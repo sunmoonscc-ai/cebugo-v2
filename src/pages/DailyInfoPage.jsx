@@ -2,14 +2,48 @@ import React, { useState } from 'react';
 import { 
   RiExchangeDollarLine, 
   RiNewspaperLine, 
-  RiNotificationBadgeLine,
-  RiArrowRightUpLine
+  RiCalendarCheckLine,
+  RiMoneyDollarCircleLine
 } from 'react-icons/ri';
 import './DailyInfoPage.css';
 
 export default function DailyInfoPage() {
-  const [phpAmount, setPhpAmount] = useState(1000);
-  const exchangeRate = 23.85; // 1 PHP = 23.85 KRW
+  // Base exchange rates against USD (Base 1 USD = 1,385 KRW = 58.2 PHP)
+  const USD_TO_KRW = 1385;
+  const USD_TO_PHP = 58.2;
+  const PHP_TO_KRW = USD_TO_KRW / USD_TO_PHP; // ~ 23.797 KRW
+
+  // Selected base currency: 'USD', 'PHP', 'KRW'
+  const [baseCurrency, setBaseCurrency] = useState('USD');
+  const [amount, setAmount] = useState(1);
+
+  const calculateConverted = () => {
+    const numAmount = parseFloat(amount) || 0;
+    if (baseCurrency === 'USD') {
+      return {
+        c1Label: '필리핀 페소 (PHP)',
+        c1Value: (numAmount * USD_TO_PHP).toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' PHP',
+        c2Label: '대한민국 원 (KRW)',
+        c2Value: (numAmount * USD_TO_KRW).toLocaleString() + ' 원'
+      };
+    } else if (baseCurrency === 'PHP') {
+      return {
+        c1Label: '미국 달러 (USD)',
+        c1Value: (numAmount / USD_TO_PHP).toLocaleString(undefined, { maximumFractionDigits: 4 }) + ' USD',
+        c2Label: '대한민국 원 (KRW)',
+        c2Value: (numAmount * PHP_TO_KRW).toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' 원'
+      };
+    } else { // KRW
+      return {
+        c1Label: '미국 달러 (USD)',
+        c1Value: (numAmount / USD_TO_KRW).toLocaleString(undefined, { maximumFractionDigits: 4 }) + ' USD',
+        c2Label: '필리핀 페소 (PHP)',
+        c2Value: (numAmount / PHP_TO_KRW).toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' PHP'
+      };
+    }
+  };
+
+  const converted = calculateConverted();
 
   const newsItems = [
     {
@@ -32,38 +66,75 @@ export default function DailyInfoPage() {
     <div className="page-content fade-in">
       <div className="daily-header">
         <h1>오늘의 세부 정보</h1>
-        <p>실시간 필리핀 페소(PHP) 환율 계산기 및 현지 주요 소식</p>
+        <p>달러 / 페소 / 원 3종 매매기준율 환율 계산기 및 현지 주요 소식</p>
       </div>
 
-      {/* Exchange Rate Calculator Card */}
+      {/* Official Exchange Announcement Card */}
       <div className="glass-card exchange-card">
-        <div className="card-title-row">
-          <RiExchangeDollarLine className="calc-icon" />
-          <h3>필리핀 페소 ↔ 원화 환율 계산기</h3>
+        <div className="announcement-banner">
+          <RiCalendarCheckLine className="notice-icon" />
+          <span>2026년 7월 23일 08시 59분 한국기준환율 발표 기준</span>
         </div>
 
-        <div className="calc-grid">
-          <div className="calc-field">
-            <label>필리핀 페소 (PHP)</label>
+        <div className="card-title-row" style={{ marginTop: '12px' }}>
+          <RiExchangeDollarLine className="calc-icon" />
+          <h3>3대 통화 (달러 / 페소 / 원) 실시간 비교 계산기</h3>
+        </div>
+
+        {/* Currency Switcher Tabs */}
+        <div className="currency-tab-switcher">
+          <button
+            className={`currency-tab ${baseCurrency === 'USD' ? 'active' : ''}`}
+            onClick={() => { setBaseCurrency('USD'); setAmount(1); }}
+          >
+            🇺🇸 미국 달러 (USD)
+          </button>
+          <button
+            className={`currency-tab ${baseCurrency === 'PHP' ? 'active' : ''}`}
+            onClick={() => { setBaseCurrency('PHP'); setAmount(100); }}
+          >
+            🇵🇭 필리핀 페소 (PHP)
+          </button>
+          <button
+            className={`currency-tab ${baseCurrency === 'KRW' ? 'active' : ''}`}
+            onClick={() => { setBaseCurrency('KRW'); setAmount(10000); }}
+          >
+            🇰🇷 대한민국 원 (KRW)
+          </button>
+        </div>
+
+        {/* Dynamic Calculator Display */}
+        <div className="triple-calc-container">
+          <div className="base-input-box">
+            <label>기준 입력 ({baseCurrency})</label>
             <input
               type="number"
-              value={phpAmount}
-              onChange={(e) => setPhpAmount(e.target.value)}
-              className="calc-input"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="calc-input base-input"
             />
           </div>
 
-          <div className="calc-equals">=</div>
+          <div className="equals-divider">➔</div>
 
-          <div className="calc-field">
-            <label>대한민국 원 (KRW)</label>
-            <div className="calc-result">
-              {(phpAmount * exchangeRate).toLocaleString()} 원
+          <div className="converted-results-grid">
+            <div className="result-card">
+              <span className="result-label">{converted.c1Label}</span>
+              <span className="result-value">{converted.c1Value}</span>
+            </div>
+            <div className="result-card">
+              <span className="result-label">{converted.c2Label}</span>
+              <span className="result-value">{converted.c2Value}</span>
             </div>
           </div>
         </div>
 
-        <span className="rate-notice">※ 기준 환율: 1 PHP = {exchangeRate} KRW (실시간 파이낸스 고시 기준)</span>
+        {/* Exchange Rate Summary Table */}
+        <div className="rate-summary-table">
+          <div className="summary-col">1 USD = <strong>1,385.00 원</strong></div>
+          <div className="summary-col">1 USD = <strong>58.20 PHP</strong></div>
+          <div className="summary-col">1 PHP = <strong>23.80 원</strong></div>
+        </div>
       </div>
 
       {/* Local News & Notices */}

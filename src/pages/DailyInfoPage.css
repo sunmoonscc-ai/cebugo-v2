@@ -18,6 +18,22 @@
   background: linear-gradient(135deg, #ffffff, #f0f9ff);
 }
 
+.announcement-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 8px 14px;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.notice-icon {
+  font-size: 1.2rem;
+}
+
 .card-title-row {
   display: flex;
   align-items: center;
@@ -30,20 +46,50 @@
   color: var(--primary);
 }
 
-.calc-grid {
+.currency-tab-switcher {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: var(--border-radius-sm);
+}
+
+.currency-tab {
+  flex: 1;
+  padding: 10px 4px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-heading);
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: #64748b;
+  border-radius: calc(var(--border-radius-sm) - 2px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.currency-tab.active {
+  background: white;
+  color: var(--primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.triple-calc-container {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 18px;
   flex-wrap: wrap;
 }
 
-.calc-field {
+.base-input-box {
   flex: 1;
-  min-width: 140px;
+  min-width: 150px;
 }
 
-.calc-field label {
+.base-input-box label {
   display: block;
   font-size: 0.78rem;
   font-weight: 600;
@@ -61,25 +107,54 @@
   font-weight: 700;
 }
 
-.calc-equals {
+.equals-divider {
   font-size: 1.4rem;
   font-weight: 700;
   color: #94a3b8;
 }
 
-.calc-result {
-  padding: 12px;
-  background: var(--primary-light);
-  color: var(--primary);
-  border-radius: var(--border-radius-sm);
-  font-family: var(--font-heading);
-  font-size: 1.2rem;
-  font-weight: 800;
+.converted-results-grid {
+  flex: 2;
+  display: flex;
+  gap: 10px;
+  min-width: 260px;
 }
 
-.rate-notice {
-  font-size: 0.75rem;
-  color: #94a3b8;
+.result-card {
+  flex: 1;
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 10px 12px;
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+}
+
+.result-label {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.result-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.rate-summary-table {
+  display: flex;
+  justify-content: space-around;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 10px;
+  border-radius: var(--border-radius-sm);
+  border: 1px dashed #cbd5e1;
+  font-size: 0.8rem;
+  color: #475569;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .news-section .section-title h2 {
