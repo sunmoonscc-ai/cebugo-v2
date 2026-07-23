@@ -6,6 +6,19 @@ import {
 } from 'react-icons/ri';
 import './DailyInfoPage.css';
 
+// Helper to format number string with 3-digit commas (e.g. 23797 -> 23,797)
+function formatNumberWithCommas(valStr) {
+  if (!valStr && valStr !== '0') return '';
+  const parts = valStr.toString().split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return parts.join('.');
+}
+
+// Helper to parse input back to clean numeric string
+function cleanNumberInput(valStr) {
+  return valStr.replace(/,/g, '');
+}
+
 export default function DailyInfoPage() {
   // Exchange rates against USD (Base 1 USD = 1,385 KRW = 58.2 PHP)
   const USD_TO_KRW = 1385;
@@ -15,7 +28,7 @@ export default function DailyInfoPage() {
   // Selected base currency: 'USD', 'PHP', 'KRW'
   const [activeCurrency, setActiveCurrency] = useState('USD');
 
-  // Amounts for each currency (interactive input values)
+  // Raw numeric string values
   const [usdVal, setUsdVal] = useState('1');
   const [phpVal, setPhpVal] = useState('58.2');
   const [krwVal, setKrwVal] = useState('1385');
@@ -39,28 +52,31 @@ export default function DailyInfoPage() {
   };
 
   // Handle direct value edits for USD
-  const handleUsdChange = (val) => {
+  const handleUsdChange = (valStr) => {
+    const clean = cleanNumberInput(valStr);
     setActiveCurrency('USD');
-    setUsdVal(val);
-    const num = parseFloat(val) || 0;
+    setUsdVal(clean);
+    const num = parseFloat(clean) || 0;
     setPhpVal((num * USD_TO_PHP).toFixed(2));
     setKrwVal(Math.round(num * USD_TO_KRW).toString());
   };
 
   // Handle direct value edits for PHP
-  const handlePhpChange = (val) => {
+  const handlePhpChange = (valStr) => {
+    const clean = cleanNumberInput(valStr);
     setActiveCurrency('PHP');
-    setPhpVal(val);
-    const num = parseFloat(val) || 0;
+    setPhpVal(clean);
+    const num = parseFloat(clean) || 0;
     setUsdVal((num / USD_TO_PHP).toFixed(4));
     setKrwVal(Math.round(num * PHP_TO_KRW).toString());
   };
 
   // Handle direct value edits for KRW
-  const handleKrwChange = (val) => {
+  const handleKrwChange = (valStr) => {
+    const clean = cleanNumberInput(valStr);
     setActiveCurrency('KRW');
-    setKrwVal(val);
-    const num = parseFloat(val) || 0;
+    setKrwVal(clean);
+    const num = parseFloat(clean) || 0;
     setUsdVal((num / USD_TO_KRW).toFixed(4));
     setPhpVal((num / PHP_TO_KRW).toFixed(2));
   };
@@ -118,8 +134,8 @@ export default function DailyInfoPage() {
             </div>
             <div className="input-wrap">
               <input
-                type="number"
-                value={usdVal}
+                type="text"
+                value={formatNumberWithCommas(usdVal)}
                 onChange={(e) => handleUsdChange(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
                 className="currency-column-input"
@@ -139,8 +155,8 @@ export default function DailyInfoPage() {
             </div>
             <div className="input-wrap">
               <input
-                type="number"
-                value={phpVal}
+                type="text"
+                value={formatNumberWithCommas(phpVal)}
                 onChange={(e) => handlePhpChange(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
                 className="currency-column-input"
@@ -160,8 +176,8 @@ export default function DailyInfoPage() {
             </div>
             <div className="input-wrap">
               <input
-                type="number"
-                value={krwVal}
+                type="text"
+                value={formatNumberWithCommas(krwVal)}
                 onChange={(e) => handleKrwChange(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
                 className="currency-column-input"
