@@ -1,0 +1,227 @@
+.login-prompt-card {
+  padding: 40px 20px;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.login-prompt-card h2 {
+  font-size: 1.4rem;
+  margin: 14px 0 6px;
+}
+
+.login-prompt-card p {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 24px;
+}
+
+.google-login-btn {
+  width: 100%;
+  max-width: 320px;
+}
+
+.profile-card {
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--primary-light);
+}
+
+.profile-name {
+  font-size: 1.3rem;
+}
+
+.profile-email {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.level-progress-box {
+  background: #f8fafc;
+  padding: 14px;
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 16px;
+}
+
+.progress-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+  margin-bottom: 8px;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transition: width 0.4s ease;
+}
+
+.progress-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 6px;
+  text-align: right;
+}
+
+.phone-status-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 14px;
+}
+
+.status-text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-icon {
+  font-size: 1.4rem;
+  color: var(--primary);
+}
+
+.status-text strong {
+  font-size: 0.88rem;
+}
+
+.status-text p {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.logout-link-btn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.profile-tabs {
+  display: flex;
+  margin-bottom: 16px;
+  padding: 6px;
+}
+
+.profile-tabs button {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 10px;
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.profile-tabs button.active {
+  background: var(--primary);
+  color: white;
+}
+
+.sub-item-card {
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.sub-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.sub-status {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.sub-status.pending {
+  background: #fef9c3;
+  color: #a16207;
+}
+
+.sub-status.approved {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.sub-item-body {
+  font-size: 0.88rem;
+  color: #334155;
+}
+
+.sub-item-date {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.point-ledger-card {
+  padding: 16px;
+}
+
+.ledger-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.ledger-date {
+  display: block;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.plus-point {
+  font-weight: 800;
+  color: #10b981;
+}

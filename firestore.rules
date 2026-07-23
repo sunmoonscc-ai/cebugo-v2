@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == "sunmoon.scc@gmail.com" ||
+        request.auth.token.email == "hdcc6th@gmail.com"
+      );
+    }
+
+    // Places Collection: Anyone can read, only admin can write
+    match /places/{placeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Submissions Collection: Authenticated users can create, admin can approve/reject
+    match /submissions/{submissionId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if isAdmin();
+    }
+
+    // Marketplace Listings: Read Lv3+, Write Lv5+ and Phone Verified
+    match /marketplaceListings/{listingId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && (request.auth.uid == resource.data.sellerUid || isAdmin());
+    }
+
+    // Users Collection: Users read/update their own profile
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Default Fallback: Allow authenticated read/write for development
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

@@ -1,0 +1,178 @@
+:root {
+  /* Color Palette - Vibrant Modern Ocean Theme */
+  --primary-hsl: 205, 95%, 48%;
+  --primary: hsl(var(--primary-hsl));
+  --primary-hover: hsl(205, 95%, 42%);
+  --primary-light: hsl(205, 95%, 94%);
+  --primary-glow: hsla(205, 95%, 48%, 0.25);
+
+  --secondary-hsl: 165, 80%, 42%;
+  --secondary: hsl(var(--secondary-hsl));
+  --secondary-light: hsl(165, 80%, 94%);
+
+  --accent-hsl: 38, 98%, 52%;
+  --accent: hsl(var(--accent-hsl));
+  --accent-light: hsl(38, 98%, 94%);
+
+  --dark-bg: #0d131f;
+  --dark-card: rgba(22, 31, 49, 0.75);
+  --dark-card-border: rgba(255, 255, 255, 0.08);
+
+  --light-bg: #f6f8fc;
+  --light-card: #ffffff;
+  --light-card-border: rgba(0, 0, 0, 0.06);
+
+  /* Carrier Brand Colors */
+  --globe-color: #0056b3;
+  --smart-color: #00875a;
+  --tnt-color: #e65100;
+
+  /* Level Gradient Accents */
+  --level-bronze: linear-gradient(135deg, #cd7f32, #a0522d);
+  --level-silver: linear-gradient(135deg, #bdc3c7, #2c3e50);
+  --level-gold: linear-gradient(135deg, #f1c40f, #e67e22);
+  --level-platinum: linear-gradient(135deg, #00c6ff, #0072ff);
+  --level-diamond: linear-gradient(135deg, #b92b27, #1565c0);
+
+  /* Typography */
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'Outfit', 'Inter', sans-serif;
+
+  /* Layout */
+  --max-width: 1200px;
+  --nav-height: 64px;
+  --bottom-nav-height: 68px;
+  --border-radius: 16px;
+  --border-radius-sm: 10px;
+  --box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+  --box-shadow-hover: 0 20px 40px -15px rgba(0, 0, 0, 0.15);
+}
+
+/* Base Style Setup */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--light-bg);
+  color: #1e293b;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: calc(var(--bottom-nav-height) + 20px);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: #0f172a;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+/* Layout Utilities */
+.app-container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  min-height: 100vh;
+  position: relative;
+  background-color: var(--light-bg);
+}
+
+.page-content {
+  padding: 16px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Modern Card Component */
+.glass-card {
+  background: var(--light-card);
+  border: 1px solid var(--light-card-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  backdrop-filter: blur(12px);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.glass-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--box-shadow-hover);
+}
+
+/* Buttons & Badges */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--border-radius-sm);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 4px 14px var(--primary-glow);
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.btn-secondary:hover {
+  background: #e2e8f0;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-carrier-globe {
+  background-color: rgba(0, 86, 179, 0.1);
+  color: var(--globe-color);
+}
+
+.badge-carrier-smart {
+  background-color: rgba(0, 135, 90, 0.1);
+  color: var(--smart-color);
+}
+
+.badge-carrier-tnt {
+  background-color: rgba(230, 81, 0, 0.1);
+  color: var(--tnt-color);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.35s ease forwards;
+}

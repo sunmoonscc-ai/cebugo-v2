@@ -1,0 +1,142 @@
+.place-card {
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-image-wrap {
+  position: relative;
+  width: 100%;
+  height: 190px;
+  overflow: hidden;
+}
+
+.card-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.place-card:hover .card-cover-img {
+  transform: scale(1.05);
+}
+
+.category-chip {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(15, 23, 42, 0.75);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+}
+
+.favorite-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #64748b;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+
+.favorite-btn.active {
+  color: #ef4444;
+  background: white;
+}
+
+.card-body {
+  padding: 16px;
+}
+
+.card-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.place-title {
+  font-size: 1.1rem;
+  line-height: 1.3;
+}
+
+.place-title a {
+  color: #0f172a;
+}
+
+.rating-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #fef9c3;
+  color: #a16207;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.star-icon {
+  color: #eab308;
+}
+
+.reviews-cnt {
+  font-size: 0.75rem;
+  color: #ca8a04;
+}
+
+.place-addr, .place-hours {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.83rem;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.info-icon {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.place-desc {
+  font-size: 0.88rem;
+  color: #334155;
+  margin: 10px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-footer-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.sns-tag {
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}

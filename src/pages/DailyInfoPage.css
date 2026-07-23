@@ -1,0 +1,132 @@
+.daily-header {
+  margin-bottom: 20px;
+}
+
+.daily-header h1 {
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+}
+
+.daily-header p {
+  font-size: 0.88rem;
+  color: #64748b;
+}
+
+.exchange-card {
+  padding: 20px;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, #ffffff, #f0f9ff);
+}
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.calc-icon {
+  font-size: 1.5rem;
+  color: var(--primary);
+}
+
+.calc-grid {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.calc-field {
+  flex: 1;
+  min-width: 140px;
+}
+
+.calc-field label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.calc-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--border-radius-sm);
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.calc-equals {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.calc-result {
+  padding: 12px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: var(--border-radius-sm);
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.rate-notice {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.news-section .section-title h2 {
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.news-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.news-card {
+  padding: 16px;
+}
+
+.news-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.news-cat {
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.news-date {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.news-title {
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+
+.news-summary {
+  font-size: 0.88rem;
+  color: #475569;
+}

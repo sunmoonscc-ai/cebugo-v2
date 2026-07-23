@@ -1,0 +1,34 @@
+.config-form {
+  padding: 24px;
+}
+
+.config-form h3 {
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+}
+
+.config-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.field-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.divider {
+  border: 0;
+  height: 1px;
+  background: #e2e8f0;
+  margin: 20px 0;
+}
+
+.save-btn {
+  width: 100%;
+  margin-top: 20px;
+}

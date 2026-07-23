@@ -1,0 +1,171 @@
+.marketplace-header {
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.header-info h2 {
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.header-info p {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.user-eligibility-box {
+  margin: 14px 0;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.eligibility-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.phone-auth-btn {
+  font-size: 0.8rem;
+  padding: 6px 12px;
+}
+
+.create-listing-btn {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.lock-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #fff1f2;
+  color: #e11d48;
+  padding: 10px;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+.write-form-card {
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.write-form-card h3 {
+  font-size: 1.15rem;
+  margin-bottom: 14px;
+}
+
+.checkbox-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 0.83rem;
+  color: #475569;
+}
+
+.listings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.listing-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.listing-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.listing-body {
+  padding: 16px;
+}
+
+.listing-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.listing-price {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.listing-status {
+  background: #dcfce7;
+  color: #15803d;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.listing-title {
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+}
+
+.listing-desc {
+  font-size: 0.88rem;
+  color: #475569;
+  margin-bottom: 12px;
+}
+
+.seller-info {
+  background: #f8fafc;
+  padding: 10px 12px;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.8rem;
+  color: #64748b;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.seller-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.contact-row {
+  display: flex;
+  gap: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.listing-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.report-btn {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  color: #94a3b8;
+}
