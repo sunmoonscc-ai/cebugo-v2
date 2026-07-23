@@ -4,13 +4,13 @@ const PlacesContext = createContext();
 
 export const usePlaces = () => useContext(PlacesContext);
 
-// Initial Mock Places Data representing Cebu Local Businesses
+// Initial Mock Places Data representing Cebu Local Businesses with new 12 categories
 const INITIAL_PLACES = [
   {
     id: 'place_1',
     name: '점보씨푸드 막탄 (Jumbo Seafood Mactan)',
     category: 'restaurant',
-    categoryName: '맛집/식당',
+    categoryName: '먹을거리',
     addr: 'Maribago, Lapu-Lapu City, Cebu',
     lat: 10.2858,
     lng: 123.9922,
@@ -32,7 +32,7 @@ const INITIAL_PLACES = [
     id: 'place_2',
     name: '트리쉐이드 스파 막탄점 (Tree Shade Spa)',
     category: 'massage',
-    categoryName: '마사지/스파',
+    categoryName: '뷰티·마사지',
     addr: 'Pajac-Maribago Rd, Lapu-Lapu City, Cebu',
     lat: 10.2921,
     lng: 123.9890,
@@ -54,7 +54,7 @@ const INITIAL_PLACES = [
     id: 'place_3',
     name: '더 마크 리조트 & 다이빙 (The Mark Resort)',
     category: 'activity',
-    categoryName: '호핑/액티비티',
+    categoryName: '즐길거리',
     addr: 'Punta Engano Rd, Lapu-Lapu City, Cebu',
     lat: 10.3065,
     lng: 124.0150,
@@ -74,9 +74,9 @@ const INITIAL_PLACES = [
   },
   {
     id: 'place_4',
-    name: '카바나 레스토랑 (Cabana Restaurant)',
+    name: '카바나 레스토랑 & 디저트 (Cabana)',
     category: 'cafe',
-    categoryName: '카페/디저트',
+    categoryName: '마실거리',
     addr: 'Punta Engano Rd, Mactan Island, Cebu',
     lat: 10.3050,
     lng: 124.0142,
@@ -92,6 +92,44 @@ const INITIAL_PLACES = [
       facility: ['https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=800&q=80'],
       product: ['https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80'],
       menu: ['https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&q=80']
+    }
+  },
+  {
+    id: 'place_5',
+    name: '세부 닥터스 종합병원 (Cebu Doctors Hospital)',
+    category: 'hospital',
+    categoryName: '병원',
+    addr: 'Osmeña Blvd, Cebu City, Cebu',
+    lat: 10.3120,
+    lng: 123.8910,
+    open: '24시간 응급센터 운영',
+    breakTime: '연중무휴',
+    phone: '09170001122',
+    sns: 'k_cebudoctors',
+    explaination: '세부 시티 중심부에 위치한 최신 의료 설비 및 응급실을 갖춘 대표 종합병원입니다.',
+    rating: 4.8,
+    reviewsCount: 19,
+    images: {
+      cover: ['https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=800&q=80']
+    }
+  },
+  {
+    id: 'place_6',
+    name: '세부 국제 어학원 (Cebu English Academy)',
+    category: 'education',
+    categoryName: '교육',
+    addr: 'Banilad, Cebu City, Cebu',
+    lat: 10.3380,
+    lng: 123.9050,
+    open: '08:00 AM - 06:00 PM',
+    breakTime: '토/일 휴무',
+    phone: '09283334455',
+    sns: 'k_cebuacademy',
+    explaination: '1:1 맞춤 원어민 튜터링 및 유학/연수 전문 명문 영어 교육 기관입니다.',
+    rating: 4.9,
+    reviewsCount: 28,
+    images: {
+      cover: ['https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&q=80']
     }
   }
 ];
@@ -177,7 +215,6 @@ export const PlacesProvider = ({ children }) => {
     setSubmissions((prev) =>
       prev.map((sub) => {
         if (sub.id === subId) {
-          // Update corresponding place if field matched
           setPlaces((pList) =>
             pList.map((p) => {
               if (p.id === sub.placeId && sub.field === '영업시간') {
@@ -218,7 +255,6 @@ export const PlacesProvider = ({ children }) => {
     };
     setReviews((prev) => [newRev, ...prev]);
 
-    // Update place average rating & review count
     setPlaces((prev) =>
       prev.map((p) => {
         if (p.id === placeId) {
