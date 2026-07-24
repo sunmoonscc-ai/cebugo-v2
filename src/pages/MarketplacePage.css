@@ -4,15 +4,17 @@
 }
 
 .header-info h2 {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 0;
 }
 
-.header-info p {
+.header-info-sub {
   font-size: 0.85rem;
+  font-weight: 400;
   color: #64748b;
 }
 

@@ -18,15 +18,18 @@ export default function Header() {
         </Link>
 
         <div className="header-actions">
-          {userProfile?.isAdmin && (
+          {userProfile?.isAdmin ? (
             <Link to="/admin/submissions" className="admin-badge-btn" title="관리자 센터">
               <RiAdminLine />
               <span>관리자</span>
             </Link>
+          ) : (
+            <Link to="/profile" className="user-profile-summary" title={isGuest ? "로그인하시면 더 많은 정보와 혜택을 이용하실 수 있습니다." : `${userProfile?.displayName} 프로필`}>
+              <LevelBadge level={userProfile?.level || 1} isGuest={isGuest} />
+            </Link>
           )}
 
           <Link to="/profile" className="user-profile-summary" title={isGuest ? "로그인하시면 더 많은 정보와 혜택을 이용하실 수 있습니다." : `${userProfile?.displayName} 프로필`}>
-            <LevelBadge level={userProfile?.level || 1} isGuest={isGuest} />
             {userProfile?.photoURL ? (
               <img src={userProfile.photoURL} alt="profile" className="header-avatar" />
             ) : (

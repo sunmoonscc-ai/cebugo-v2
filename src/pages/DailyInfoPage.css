@@ -3,12 +3,17 @@
 }
 
 .daily-header h1 {
-  font-size: 1.5rem;
-  margin-bottom: 4px;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 0;
 }
 
-.daily-header p {
-  font-size: 0.88rem;
+.daily-header-sub {
+  font-size: 0.85rem;
+  font-weight: 400;
   color: #64748b;
 }
 
@@ -201,4 +206,179 @@
 .news-summary {
   font-size: 0.88rem;
   color: #475569;
+}
+
+/* Sub-Tab Navigation Bar */
+.news-nav-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  padding: 6px;
+  margin-bottom: 20px;
+  background: white;
+}
+
+.news-tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border: none;
+  background: transparent;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.news-tab-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.news-tab-btn.active {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+.news-tab-btn .tab-icon {
+  font-size: 1.1rem;
+}
+
+@media (max-width: 480px) {
+  .news-tab-btn span {
+    font-size: 0.8rem;
+  }
+  .news-tab-btn .tab-icon {
+    font-size: 0.95rem;
+  }
+  .news-tab-btn {
+    padding: 8px 4px;
+    gap: 3px;
+  }
+}
+
+/* Notice Cards */
+.notice-item-card {
+  padding: 18px;
+}
+
+.notice-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.notice-badge-tag {
+  background: #ffedf0;
+  color: #e11d48;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(225, 29, 72, 0.2);
+}
+
+.notice-title-text {
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+  color: #0f172a;
+}
+
+.notice-content-text {
+  font-size: 0.88rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+/* Contacts Grid & Cards */
+.contacts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.contact-card {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.contact-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--primary-light);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.contact-cat-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--secondary);
+  background: var(--secondary-light);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.contact-name {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 2px;
+}
+
+.contact-desc {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.btn-call-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  justify-content: center;
+  background: #10b981;
+  color: white;
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 8px 12px;
+  border-radius: var(--border-radius-sm);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-call-action:hover {
+  background: #059669;
+}
+
+.contact-emergency-line {
+  margin-top: 8px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #e11d48;
+  background: #fff1f2;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-align: center;
 }

@@ -69,8 +69,10 @@ export default function MarketplacePage() {
     <div className="page-content fade-in">
       <div className="marketplace-header glass-card">
         <div className="header-info">
-          <h2><RiShoppingBagLine /> 세부 현지 중고 물품 거래</h2>
-          <p>레벨 3+ 열람 / 레벨 4+ 및 [현지폰 + 카톡 인증] 완료 시 글작성 가능</p>
+          <h2>
+            <RiShoppingBagLine /> 중고거래
+            <span className="header-info-sub"> - 세부 현지 중고물품 거래 (열람은 레벨3 이상, 작성은 레벨4 이상 & 현지 휴대전화 및 카카오톡 인증 시 가능)</span>
+          </h2>
         </div>
 
         <div className="user-eligibility-box">

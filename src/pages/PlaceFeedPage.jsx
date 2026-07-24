@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { usePlaces } from '../context/PlacesContext';
 import { useAuth } from '../context/AuthContext';
-import { RiCalendarEventLine, RiAddLine, RiStore2Line } from 'react-icons/ri';
+import { RiMegaphoneLine, RiAddLine, RiStore2Line } from 'react-icons/ri';
 import './PlaceFeedPage.css';
 
 export default function PlaceFeedPage() {
@@ -37,8 +37,10 @@ export default function PlaceFeedPage() {
   return (
     <div className="page-content fade-in">
       <div className="feed-header">
-        <h1><RiCalendarEventLine /> 업체 소식 및 갤러리 피드</h1>
-        <p>세부 검증 업체들이 직접 작성하는 날짜별 최신 소식 및 혜택</p>
+        <h1>
+          <RiMegaphoneLine /> 광고
+          <span className="feed-header-sub"> - 세부 검증 업체들이 직접 작성하는 날짜별 최신 소식 및 혜택</span>
+        </h1>
       </div>
 
       {/* Place Filter Bar */}
