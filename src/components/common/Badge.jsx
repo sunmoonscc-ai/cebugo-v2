@@ -3,7 +3,19 @@ import { getLevelTitle } from '../../utils/imageHelper';
 import { RiShieldUserFill, RiPhoneFindLine, RiSmartphoneLine, RiKakaoTalkFill } from 'react-icons/ri';
 import './Badge.css';
 
-export function LevelBadge({ level = 1 }) {
+export function LevelBadge({ level = 1, isGuest = false }) {
+  if (level <= 1 || isGuest) {
+    return (
+      <span 
+        className="badge level-badge level-guest"
+        title="로그인하시면 더 많은 상세 정보와 커뮤니티 기능을 이용하실 수 있습니다."
+      >
+        <RiShieldUserFill />
+        방문자 (손님)
+      </span>
+    );
+  }
+
   let colorClass = 'level-bronze';
   if (level >= 20) colorClass = 'level-diamond';
   else if (level >= 15) colorClass = 'level-platinum';

@@ -80,3 +80,16 @@
   justify-content: center;
   color: #64748b;
 }
+
+.guest-info-text {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #64748b;
+  letter-spacing: -0.2px;
+}
+
+@media (max-width: 580px) {
+  .guest-info-text {
+    font-size: 0.72rem;
+  }
+}

@@ -10,6 +10,11 @@
   background: var(--level-bronze);
 }
 
+.level-guest {
+  background: linear-gradient(135deg, #64748b, #475569);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 .level-silver {
   background: var(--level-silver);
 }

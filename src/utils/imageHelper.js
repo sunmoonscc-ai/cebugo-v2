@@ -57,7 +57,7 @@ export function getLevelTitle(level = 1) {
   if (level >= 4) return '마켓 멤버 (Lv4)';
   if (level >= 3) return '리더 멤버 (Lv3)';
   if (level >= 2) return '새싹 회원 (Lv2)';
-  return '새싹 여행자 (Lv1)';
+  return '방문자 (손님)';
 }
 
 export function getLevelProgress(points = 0) {

@@ -32,7 +32,7 @@ export default function ProfilePage() {
         <div className="glass-card login-prompt-card">
           <RiUser3Line style={{ fontSize: '3.5rem', color: 'var(--primary)' }} />
           <h2>로그인이 필요합니다</h2>
-          <p>구글 계정으로 로그인 후 세부 정보 제보, 포인트 적립 및 중고거래를 이용하세요.</p>
+          <p>구글 계정으로 로그인하시면 더 많은 세부 여행 정보 열람, 정보 제보, 포인트 적립 및 중고거래 커뮤니티 기능을 이용하실 수 있습니다.</p>
           
           <button className="btn btn-primary google-login-btn" onClick={loginWithGoogle}>
             <RiGoogleFill /> Google 계정으로 로그인

@@ -2,11 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LevelBadge } from './Badge';
-import { RiGlobalLine, RiAdminLine, RiUser3Line } from 'react-icons/ri';
+import { RiGlobalLine, RiAdminLine, RiUser3Line, RiLockUnlockLine } from 'react-icons/ri';
 import './Header.css';
 
 export default function Header() {
-  const { userProfile } = useAuth();
+  const { currentUser, userProfile } = useAuth();
+  const isGuest = !currentUser;
 
   return (
     <header className="main-header">
@@ -24,8 +25,8 @@ export default function Header() {
             </Link>
           )}
 
-          <Link to="/profile" className="user-profile-summary">
-            <LevelBadge level={userProfile?.level || 1} />
+          <Link to="/profile" className="user-profile-summary" title={isGuest ? "로그인하시면 더 많은 정보와 혜택을 이용하실 수 있습니다." : `${userProfile?.displayName} 프로필`}>
+            <LevelBadge level={userProfile?.level || 1} isGuest={isGuest} />
             {userProfile?.photoURL ? (
               <img src={userProfile.photoURL} alt="profile" className="header-avatar" />
             ) : (
