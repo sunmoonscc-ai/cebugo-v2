@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import ImageCarousel from '../components/places/ImageCarousel';
+import { fetchGoogleNews } from '../services/googleNewsService';
 import { 
   RiExchangeDollarLine, 
   RiNewspaperLine, 
@@ -10,7 +13,16 @@ import {
   RiPhoneFill,
   RiShieldCrossLine,
   RiHospitalLine,
-  RiFlightTakeoffLine
+  RiFlightTakeoffLine,
+  RiAddLine,
+  RiEditLine,
+  RiDeleteBinLine,
+  RiCloseLine,
+  RiCheckLine,
+  RiPriceTag3Line,
+  RiImageAddLine,
+  RiHashtag,
+  RiRefreshLine
 } from 'react-icons/ri';
 import './DailyInfoPage.css';
 
@@ -27,7 +39,183 @@ function cleanNumberInput(valStr) {
   return valStr.replace(/,/g, '');
 }
 
+const DEFAULT_TAGS = ['중요공지', '안전공지', '입국안내', '행사/이벤트', '일반공지'];
+
+const DEFAULT_TRAVEL_INFO = [
+  {
+    id: 'i1',
+    title: '필리핀 세관 입국 면세 한도 및 반입 규정',
+    badge: '면세/입국',
+    desc: '필리핀 면세 한도는 1인당 10,000 페소(PHP)입니다. 담배 2보루, 주류 2병(총 1.5L 이하)까지 면세 반입이 허용됩니다.',
+    images: []
+  },
+  {
+    id: 'i2',
+    title: '세부 현지 팁(Tip) 문화 & 매너 가이드',
+    badge: '여행팁',
+    desc: '식당 및 마사지샵 이용 시 50~100 페소 정도의 매너 팁이 일반적입니다. 택시는 거스름돈을 팁으로 전달하기도 합니다.',
+    images: []
+  },
+  {
+    id: 'i3',
+    title: '전압 및 어댑터 사용 안내',
+    badge: '생활정보',
+    desc: '필리핀은 220V, 60Hz를 사용하며, 대부분 한국과 동일한 2구 플러그를 그대로 사용하실 수 있습니다.',
+    images: []
+  },
+  {
+    id: 'i4',
+    title: '세부 현지 대중교통 이용 팁 (그랩/트라이시클)',
+    badge: '교통정보',
+    desc: '그랩(Grab) 앱을 사전에 설치하면 이동 시 바가지 요금 없이 안전하게 정찰제로 이동하실 수 있습니다.',
+    images: []
+  }
+];
+
+const DEFAULT_NOTICES = [
+  {
+    id: 'n1',
+    title: '세부 여행객을 위한 2026년 하반기 CebugoHub 통합 가이드',
+    date: '2026-07-24',
+    badge: '중요공지',
+    content: 'CebugoHub를 이용해 세부 현지 검증 업체 정보, 중고거래, 입국 정보 및 비상 연락망을 손쉽게 확인하세요.',
+    images: [
+      'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&fit=crop',
+      'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?w=800&fit=crop'
+    ]
+  },
+  {
+    id: 'n2',
+    title: '7월 세부 우기철 안전한 호핑투어 및 다이빙 수칙 안내',
+    date: '2026-07-21',
+    badge: '안전공지',
+    content: '해양경찰청(PCG) 기상 주의보 발행 시 호핑 출항이 통제될 수 있으니 미리 예약 업체 연락처를 확인하세요.',
+    images: []
+  },
+  {
+    id: 'n3',
+    title: '세부 국제공항 출국 수속 및 E-Travel 작성 필수 안내',
+    date: '2026-07-15',
+    badge: '입국안내',
+    content: '필리핀 입/출국 시 e-Travel 작성 등록이 필수입니다. 출국 전 공식 웹사이트에서 사전 등록 상태를 점검하시기 바랍니다.',
+    images: []
+  }
+];
+
+const DEFAULT_CONTACTS = [
+  {
+    id: 'c1',
+    category: '공관 / 영사',
+    name: '주세부 대한민국 분공관',
+    phones: ['+63-32-340-9900'],
+    emergency: '+63-917-808-3904 (24시간 사건사고)',
+    desc: '세부시티 아얄라 센트럴 블록 타워 12층',
+    website: 'https://overseas.mofa.go.kr/ph-cebu-ko/index.do',
+    facebook: 'https://facebook.com/mofa.cebu',
+    snsList: [{ type: 'kakao', value: 'cebugongwan' }]
+  },
+  {
+    id: 'c2',
+    category: '영사콜센터',
+    name: '외교부 영사콜센터 (한국)',
+    phones: ['+82-2-3210-0404'],
+    emergency: '24시간 연중무휴 긴급 상담',
+    desc: '해외 긴급 상황 및 통역 서비스 지원',
+    website: 'https://www.0404.go.kr',
+    facebook: '',
+    snsList: []
+  },
+  {
+    id: 'c3',
+    category: '한인회',
+    name: '세부 한인회 비상연락처',
+    phones: ['+63-917-319-3838', '+63-32-343-4100'],
+    emergency: '+63-917-319-3838',
+    desc: '세부 거주 한인 및 관광객 긴급 구조 지원',
+    website: 'https://cebukorean.org',
+    facebook: 'https://facebook.com/cebukorean',
+    snsList: [{ type: 'kakao', value: 'cebukorean' }]
+  },
+  {
+    id: 'c4',
+    category: '긴급신고',
+    name: '필리핀 긴급합동신고센터',
+    phones: ['911'],
+    emergency: '경찰 / 소방 / 구급 통합 911',
+    desc: '필리핀 전역 통합 긴급 구조 번호',
+    website: '',
+    facebook: '',
+    snsList: []
+  },
+  {
+    id: 'c5',
+    category: '공항 / 교통',
+    name: '막탄-세부 국제공항 (MCIA)',
+    phones: ['+63-32-494-7000'],
+    emergency: '터미널 안내센터',
+    desc: '항공편 운항 상태 및 수하물 관련 문의',
+    website: 'https://mactancebuairport.com',
+    facebook: 'https://facebook.com/mactancebuairport',
+    snsList: []
+  },
+  {
+    id: 'c6',
+    category: '의료 / 병원',
+    name: '세부 닥터스 종합병원 (Cebu Doctors Hospital)',
+    phones: ['+63-32-255-5555'],
+    emergency: '응급실 (Emergency Room)',
+    desc: '세부시티 위치 메이저 종합병원',
+    website: 'https://cebudoctorshospital.com',
+    facebook: '',
+    snsList: []
+  }
+];
+
+const DEFAULT_PH_NEWS = [
+  {
+    id: 'p1',
+    title: '막탄-세부 국제공항(MCIA) 2026 스마트 입국 심사대 및 eTravel 시스템 전면 도입',
+    date: '2026-07-24',
+    category: '세부소식 / 입국',
+    summary: '막탄 세부 공항 터미널2에 자동 입국 심사 게이트와 100% 모바일 eTravel QR 시스템이 결합되어 한국인 관광객의 입국 대기 시간이 대폭 단축되었습니다.',
+    url: 'https://etravel.gov.ph/'
+  },
+  {
+    id: 'p2',
+    title: '2026 미쉐린 가이드: 세부 포켓 가이드북 최초 발간, 미식 도시 재조명',
+    date: '2026-07-23',
+    category: '세부소식 / 관광',
+    summary: '세계적인 미식 평가서 미쉐린 가이드가 2026년 세부 포켓 가이드북을 출간하여 세부의 로컬 파인 다이닝과 해산물 요리가 글로벌 관광객들에게 주목받고 있습니다.',
+    url: 'https://mactancebuairport.com'
+  },
+  {
+    id: 'p3',
+    title: '세부 아얄라 몰 & IT파크 간 프리미엄 스마트 셔틀 버스 신규 개통',
+    date: '2026-07-22',
+    category: '세부소식 / 교통',
+    summary: '세부 대표 비즈니스 및 쇼핑 거점인 아얄라몰과 IT파크를 잇는 정찰제 스마트 셔틀버스가 상시 운행을 시작하여 자유 여행객들의 이동 편의성이 크게 높아졌습니다.',
+    url: 'https://sunstar.com.ph'
+  },
+  {
+    id: 'p4',
+    title: '필리핀 2026 글로벌 은퇴 & 장기 여행 목적지 세계 1위 선정',
+    date: '2026-07-20',
+    category: '필리핀 이슈 / 사회',
+    summary: '합리적인 생활비, 친절한 현지 주민, 우수한 온화한 기후와 의료 인프라를 바탕으로 필리핀이 2026 해외 은퇴 및 한달살기 선호지 1위로 꼽혔습니다.',
+    url: 'https://inquirer.net'
+  },
+  {
+    id: 'p5',
+    title: '필리핀 중앙은행 페소화 환율 변동성 대응 및 메트로 마닐라 최저임금 조정',
+    date: '2026-07-18',
+    category: '필리핀 이슈 / 경제',
+    summary: '달러 및 페소 교차 환율 변동 속에 필리핀 금융당국이 물가 안정 및 경제 성장을 위한 종합 기조 방안을 발표했습니다.',
+    url: 'https://bworldonline.com'
+  }
+];
+
 export default function DailyInfoPage() {
+  const { userProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('notice'); // notice, contacts, info, phnews, exchange
 
   // Exchange rates against USD (Base 1 USD = 1,385 KRW = 58.2 PHP)
@@ -84,137 +272,595 @@ export default function DailyInfoPage() {
     setPhpVal((num / PHP_TO_KRW).toFixed(2));
   };
 
-  const noticeItems = [
-    {
-      id: 'n1',
-      title: '세부 여행객을 위한 2026년 하반기 CebugoHub 통합 가이드',
-      date: '2026-07-24',
-      badge: '중요공지',
-      content: 'CebugoHub를 이용해 세부 현지 검증 업체 정보, 중고거래, 입국 정보 및 비상 연락망을 손쉽게 확인하세요.'
-    },
-    {
-      id: 'n2',
-      title: '7월 세부 우기철 안전한 호핑투어 및 다이빙 수칙 안내',
-      date: '2026-07-21',
-      badge: '안전공지',
-      content: '해양경찰청(PCG) 기상 주의보 발행 시 호핑 출항이 통제될 수 있으니 미리 예약 업체 연락처를 확인하세요.'
-    },
-    {
-      id: 'n3',
-      title: '세부 국제공항 출국 수속 및 E-Travel 작성 필수 안내',
-      date: '2026-07-15',
-      badge: '입국안내',
-      content: '필리핀 입/출국 시 e-Travel 작성 등록이 필수입니다. 출국 전 공식 웹사이트에서 사전 등록 상태를 점검하시기 바랍니다.'
+  // Tags state backed by localStorage
+  const [tags, setTags] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cebugo_notice_tags');
+      return saved ? JSON.parse(saved) : DEFAULT_TAGS;
+    } catch {
+      return DEFAULT_TAGS;
     }
-  ];
+  });
 
-  const contactItems = [
-    {
-      id: 'c1',
-      category: '공관 / 영사',
-      name: '주세부 대한민국 분공관',
-      phone: '+63-32-340-9900',
-      emergency: '+63-917-808-3904 (24시간 사건사고)',
-      icon: RiShieldCrossLine,
-      desc: '세부시티 아얄라 센트럴 블록 타워 12층'
-    },
-    {
-      id: 'c2',
-      category: '영사콜센터',
-      name: '외교부 영사콜센터 (한국)',
-      phone: '+82-2-3210-0404',
-      emergency: '24시간 연중무휴 긴급 상담',
-      icon: RiPhoneFill,
-      desc: '해외 긴급 상황 및 통역 서비스 지원'
-    },
-    {
-      id: 'c3',
-      category: '한인회',
-      name: '세부 한인회 비상연락처',
-      phone: '+63-917-319-3838',
-      emergency: '+63-32-343-4100',
-      icon: RiContactsBook2Line,
-      desc: '세부 거주 한인 및 관광객 긴급 구조 지원'
-    },
-    {
-      id: 'c4',
-      category: '긴급신고',
-      name: '필리핀 긴급합동신고센터',
-      phone: '911',
-      emergency: '경찰 / 소방 / 구급 통합 911',
-      icon: RiPhoneFill,
-      desc: '필리핀 전역 통합 긴급 구조 번호'
-    },
-    {
-      id: 'c5',
-      category: '공항 / 교통',
-      name: '막탄-세부 국제공항 (MCIA)',
-      phone: '+63-32-494-7000',
-      emergency: '터미널 안내센터',
-      icon: RiFlightTakeoffLine,
-      desc: '항공편 운항 상태 및 수하물 관련 문의'
-    },
-    {
-      id: 'c6',
-      category: '의료 / 병원',
-      name: '세부 닥터스 종합병원 (Cebu Doctors Hospital)',
-      phone: '+63-32-255-5555',
-      emergency: '응급실 (Emergency Room)',
-      icon: RiHospitalLine,
-      desc: '세부시티 위치 메이저 종합병원'
+  useEffect(() => {
+    try {
+      localStorage.setItem('cebugo_notice_tags', JSON.stringify(tags));
+    } catch (err) {
+      console.error('Failed to save tags to localStorage', err);
     }
-  ];
+  }, [tags]);
 
-  const infoItems = [
-    {
-      id: 'i1',
-      title: '필리핀 세관 입국 면세 한도 및 반입 규정',
-      badge: '면세/입국',
-      desc: '필리핀 면세 한도는 1인당 10,000 페소(PHP)입니다. 담배 2보루, 주류 2병(총 1.5L 이하)까지 면세 반입이 허용됩니다.'
-    },
-    {
-      id: 'i2',
-      title: '세부 현지 팁(Tip) 문화 & 매너 가이드',
+  // Notice CRUD state backed by localStorage
+  const [notices, setNotices] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cebugo_notices');
+      return saved ? JSON.parse(saved) : DEFAULT_NOTICES;
+    } catch {
+      return DEFAULT_NOTICES;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cebugo_notices', JSON.stringify(notices));
+    } catch (err) {
+      console.error('Failed to save notices to localStorage', err);
+    }
+  }, [notices]);
+
+  // Contacts CRUD state backed by localStorage
+  const [contacts, setContacts] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cebugo_contacts');
+      return saved ? JSON.parse(saved) : DEFAULT_CONTACTS;
+    } catch {
+      return DEFAULT_CONTACTS;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cebugo_contacts', JSON.stringify(contacts));
+    } catch (err) {
+      console.error('Failed to save contacts to localStorage', err);
+    }
+  }, [contacts]);
+
+  // PH News CRUD state backed by localStorage
+  const [phNews, setPhNews] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cebugo_ph_news');
+      return saved ? JSON.parse(saved) : DEFAULT_PH_NEWS;
+    } catch {
+      return DEFAULT_PH_NEWS;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cebugo_ph_news', JSON.stringify(phNews));
+    } catch (err) {
+      console.error('Failed to save phNews to localStorage', err);
+    }
+  }, [phNews]);
+
+  const [isFetchingNews, setIsFetchingNews] = useState(false);
+  const [lastNewsRefreshedAt, setLastNewsRefreshedAt] = useState(null);
+
+  const handleRefreshGoogleNews = async () => {
+    setIsFetchingNews(true);
+    const liveItems = await fetchGoogleNews();
+    if (liveItems && liveItems.length > 0) {
+      setPhNews((prev) => {
+        // keep user manually created/edited news and merge new google items
+        const manualItems = prev.filter((n) => !n.isAutoFetched);
+        return [...manualItems, ...liveItems];
+      });
+      setLastNewsRefreshedAt(new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }));
+    }
+    setIsFetchingNews(false);
+  };
+
+  useEffect(() => {
+    // Auto fetch live google news when phnews tab is opened
+    if (activeTab === 'phnews' && (!lastNewsRefreshedAt || phNews.length <= 5)) {
+      handleRefreshGoogleNews();
+    }
+  }, [activeTab]);
+
+  const [newsCategoryFilter, setNewsCategoryFilter] = useState('all'); // all, cebu, ph
+
+  // News Modal / Form state
+  const [isNewsModalOpen, setIsNewsModalOpen] = useState(false);
+  const [editingNews, setEditingNews] = useState(null);
+  const [newsFormData, setNewsFormData] = useState({
+    title: '',
+    category: '세부소식 / 현지',
+    date: new Date().toISOString().split('T')[0],
+    summary: '',
+    url: '',
+    images: []
+  });
+
+  const handleOpenCreateNews = () => {
+    setEditingNews(null);
+    setNewsFormData({
+      title: '',
+      category: '세부소식 / 현지',
+      date: new Date().toISOString().split('T')[0],
+      summary: '',
+      url: '',
+      images: []
+    });
+    setIsNewsModalOpen(true);
+  };
+
+  const handleOpenEditNews = (item) => {
+    setEditingNews(item);
+    setNewsFormData({
+      title: item.title,
+      category: item.category || '세부소식 / 현지',
+      date: item.date || new Date().toISOString().split('T')[0],
+      summary: item.summary,
+      url: item.url || '',
+      images: item.images || []
+    });
+    setIsNewsModalOpen(true);
+  };
+
+  const handleDeleteNews = (id) => {
+    if (window.confirm('정말로 이 뉴스 항목을 삭제하시겠습니까?')) {
+      setPhNews((prev) => prev.filter((item) => item.id !== id));
+    }
+  };
+
+  const handleNewsImageFileUpload = (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    const currentCount = newsFormData.images.length;
+    if (currentCount + files.length > 10) {
+      alert(`이미지는 최대 10개까지 첨부할 수 있습니다. (현재: ${currentCount}개)`);
+      return;
+    }
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewsFormData((prev) => {
+          if (prev.images.length >= 10) return prev;
+          return {
+            ...prev,
+            images: [...prev.images, reader.result]
+          };
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+
+    e.target.value = '';
+  };
+
+  const handleRemoveNewsImage = (index) => {
+    setNewsFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, idx) => idx !== index)
+    }));
+  };
+
+  const handleSaveNews = (e) => {
+    e.preventDefault();
+    if (!newsFormData.title.trim() || !newsFormData.summary.trim()) {
+      alert('뉴스 제목과 요약 내용을 입력해 주세요.');
+      return;
+    }
+
+    if (editingNews) {
+      setPhNews((prev) =>
+        prev.map((item) => (item.id === editingNews.id ? { ...item, ...newsFormData } : item))
+      );
+    } else {
+      const newNews = {
+        id: `p_${Date.now()}`,
+        ...newsFormData
+      };
+      setPhNews((prev) => [newNews, ...prev]);
+    }
+
+    setIsNewsModalOpen(false);
+  };
+
+  // Travel Info CRUD state backed by localStorage
+  const [travelInfos, setTravelInfos] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cebugo_travel_info');
+      return saved ? JSON.parse(saved) : DEFAULT_TRAVEL_INFO;
+    } catch {
+      return DEFAULT_TRAVEL_INFO;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cebugo_travel_info', JSON.stringify(travelInfos));
+    } catch (err) {
+      console.error('Failed to save travel info to localStorage', err);
+    }
+  }, [travelInfos]);
+
+  // Info Modal / Form state
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [editingInfo, setEditingInfo] = useState(null);
+  const [infoFormData, setInfoFormData] = useState({
+    title: '',
+    badge: '여행팁',
+    desc: '',
+    images: []
+  });
+
+  const handleOpenCreateInfo = () => {
+    setEditingInfo(null);
+    setInfoFormData({
+      title: '',
       badge: '여행팁',
-      desc: '식당 및 마사지샵 이용 시 50~100 페소 정도의 매너 팁이 일반적입니다. 택시는 거스름돈을 팁으로 전달하기도 합니다.'
-    },
-    {
-      id: 'i3',
-      title: '전압 및 어댑터 사용 안내',
-      badge: '생활정보',
-      desc: '필리핀은 220V, 60Hz를 사용하며, 대부분 한국과 동일한 2구 플러그를 그대로 사용하실 수 있습니다.'
-    },
-    {
-      id: 'i4',
-      title: '세부 현지 대중교통 이용 팁 (그랩/트라이시클)',
-      badge: '교통정보',
-      desc: '그랩(Grab) 앱을 사전에 설치하면 이동 시 바가지 요금 없이 안전하게 정찰제로 이동하실 수 있습니다.'
-    }
-  ];
+      desc: '',
+      images: []
+    });
+    setIsInfoModalOpen(true);
+  };
 
-  const phNewsItems = [
-    {
-      id: 'p1',
-      title: '막탄-세부 국제공항(MCIA) 신규 스마트 입국 심사대 도입',
-      date: '2026-07-23',
-      category: '교통/입국',
-      summary: '막탄 공항 터미널2에 자동 입국 심사 게이트가 확충되어 한국인 관광객의 입국 대기 시간이 대폭 단축되었습니다.'
-    },
-    {
-      id: 'p2',
-      title: '세부 아얄라 몰 & IT파크 간 신규 스마트 셔틀 노선 개통',
-      date: '2026-07-20',
-      category: '현지소식',
-      summary: '주요 관광 및 비즈니스 거점을 잇는 프리미엄 스마트 버스가 운영을 시작하여 이동 편의성이 향상되었습니다.'
-    },
-    {
-      id: 'p3',
-      title: '필리핀 관광부, 2026년 하반기 외국인 방문객 케어 서비스 강화',
-      date: '2026-07-18',
-      category: '관광/행정',
-      summary: '관광 주요 지역의 안심 케어 센터 및 24시간 한국어 핫라인 서비스 운영이 더욱 활성화됩니다.'
+  const handleOpenEditInfo = (item) => {
+    setEditingInfo(item);
+    setInfoFormData({
+      title: item.title,
+      badge: item.badge || '여행팁',
+      desc: item.desc,
+      images: item.images || []
+    });
+    setIsInfoModalOpen(true);
+  };
+
+  const handleDeleteInfo = (id) => {
+    if (window.confirm('정말로 이 정보 항목을 삭제하시겠습니까?')) {
+      setTravelInfos((prev) => prev.filter((item) => item.id !== id));
     }
-  ];
+  };
+
+  const handleInfoImageFileUpload = (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    const currentCount = infoFormData.images.length;
+    if (currentCount + files.length > 10) {
+      alert(`이미지는 최대 10개까지 첨부할 수 있습니다. (현재: ${currentCount}개)`);
+      return;
+    }
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setInfoFormData((prev) => {
+          if (prev.images.length >= 10) return prev;
+          return {
+            ...prev,
+            images: [...prev.images, reader.result]
+          };
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+
+    e.target.value = '';
+  };
+
+  const handleRemoveInfoImage = (index) => {
+    setInfoFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, idx) => idx !== index)
+    }));
+  };
+
+  const handleSaveInfo = (e) => {
+    e.preventDefault();
+    if (!infoFormData.title.trim() || !infoFormData.desc.trim()) {
+      alert('제목과 상세 내용을 입력해 주세요.');
+      return;
+    }
+
+    if (editingInfo) {
+      setTravelInfos((prev) =>
+        prev.map((item) => (item.id === editingInfo.id ? { ...item, ...infoFormData } : item))
+      );
+    } else {
+      const newInfo = {
+        id: `i_${Date.now()}`,
+        ...infoFormData
+      };
+      setTravelInfos((prev) => [newInfo, ...prev]);
+    }
+
+    setIsInfoModalOpen(false);
+  };
+
+  // Contact Modal / Form state
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState(null);
+  const [contactFormData, setContactFormData] = useState({
+    category: '공관 / 영사',
+    name: '',
+    desc: '',
+    phones: [''],
+    emergency: '',
+    website: '',
+    facebook: '',
+    snsList: [{ type: 'kakao', value: '' }]
+  });
+
+  const handleOpenCreateContact = () => {
+    setEditingContact(null);
+    setContactFormData({
+      category: '공관 / 영사',
+      name: '',
+      desc: '',
+      phones: [''],
+      emergency: '',
+      website: '',
+      facebook: '',
+      snsList: [{ type: 'kakao', value: '' }]
+    });
+    setIsContactModalOpen(true);
+  };
+
+  const handleOpenEditContact = (item) => {
+    setEditingContact(item);
+    setContactFormData({
+      category: item.category || '공관 / 영사',
+      name: item.name || '',
+      desc: item.desc || '',
+      phones: item.phones && item.phones.length > 0 ? [...item.phones] : [item.phone || ''],
+      emergency: item.emergency || '',
+      website: item.website || '',
+      facebook: item.facebook || '',
+      snsList: item.snsList && item.snsList.length > 0 ? [...item.snsList] : [{ type: 'kakao', value: '' }]
+    });
+    setIsContactModalOpen(true);
+  };
+
+  const handleDeleteContact = (id) => {
+    if (window.confirm('정말로 이 연락처 항목을 삭제하시겠습니까?')) {
+      setContacts((prev) => prev.filter((item) => item.id !== id));
+    }
+  };
+
+  // Phone list handlers inside form
+  const handleAddPhoneField = () => {
+    setContactFormData((prev) => ({
+      ...prev,
+      phones: [...prev.phones, '']
+    }));
+  };
+
+  const handlePhoneChange = (index, value) => {
+    setContactFormData((prev) => {
+      const updated = [...prev.phones];
+      updated[index] = value;
+      return { ...prev, phones: updated };
+    });
+  };
+
+  const handleRemovePhoneField = (index) => {
+    setContactFormData((prev) => ({
+      ...prev,
+      phones: prev.phones.filter((_, idx) => idx !== index)
+    }));
+  };
+
+  // SNS list handlers inside form
+  const handleAddSnsField = () => {
+    setContactFormData((prev) => ({
+      ...prev,
+      snsList: [...prev.snsList, { type: 'kakao', value: '' }]
+    }));
+  };
+
+  const handleSnsChange = (index, field, value) => {
+    setContactFormData((prev) => {
+      const updated = [...prev.snsList];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, snsList: updated };
+    });
+  };
+
+  const handleRemoveSnsField = (index) => {
+    setContactFormData((prev) => ({
+      ...prev,
+      snsList: prev.snsList.filter((_, idx) => idx !== index)
+    }));
+  };
+
+  const handleSaveContact = (e) => {
+    e.preventDefault();
+    if (!contactFormData.name.trim()) {
+      alert('기관 및 연락처 이름을 입력해 주세요.');
+      return;
+    }
+
+    const cleanPhones = contactFormData.phones.map((p) => p.trim()).filter(Boolean);
+    const cleanSns = contactFormData.snsList.filter((s) => s.value.trim() !== '');
+
+    const contactToSave = {
+      ...contactFormData,
+      phones: cleanPhones.length > 0 ? cleanPhones : ['미등록'],
+      snsList: cleanSns
+    };
+
+    if (editingContact) {
+      setContacts((prev) =>
+        prev.map((item) => (item.id === editingContact.id ? { ...item, ...contactToSave } : item))
+      );
+    } else {
+      const newContact = {
+        id: `c_${Date.now()}`,
+        ...contactToSave
+      };
+      setContacts((prev) => [...prev, newContact]);
+    }
+
+    setIsContactModalOpen(false);
+  };
+
+  // Tag Manager Modal state
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false);
+  const [newTagInput, setNewTagInput] = useState('');
+  const [editingTagIndex, setEditingTagIndex] = useState(null);
+  const [editingTagValue, setEditingTagValue] = useState('');
+
+  const handleAddTag = () => {
+    const trimmed = newTagInput.trim();
+    if (!trimmed) return;
+    if (tags.includes(trimmed)) {
+      alert('이미 존재하는 구분 태그입니다.');
+      return;
+    }
+    setTags((prev) => [...prev, trimmed]);
+    setNewTagInput('');
+  };
+
+  const handleStartEditTag = (index, val) => {
+    setEditingTagIndex(index);
+    setEditingTagValue(val);
+  };
+
+  const handleSaveEditTag = (index) => {
+    const trimmed = editingTagValue.trim();
+    if (!trimmed) return;
+    if (tags.some((t, idx) => t === trimmed && idx !== index)) {
+      alert('이미 같은 이름의 구분 태그가 존재합니다.');
+      return;
+    }
+    const oldTag = tags[index];
+    setTags((prev) => prev.map((t, idx) => (idx === index ? trimmed : t)));
+    // Also update any notice using oldTag
+    setNotices((prev) => prev.map((n) => (n.badge === oldTag ? { ...n, badge: trimmed } : n)));
+    setEditingTagIndex(null);
+  };
+
+  const handleDeleteTag = (index) => {
+    const tagToDelete = tags[index];
+    if (tags.length <= 1) {
+      alert('최소 하나 이상의 구분 태그가 존재해야 합니다.');
+      return;
+    }
+    if (window.confirm(`'${tagToDelete}' 태그를 삭제하시겠습니까?`)) {
+      setTags((prev) => prev.filter((_, idx) => idx !== index));
+      // Re-assign default tag for affected notices
+      const fallbackTag = tags.find((_, idx) => idx !== index) || '일반공지';
+      setNotices((prev) => prev.map((n) => (n.badge === tagToDelete ? { ...n, badge: fallbackTag } : n)));
+    }
+  };
+
+  // Notice Modal / Form state
+  const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
+  const [editingNotice, setEditingNotice] = useState(null); // null for create, item for edit
+  const [noticeFormData, setNoticeFormData] = useState({
+    title: '',
+    badge: tags[0] || '중요공지',
+    date: new Date().toISOString().split('T')[0],
+    content: '',
+    images: []
+  });
+
+  const handleOpenCreateNotice = () => {
+    setEditingNotice(null);
+    setNoticeFormData({
+      title: '',
+      badge: tags[0] || '중요공지',
+      date: new Date().toISOString().split('T')[0],
+      content: '',
+      images: []
+    });
+    setIsNoticeModalOpen(true);
+  };
+
+  const handleOpenEditNotice = (item) => {
+    setEditingNotice(item);
+    setNoticeFormData({
+      title: item.title,
+      badge: item.badge || tags[0] || '중요공지',
+      date: item.date,
+      content: item.content,
+      images: item.images || []
+    });
+    setIsNoticeModalOpen(true);
+  };
+
+  const handleDeleteNotice = (id) => {
+    if (window.confirm('정말로 이 공지사항을 삭제하시겠습니까?')) {
+      setNotices((prev) => prev.filter((item) => item.id !== id));
+    }
+  };
+
+  const handleImageFileUpload = (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    const currentCount = noticeFormData.images.length;
+    if (currentCount + files.length > 10) {
+      alert(`이미지는 최대 10개까지 첨부할 수 있습니다. (현재: ${currentCount}개)`);
+      return;
+    }
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNoticeFormData((prev) => {
+          if (prev.images.length >= 10) return prev;
+          return {
+            ...prev,
+            images: [...prev.images, reader.result]
+          };
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+
+    e.target.value = '';
+  };
+
+  const handleRemoveImage = (index) => {
+    setNoticeFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, idx) => idx !== index)
+    }));
+  };
+
+  const handleSaveNotice = (e) => {
+    e.preventDefault();
+    if (!noticeFormData.title.trim() || !noticeFormData.content.trim()) {
+      alert('제목과 내용을 입력해 주세요.');
+      return;
+    }
+
+    if (editingNotice) {
+      // Edit existing
+      setNotices((prev) =>
+        prev.map((item) =>
+          item.id === editingNotice.id
+            ? { ...item, ...noticeFormData }
+            : item
+        )
+      );
+    } else {
+      // Create new
+      const newNotice = {
+        id: `n_${Date.now()}`,
+        ...noticeFormData
+      };
+      setNotices((prev) => [newNotice, ...prev]);
+    }
+
+    setIsNoticeModalOpen(false);
+  };
 
   return (
     <div className="page-content fade-in">
@@ -271,92 +917,972 @@ export default function DailyInfoPage() {
       {/* TAB 1: 공지 (Announcements) */}
       {activeTab === 'notice' && (
         <div className="tab-content-section fade-in">
+          {userProfile?.isAdmin && (
+            <div className="admin-notice-actions">
+              <button 
+                type="button" 
+                className="btn btn-secondary tag-manage-btn"
+                onClick={() => setIsTagModalOpen(true)}
+              >
+                <RiPriceTag3Line /> 구분 태그 관리
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-primary add-notice-btn"
+                onClick={handleOpenCreateNotice}
+              >
+                <RiAddLine /> 신규 공지사항 작성
+              </button>
+            </div>
+          )}
+
           <div className="news-list">
-            {noticeItems.map((item) => (
+            {notices.map((item) => (
               <div key={item.id} className="glass-card notice-item-card">
                 <div className="notice-header">
-                  <span className="notice-badge-tag">{item.badge}</span>
-                  <span className="news-date">{item.date}</span>
+                  <div className="notice-header-left">
+                    <span className="notice-badge-tag">{item.badge}</span>
+                    <span className="news-date">{item.date}</span>
+                  </div>
+                  {userProfile?.isAdmin && (
+                    <div className="admin-card-actions">
+                      <button 
+                        type="button" 
+                        className="btn-icon-action edit"
+                        onClick={() => handleOpenEditNotice(item)}
+                        title="공지 수정"
+                      >
+                        <RiEditLine /> 수정
+                      </button>
+                      <button 
+                        type="button" 
+                        className="btn-icon-action delete"
+                        onClick={() => handleDeleteNotice(item.id)}
+                        title="공지 삭제"
+                      >
+                        <RiDeleteBinLine /> 삭제
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <h3 className="notice-title-text">{item.title}</h3>
+
+                {/* Attached Images Carousel / Preview */}
+                {item.images && item.images.length > 0 && (
+                  <div className="notice-card-images" style={{ margin: '12px 0' }}>
+                    <ImageCarousel images={item.images} />
+                  </div>
+                )}
+
                 <p className="notice-content-text">{item.content}</p>
               </div>
             ))}
           </div>
+
+          {/* Admin Tag Manager Modal */}
+          {isTagModalOpen && (
+            <div className="modal-overlay fade-in" onClick={() => setIsTagModalOpen(false)}>
+              <div className="modal-content glass-card tag-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2><RiPriceTag3Line /> 공지사항 구분 태그 관리</h2>
+                  <button className="modal-close-btn" onClick={() => setIsTagModalOpen(false)}>
+                    <RiCloseLine />
+                  </button>
+                </div>
+
+                <div className="tag-manager-body">
+                  <div className="add-tag-row">
+                    <input
+                      type="text"
+                      placeholder="신규 태그명 입력 (예: 이벤트)"
+                      value={newTagInput}
+                      onChange={(e) => setNewTagInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+                      className="form-input"
+                    />
+                    <button type="button" className="btn btn-primary" onClick={handleAddTag}>
+                      <RiAddLine /> 추가
+                    </button>
+                  </div>
+
+                  <div className="tag-list-box">
+                    <span className="field-hint" style={{ marginBottom: '8px', display: 'block' }}>
+                      ※ 태그 이름을 클릭하거나 수정/삭제 버튼으로 태그를 관리할 수 있습니다.
+                    </span>
+                    {tags.map((tag, idx) => (
+                      <div key={idx} className="tag-list-item">
+                        {editingTagIndex === idx ? (
+                          <div className="tag-edit-inline">
+                            <input
+                              type="text"
+                              value={editingTagValue}
+                              onChange={(e) => setEditingTagValue(e.target.value)}
+                              className="form-input tag-edit-input"
+                            />
+                            <button type="button" className="btn-icon-action edit" onClick={() => handleSaveEditTag(idx)}>
+                              <RiCheckLine />
+                            </button>
+                            <button type="button" className="btn-icon-action" onClick={() => setEditingTagIndex(null)}>
+                              <RiCloseLine />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="tag-badge-display">
+                              <RiHashtag /> {tag}
+                            </span>
+                            <div className="tag-item-actions">
+                              <button type="button" className="btn-icon-action edit" onClick={() => handleStartEditTag(idx, tag)}>
+                                <RiEditLine /> 수정
+                              </button>
+                              <button type="button" className="btn-icon-action delete" onClick={() => handleDeleteTag(idx)}>
+                                <RiDeleteBinLine /> 삭제
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="modal-actions" style={{ marginTop: '16px' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setIsTagModalOpen(false)}>
+                    닫기
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Admin Notice Create / Edit Modal */}
+          {isNoticeModalOpen && (
+            <div className="modal-overlay fade-in" onClick={() => setIsNoticeModalOpen(false)}>
+              <div className="modal-content glass-card notice-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2>{editingNotice ? '공지사항 수정' : '신규 공지사항 작성'}</h2>
+                  <button className="modal-close-btn" onClick={() => setIsNoticeModalOpen(false)}>
+                    <RiCloseLine />
+                  </button>
+                </div>
+                <form onSubmit={handleSaveNotice} className="notice-form">
+                  <div className="form-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label className="form-label">구분 태그</label>
+                      <button
+                        type="button"
+                        style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                        onClick={() => setIsTagModalOpen(true)}
+                      >
+                        <RiPriceTag3Line /> 태그 관리
+                      </button>
+                    </div>
+                    <select
+                      value={noticeFormData.badge}
+                      onChange={(e) => setNoticeFormData({ ...noticeFormData, badge: e.target.value })}
+                      className="form-input"
+                    >
+                      {tags.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">작성일자</label>
+                    <input
+                      type="date"
+                      value={noticeFormData.date}
+                      onChange={(e) => setNoticeFormData({ ...noticeFormData, date: e.target.value })}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">공지 제목</label>
+                    <input
+                      type="text"
+                      placeholder="공지사항 제목을 입력하세요"
+                      value={noticeFormData.title}
+                      onChange={(e) => setNoticeFormData({ ...noticeFormData, title: e.target.value })}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">공지 상세 내용</label>
+                    <textarea
+                      rows="4"
+                      placeholder="상세 공지 내용을 입력하세요"
+                      value={noticeFormData.content}
+                      onChange={(e) => setNoticeFormData({ ...noticeFormData, content: e.target.value })}
+                      className="form-textarea"
+                      required
+                    />
+                  </div>
+
+                  {/* Image Attachment (Max 10) */}
+                  <div className="form-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label className="form-label">이미지 첨부 ({noticeFormData.images.length} / 10개)</label>
+                      <span className="field-hint">최대 10개 파일 첨부 가능</span>
+                    </div>
+
+                    <div className="image-upload-wrapper">
+                      {noticeFormData.images.length < 10 && (
+                        <label className="image-upload-dropzone">
+                          <RiImageAddLine className="upload-icon" />
+                          <span>이미지 추가</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleImageFileUpload}
+                            style={{ display: 'none' }}
+                          />
+                        </label>
+                      )}
+
+                      {noticeFormData.images.map((imgUrl, idx) => (
+                        <div key={idx} className="uploaded-img-preview">
+                          <img src={imgUrl} alt={`preview-${idx}`} />
+                          <button
+                            type="button"
+                            className="remove-img-btn"
+                            onClick={() => handleRemoveImage(idx)}
+                            title="이미지 삭제"
+                          >
+                            <RiCloseLine />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="modal-actions">
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary" 
+                      onClick={() => setIsNoticeModalOpen(false)}
+                    >
+                      취소
+                    </button>
+                    <button type="submit" className="btn btn-primary">
+                      <RiCheckLine /> {editingNotice ? '수정 완료' : '등록 하기'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* TAB 2: 연락처 (Emergency Directory) */}
       {activeTab === 'contacts' && (
         <div className="tab-content-section fade-in">
+          {userProfile?.isAdmin && (
+            <div className="admin-notice-actions">
+              <button 
+                type="button" 
+                className="btn btn-primary add-notice-btn"
+                onClick={handleOpenCreateContact}
+              >
+                <RiAddLine /> 신규 비상연락처 추가
+              </button>
+            </div>
+          )}
+
           <div className="contacts-grid">
-            {contactItems.map((item) => {
-              const IconComp = item.icon;
+            {contacts.map((item) => {
+              const IconComp = item.icon || RiPhoneFill;
+              const phonesList = item.phones && item.phones.length > 0 ? item.phones : (item.phone ? [item.phone] : []);
               return (
                 <div key={item.id} className="glass-card contact-card">
                   <div className="contact-top">
-                    <div className="icon-wrapper">
-                      <IconComp />
+                    <div className="contact-top-left">
+                      <div className="icon-wrapper">
+                        <IconComp />
+                      </div>
+                      <div>
+                        <span className="contact-cat-badge">{item.category}</span>
+                        <h3 className="contact-name">{item.name}</h3>
+                      </div>
                     </div>
-                    <div>
-                      <span className="contact-cat-badge">{item.category}</span>
-                      <h3 className="contact-name">{item.name}</h3>
-                    </div>
+
+                    {userProfile?.isAdmin && (
+                      <div className="admin-card-actions">
+                        <button 
+                          type="button" 
+                          className="btn-icon-action edit"
+                          onClick={() => handleOpenEditContact(item)}
+                          title="연락처 수정"
+                        >
+                          <RiEditLine /> 수정
+                        </button>
+                        <button 
+                          type="button" 
+                          className="btn-icon-action delete"
+                          onClick={() => handleDeleteContact(item.id)}
+                          title="연락처 삭제"
+                        >
+                          <RiDeleteBinLine /> 삭제
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <p className="contact-desc">{item.desc}</p>
 
-                  <div className="contact-action-row">
-                    <a href={`tel:${item.phone.replace(/[^0-9+]/g, '')}`} className="btn-call-action">
-                      <RiPhoneFill /> {item.phone}
-                    </a>
+                  {/* Multiple Call Buttons */}
+                  <div className="contact-phones-column">
+                    {phonesList.map((ph, pIdx) => (
+                      <a 
+                        key={pIdx}
+                        href={`tel:${ph.replace(/[^0-9+]/g, '')}`} 
+                        className="btn-call-action"
+                      >
+                        <RiPhoneFill /> {ph}
+                      </a>
+                    ))}
                   </div>
+
+                  {/* Emergency line */}
                   {item.emergency && (
                     <div className="contact-emergency-line">
                       <span>비상: {item.emergency}</span>
+                    </div>
+                  )}
+
+                  {/* Links Row: Website & Facebook & SNS */}
+                  {(item.website || item.facebook || (item.snsList && item.snsList.length > 0)) && (
+                    <div className="contact-links-row">
+                      {item.website && (
+                        <a href={item.website} target="_blank" rel="noopener noreferrer" className="contact-link-badge website">
+                          <RiGlobalLine /> 홈페이지
+                        </a>
+                      )}
+                      {item.facebook && (
+                        <a href={item.facebook} target="_blank" rel="noopener noreferrer" className="contact-link-badge facebook">
+                          페이스북
+                        </a>
+                      )}
+                      {item.snsList && item.snsList.map((sns, sIdx) => (
+                        <span key={sIdx} className="contact-link-badge sns">
+                          {sns.type === 'kakao' ? '카톡: ' : 'SNS: '}{sns.value}
+                        </span>
+                      ))}
                     </div>
                   )}
                 </div>
               );
             })}
           </div>
+
+          {/* Admin Contact Create / Edit Modal */}
+          {isContactModalOpen && (
+            <div className="modal-overlay fade-in" onClick={() => setIsContactModalOpen(false)}>
+              <div className="modal-content glass-card contact-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2>{editingContact ? '비상연락처 수정' : '신규 비상연락처 추가'}</h2>
+                  <button className="modal-close-btn" onClick={() => setIsContactModalOpen(false)}>
+                    <RiCloseLine />
+                  </button>
+                </div>
+                <form onSubmit={handleSaveContact} className="notice-form">
+                  <div className="form-group">
+                    <label className="form-label">구분 카테고리</label>
+                    <select
+                      value={contactFormData.category}
+                      onChange={(e) => setContactFormData({ ...contactFormData, category: e.target.value })}
+                      className="form-input"
+                    >
+                      <option value="공관 / 영사">공관 / 영사</option>
+                      <option value="영사콜센터">영사콜센터</option>
+                      <option value="한인회">한인회</option>
+                      <option value="긴급신고">긴급신고</option>
+                      <option value="공항 / 교통">공항 / 교통</option>
+                      <option value="의료 / 병원">의료 / 병원</option>
+                      <option value="투어 / 액티비티">투어 / 액티비티</option>
+                      <option value="기타 비상연락">기타 비상연락</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">기관 / 연락처 이름 *</label>
+                    <input
+                      type="text"
+                      placeholder="예: 세부 한국 영사관 분공관"
+                      value={contactFormData.name}
+                      onChange={(e) => setContactFormData({ ...contactFormData, name: e.target.value })}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">설명 / 위치</label>
+                    <input
+                      type="text"
+                      placeholder="예: 세부시티 아얄라 센트럴 블록 타워 12층"
+                      value={contactFormData.desc}
+                      onChange={(e) => setContactFormData({ ...contactFormData, desc: e.target.value })}
+                      className="form-input"
+                    />
+                  </div>
+
+                  {/* Multiple Phone Numbers Field */}
+                  <div className="form-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label className="form-label">전화번호 (여러 개 입력 가능)</label>
+                      <button
+                        type="button"
+                        className="btn-text-link"
+                        onClick={handleAddPhoneField}
+                      >
+                        + 전화번호 추가
+                      </button>
+                    </div>
+
+                    {contactFormData.phones.map((phoneVal, pIdx) => (
+                      <div key={pIdx} className="dynamic-input-row">
+                        <input
+                          type="text"
+                          placeholder="예: +63-32-340-9900"
+                          value={phoneVal}
+                          onChange={(e) => handlePhoneChange(pIdx, e.target.value)}
+                          className="form-input"
+                        />
+                        {contactFormData.phones.length > 1 && (
+                          <button
+                            type="button"
+                            className="btn-icon-action delete"
+                            onClick={() => handleRemovePhoneField(pIdx)}
+                          >
+                            <RiCloseLine />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">비상 / 긴급 연락처 (선택)</label>
+                    <input
+                      type="text"
+                      placeholder="예: +63-917-808-3904 (24시간 사건사고)"
+                      value={contactFormData.emergency}
+                      onChange={(e) => setContactFormData({ ...contactFormData, emergency: e.target.value })}
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">홈페이지 URL (선택)</label>
+                    <input
+                      type="url"
+                      placeholder="https://example.com"
+                      value={contactFormData.website}
+                      onChange={(e) => setContactFormData({ ...contactFormData, website: e.target.value })}
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">페이스북 URL (선택)</label>
+                    <input
+                      type="url"
+                      placeholder="https://facebook.com/page"
+                      value={contactFormData.facebook}
+                      onChange={(e) => setContactFormData({ ...contactFormData, facebook: e.target.value })}
+                      className="form-input"
+                    />
+                  </div>
+
+                  {/* Multiple SNS Field */}
+                  <div className="form-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label className="form-label">SNS 아이디 (카카오/라인 등 여러 개 가능)</label>
+                      <button
+                        type="button"
+                        className="btn-text-link"
+                        onClick={handleAddSnsField}
+                      >
+                        + SNS 추가
+                      </button>
+                    </div>
+
+                    {contactFormData.snsList.map((snsObj, sIdx) => (
+                      <div key={sIdx} className="dynamic-input-row">
+                        <select
+                          value={snsObj.type}
+                          onChange={(e) => handleSnsChange(sIdx, 'type', e.target.value)}
+                          className="form-input"
+                          style={{ width: '110px' }}
+                        >
+                          <option value="kakao">카카오톡</option>
+                          <option value="line">라인</option>
+                          <option value="insta">인스타그램</option>
+                          <option value="other">기타</option>
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="아이디 또는 핸들 입력"
+                          value={snsObj.value}
+                          onChange={(e) => handleSnsChange(sIdx, 'value', e.target.value)}
+                          className="form-input"
+                          style={{ flex: 1 }}
+                        />
+                        {contactFormData.snsList.length > 1 && (
+                          <button
+                            type="button"
+                            className="btn-icon-action delete"
+                            onClick={() => handleRemoveSnsField(sIdx)}
+                          >
+                            <RiCloseLine />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="modal-actions">
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary" 
+                      onClick={() => setIsContactModalOpen(false)}
+                    >
+                      취소
+                    </button>
+                    <button type="submit" className="btn btn-primary">
+                      <RiCheckLine /> {editingContact ? '수정 완료' : '등록 하기'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* TAB 3: 정보 (Travel & Living Info) */}
       {activeTab === 'info' && (
         <div className="tab-content-section fade-in">
+          {userProfile?.isAdmin && (
+            <div className="admin-notice-actions">
+              <button 
+                type="button" 
+                className="btn btn-primary add-notice-btn"
+                onClick={handleOpenCreateInfo}
+              >
+                <RiAddLine /> 신규 정보 작성
+              </button>
+            </div>
+          )}
+
           <div className="news-list">
-            {infoItems.map((item) => (
+            {travelInfos.map((item) => (
               <div key={item.id} className="glass-card notice-item-card">
                 <div className="notice-header">
-                  <span className="notice-badge-tag" style={{ background: '#e0f2fe', color: '#0369a1', borderColor: 'rgba(3, 105, 161, 0.2)' }}>
-                    {item.badge}
-                  </span>
+                  <div className="notice-header-left">
+                    <span className="notice-badge-tag" style={{ background: '#e0f2fe', color: '#0369a1', borderColor: 'rgba(3, 105, 161, 0.2)' }}>
+                      {item.badge}
+                    </span>
+                  </div>
+                  {userProfile?.isAdmin && (
+                    <div className="admin-card-actions">
+                      <button 
+                        type="button" 
+                        className="btn-icon-action edit"
+                        onClick={() => handleOpenEditInfo(item)}
+                        title="정보 수정"
+                      >
+                        <RiEditLine /> 수정
+                      </button>
+                      <button 
+                        type="button" 
+                        className="btn-icon-action delete"
+                        onClick={() => handleDeleteInfo(item.id)}
+                        title="정보 삭제"
+                      >
+                        <RiDeleteBinLine /> 삭제
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <h3 className="notice-title-text">{item.title}</h3>
+
+                {/* Attached Images Carousel / Preview */}
+                {item.images && item.images.length > 0 && (
+                  <div className="notice-card-images" style={{ margin: '12px 0' }}>
+                    <ImageCarousel images={item.images} />
+                  </div>
+                )}
+
                 <p className="notice-content-text">{item.desc}</p>
               </div>
             ))}
           </div>
+
+          {/* Admin Info Create / Edit Modal */}
+          {isInfoModalOpen && (
+            <div className="modal-overlay fade-in" onClick={() => setIsInfoModalOpen(false)}>
+              <div className="modal-content glass-card notice-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2>{editingInfo ? '여행/생활 정보 수정' : '신규 여행/생활 정보 작성'}</h2>
+                  <button className="modal-close-btn" onClick={() => setIsInfoModalOpen(false)}>
+                    <RiCloseLine />
+                  </button>
+                </div>
+                <form onSubmit={handleSaveInfo} className="notice-form">
+                  <div className="form-group">
+                    <label className="form-label">구분 태그</label>
+                    <input
+                      type="text"
+                      placeholder="예: 여행팁, 면세/입국, 생활정보, 교통정보"
+                      value={infoFormData.badge}
+                      onChange={(e) => setInfoFormData({ ...infoFormData, badge: e.target.value })}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">정보 제목 *</label>
+                    <input
+                      type="text"
+                      placeholder="정보 제목을 입력하세요"
+                      value={infoFormData.title}
+                      onChange={(e) => setInfoFormData({ ...infoFormData, title: e.target.value })}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">정보 상세 내용 *</label>
+                    <textarea
+                      rows="5"
+                      placeholder="상세 정보를 입력하세요"
+                      value={infoFormData.desc}
+                      onChange={(e) => setInfoFormData({ ...infoFormData, desc: e.target.value })}
+                      className="form-textarea"
+                      required
+                    />
+                  </div>
+
+                  {/* Image Attachment (Max 10) */}
+                  <div className="form-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label className="form-label">이미지 첨부 ({infoFormData.images.length} / 10개)</label>
+                      <span className="field-hint">최대 10개 파일 첨부 가능</span>
+                    </div>
+
+                    <div className="image-upload-wrapper">
+                      {infoFormData.images.length < 10 && (
+                        <label className="image-upload-dropzone">
+                          <RiImageAddLine className="upload-icon" />
+                          <span>이미지 추가</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleInfoImageFileUpload}
+                            style={{ display: 'none' }}
+                          />
+                        </label>
+                      )}
+
+                      {infoFormData.images.map((imgUrl, idx) => (
+                        <div key={idx} className="uploaded-img-preview">
+                          <img src={imgUrl} alt={`preview-${idx}`} />
+                          <button
+                            type="button"
+                            className="remove-img-btn"
+                            onClick={() => handleRemoveInfoImage(idx)}
+                            title="이미지 삭제"
+                          >
+                            <RiCloseLine />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="modal-actions">
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary" 
+                      onClick={() => setIsInfoModalOpen(false)}
+                    >
+                      취소
+                    </button>
+                    <button type="submit" className="btn btn-primary">
+                      <RiCheckLine /> {editingInfo ? '수정 완료' : '등록 하기'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* TAB 4: 필리핀뉴스 (PH News) */}
       {activeTab === 'phnews' && (
         <div className="tab-content-section fade-in">
-          <div className="news-list">
-            {phNewsItems.map((item) => (
-              <div key={item.id} className="glass-card news-card fade-in">
-                <div className="news-top">
-                  <span className="news-cat">{item.category}</span>
-                  <span className="news-date">{item.date}</span>
-                </div>
-                <h3 className="news-title">{item.title}</h3>
-                <p className="news-summary">{item.summary}</p>
-              </div>
-            ))}
+          <div className="news-filter-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+            <div className="news-cat-pills">
+              <button
+                type="button"
+                className={`pill-btn ${newsCategoryFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setNewsCategoryFilter('all')}
+              >
+                전체 소식 ({phNews.length})
+              </button>
+              <button
+                type="button"
+                className={`pill-btn ${newsCategoryFilter === 'cebu' ? 'active' : ''}`}
+                onClick={() => setNewsCategoryFilter('cebu')}
+              >
+                🏝️ 세부 소식 ({phNews.filter((n) => n.category.includes('세부')).length})
+              </button>
+              <button
+                type="button"
+                className={`pill-btn ${newsCategoryFilter === 'ph' ? 'active' : ''}`}
+                onClick={() => setNewsCategoryFilter('ph')}
+              >
+                🇵🇭 필리핀 이슈 ({phNews.filter((n) => n.category.includes('필리핀')).length})
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                className={`btn btn-secondary ${isFetchingNews ? 'rotating' : ''}`}
+                onClick={handleRefreshGoogleNews}
+                disabled={isFetchingNews}
+                style={{ fontSize: '0.8rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                title="구글 실시간 뉴스 수집"
+              >
+                <RiRefreshLine /> {isFetchingNews ? '뉴스 수집 중...' : '구글 뉴스 새로고침'}
+              </button>
+
+              {userProfile?.isAdmin && (
+                <button 
+                  type="button" 
+                  className="btn btn-primary add-notice-btn"
+                  onClick={handleOpenCreateNews}
+                >
+                  <RiAddLine /> 신규 뉴스 작성
+                </button>
+              )}
+            </div>
           </div>
+
+          {lastNewsRefreshedAt && (
+            <div className="field-hint" style={{ marginBottom: '10px', textAlign: 'right', fontSize: '0.75rem', color: '#64748b' }}>
+              ※ 구글 뉴스 수집 완료 ({lastNewsRefreshedAt} 기준)
+            </div>
+          )}
+
+          <div className="news-list">
+            {phNews
+              .filter((item) => {
+                if (newsCategoryFilter === 'cebu') return item.category.includes('세부');
+                if (newsCategoryFilter === 'ph') return item.category.includes('필리핀');
+                return true;
+              })
+              .map((item) => (
+                <div key={item.id} className="glass-card news-card fade-in">
+                  <div className="news-top">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="news-cat">{item.category}</span>
+                      <span className="news-date">{item.date}</span>
+                    </div>
+
+                    {userProfile?.isAdmin && (
+                      <div className="admin-card-actions">
+                        <button 
+                          type="button" 
+                          className="btn-icon-action edit"
+                          onClick={() => handleOpenEditNews(item)}
+                          title="뉴스 수정"
+                        >
+                          <RiEditLine /> 수정
+                        </button>
+                        <button 
+                          type="button" 
+                          className="btn-icon-action delete"
+                          onClick={() => handleDeleteNews(item.id)}
+                          title="뉴스 삭제"
+                        >
+                          <RiDeleteBinLine /> 삭제
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <h3 className="news-title">{item.title}</h3>
+
+                  {/* Attached Images Carousel */}
+                  {item.images && item.images.length > 0 && (
+                    <div className="notice-card-images" style={{ margin: '10px 0' }}>
+                      <ImageCarousel images={item.images} />
+                    </div>
+                  )}
+
+                  <p className="news-summary">{item.summary}</p>
+
+                  {item.url && (
+                    <div className="news-url-row" style={{ marginTop: '10px', textAlign: 'right' }}>
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-text-link"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.82rem', fontWeight: 700 }}
+                      >
+                        <RiGlobalLine /> 원문 뉴스 바로가기 ↗
+                      </a>
+                    </div>
+                  )}
+                </div>
+              ))}
+          </div>
+
+          {/* Admin PH News Create / Edit Modal */}
+          {isNewsModalOpen && (
+            <div className="modal-overlay fade-in" onClick={() => setIsNewsModalOpen(false)}>
+              <div className="modal-content glass-card notice-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2>{editingNews ? '필리핀/세부 뉴스 수정' : '신규 필리핀/세부 뉴스 작성'}</h2>
+                  <button className="modal-close-btn" onClick={() => setIsNewsModalOpen(false)}>
+                    <RiCloseLine />
+                  </button>
+                </div>
+                <form onSubmit={handleSaveNews} className="notice-form">
+                  <div className="form-group">
+                    <label className="form-label">구분 카테고리</label>
+                    <select
+                      value={newsFormData.category}
+                      onChange={(e) => setNewsFormData({ ...newsFormData, category: e.target.value })}
+                      className="form-input"
+                    >
+                      <option value="세부소식 / 현지">세부소식 / 현지</option>
+                      <option value="세부소식 / 입국">세부소식 / 입국</option>
+                      <option value="세부소식 / 교통">세부소식 / 교통</option>
+                      <option value="세부소식 / 관광">세부소식 / 관광</option>
+                      <option value="필리핀 이슈 / 사회">필리핀 이슈 / 사회</option>
+                      <option value="필리핀 이슈 / 경제">필리핀 이슈 / 경제</option>
+                      <option value="필리핀 이슈 / 기상통제">필리핀 이슈 / 기상통제</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">보도일자 *</label>
+                    <input
+                      type="date"
+                      value={newsFormData.date}
+                      onChange={(e) => setNewsFormData({ ...newsFormData, date: e.target.value })}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">뉴스 제목 *</label>
+                    <input
+                      type="text"
+                      placeholder="뉴스 헤드라인 제목을 입력하세요"
+                      value={newsFormData.title}
+                      onChange={(e) => setNewsFormData({ ...newsFormData, title: e.target.value })}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">뉴스 요약 내용 *</label>
+                    <textarea
+                      rows="4"
+                      placeholder="뉴스 주요 요약 내용을 입력하세요"
+                      value={newsFormData.summary}
+                      onChange={(e) => setNewsFormData({ ...newsFormData, summary: e.target.value })}
+                      className="form-textarea"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">뉴스 기사 원문 링크 (선택)</label>
+                    <input
+                      type="url"
+                      placeholder="https://news.google.com/..."
+                      value={newsFormData.url}
+                      onChange={(e) => setNewsFormData({ ...newsFormData, url: e.target.value })}
+                      className="form-input"
+                    />
+                  </div>
+
+                  {/* Image Attachment (Max 10) */}
+                  <div className="form-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label className="form-label">이미지 첨부 ({newsFormData.images.length} / 10개)</label>
+                      <span className="field-hint">최대 10개 파일 첨부 가능</span>
+                    </div>
+
+                    <div className="image-upload-wrapper">
+                      {newsFormData.images.length < 10 && (
+                        <label className="image-upload-dropzone">
+                          <RiImageAddLine className="upload-icon" />
+                          <span>이미지 추가</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleNewsImageFileUpload}
+                            style={{ display: 'none' }}
+                          />
+                        </label>
+                      )}
+
+                      {newsFormData.images.map((imgUrl, idx) => (
+                        <div key={idx} className="uploaded-img-preview">
+                          <img src={imgUrl} alt={`preview-${idx}`} />
+                          <button
+                            type="button"
+                            className="remove-img-btn"
+                            onClick={() => handleRemoveNewsImage(idx)}
+                            title="이미지 삭제"
+                          >
+                            <RiCloseLine />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="modal-actions">
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary" 
+                      onClick={() => setIsNewsModalOpen(false)}
+                    >
+                      취소
+                    </button>
+                    <button type="submit" className="btn btn-primary">
+                      <RiCheckLine /> {editingNews ? '수정 완료' : '등록 하기'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
