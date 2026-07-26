@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import ImageCarousel from '../components/places/ImageCarousel';
 import { fetchGoogleNews } from '../services/googleNewsService';
+import { fetchExchangeRates } from '../services/exchangeRateService';
 import { 
   RiExchangeDollarLine, 
   RiNewspaperLine, 
@@ -218,30 +219,47 @@ export default function DailyInfoPage() {
   const { userProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('notice'); // notice, contacts, info, phnews, exchange
 
-  // Exchange rates against USD (Base 1 USD = 1,385 KRW = 58.2 PHP)
-  const USD_TO_KRW = 1385;
-  const USD_TO_PHP = 58.2;
-  const PHP_TO_KRW = USD_TO_KRW / USD_TO_PHP;
-
   const [activeCurrency, setActiveCurrency] = useState('USD');
   const [usdVal, setUsdVal] = useState('1');
-  const [phpVal, setPhpVal] = useState('58.2');
-  const [krwVal, setKrwVal] = useState('1385');
+  const [phpVal, setPhpVal] = useState('58.20');
+  const [krwVal, setKrwVal] = useState('1,385');
+  const [exchangeRates, setExchangeRates] = useState({
+    usdToKrw: 1385,
+    usdToPhp: 58.2,
+    phpToKrw: 1385 / 58.2,
+    lastUpdatedText: '환율 정보 로딩 중...',
+    isFallback: false
+  });
+  const [isFetchingRates, setIsFetchingRates] = useState(false);
+
+  const loadExchangeRates = async () => {
+    setIsFetchingRates(true);
+    const ratesData = await fetchExchangeRates();
+    setExchangeRates(ratesData);
+    setPhpVal((1 * ratesData.usdToPhp).toFixed(2));
+    setKrwVal(Math.round(1 * ratesData.usdToKrw).toString());
+    setIsFetchingRates(false);
+  };
+
+  useEffect(() => {
+    loadExchangeRates();
+  }, []);
 
   const handleSelectCurrency = (cur) => {
     setActiveCurrency(cur);
+    const { usdToKrw, usdToPhp, phpToKrw } = exchangeRates;
     if (cur === 'USD') {
       setUsdVal('1');
-      setPhpVal(USD_TO_PHP.toFixed(2));
-      setKrwVal(USD_TO_KRW.toString());
+      setPhpVal(usdToPhp.toFixed(2));
+      setKrwVal(Math.round(usdToKrw).toString());
     } else if (cur === 'PHP') {
       setPhpVal('1');
-      setUsdVal((1 / USD_TO_PHP).toFixed(4));
-      setKrwVal(PHP_TO_KRW.toFixed(2));
+      setUsdVal((1 / usdToPhp).toFixed(4));
+      setKrwVal(phpToKrw.toFixed(2));
     } else if (cur === 'KRW') {
       setKrwVal('1');
-      setUsdVal((1 / USD_TO_KRW).toFixed(4));
-      setPhpVal((1 / PHP_TO_KRW).toFixed(4));
+      setUsdVal((1 / usdToKrw).toFixed(4));
+      setPhpVal((1 / phpToKrw).toFixed(4));
     }
   };
 
@@ -250,8 +268,8 @@ export default function DailyInfoPage() {
     setActiveCurrency('USD');
     setUsdVal(clean);
     const num = parseFloat(clean) || 0;
-    setPhpVal((num * USD_TO_PHP).toFixed(2));
-    setKrwVal(Math.round(num * USD_TO_KRW).toString());
+    setPhpVal((num * exchangeRates.usdToPhp).toFixed(2));
+    setKrwVal(Math.round(num * exchangeRates.usdToKrw).toString());
   };
 
   const handlePhpChange = (valStr) => {
@@ -259,8 +277,8 @@ export default function DailyInfoPage() {
     setActiveCurrency('PHP');
     setPhpVal(clean);
     const num = parseFloat(clean) || 0;
-    setUsdVal((num / USD_TO_PHP).toFixed(4));
-    setKrwVal(Math.round(num * PHP_TO_KRW).toString());
+    setUsdVal((num / exchangeRates.usdToPhp).toFixed(4));
+    setKrwVal(Math.round(num * exchangeRates.phpToKrw).toString());
   };
 
   const handleKrwChange = (valStr) => {
@@ -268,8 +286,8 @@ export default function DailyInfoPage() {
     setActiveCurrency('KRW');
     setKrwVal(clean);
     const num = parseFloat(clean) || 0;
-    setUsdVal((num / USD_TO_KRW).toFixed(4));
-    setPhpVal((num / PHP_TO_KRW).toFixed(2));
+    setUsdVal((num / exchangeRates.usdToKrw).toFixed(4));
+    setPhpVal((num / exchangeRates.phpToKrw).toFixed(2));
   };
 
   // Tags state backed by localStorage
@@ -1890,9 +1908,40 @@ export default function DailyInfoPage() {
       {activeTab === 'exchange' && (
         <div className="tab-content-section fade-in">
           <div className="glass-card exchange-card">
-            <div className="announcement-banner">
-              <RiCalendarCheckLine className="notice-icon" />
-              <span>2026년 7월 24일 09시 00분 기준 실시간 교차 환율</span>
+            <div 
+              className="announcement-banner" 
+              style={{ 
+                justifyContent: 'space-between', 
+                display: 'flex', 
+                alignItems: 'center',
+                backgroundColor: exchangeRates.hasError ? 'rgba(239, 68, 68, 0.1)' : undefined,
+                borderColor: exchangeRates.hasError ? 'rgba(239, 68, 68, 0.3)' : undefined,
+                color: exchangeRates.hasError ? '#dc2626' : undefined
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <RiCalendarCheckLine className="notice-icon" />
+                <span>{exchangeRates.lastUpdatedText}</span>
+              </div>
+              <button 
+                onClick={loadExchangeRates} 
+                disabled={isFetchingRates}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'inherit',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.85rem',
+                  opacity: isFetchingRates ? 0.6 : 1
+                }}
+                title="환율 정보 새로고침"
+              >
+                <RiRefreshLine style={{ animation: isFetchingRates ? 'spin 1s linear infinite' : 'none' }} />
+                새로고침
+              </button>
             </div>
 
             <div className="card-title-row" style={{ marginTop: '12px' }}>
@@ -1972,9 +2021,9 @@ export default function DailyInfoPage() {
 
             {/* Exchange Rate Summary Footer */}
             <div className="rate-summary-table" style={{ marginTop: '16px' }}>
-              <div className="summary-col">1 USD = <strong>1,385.00 원</strong></div>
-              <div className="summary-col">1 USD = <strong>58.20 PHP</strong></div>
-              <div className="summary-col">1 PHP = <strong>23.80 원</strong></div>
+              <div className="summary-col">1 USD = <strong>{formatNumberWithCommas(exchangeRates.usdToKrw.toFixed(2))} 원</strong></div>
+              <div className="summary-col">1 USD = <strong>{exchangeRates.usdToPhp.toFixed(2)} PHP</strong></div>
+              <div className="summary-col">1 PHP = <strong>{exchangeRates.phpToKrw.toFixed(2)} 원</strong></div>
             </div>
           </div>
         </div>
