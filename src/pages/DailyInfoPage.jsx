@@ -264,23 +264,24 @@ export default function DailyInfoPage() {
     setPhpVal((num / exchangeRates.phpToKrw).toFixed(2));
   };
 
-  // Tags state backed by localStorage
-  const [tags, setTags] = useState(() => {
-    try {
-      const saved = localStorage.getItem('cebugo_notice_tags');
-      return saved ? JSON.parse(saved) : DEFAULT_TAGS;
-    } catch {
-      return DEFAULT_TAGS;
-    }
-  });
+  // Tags state backed by Firebase Firestore
+  const [tags, setTags] = useState(DEFAULT_TAGS);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('cebugo_notice_tags', JSON.stringify(tags));
-    } catch (err) {
-      console.error('Failed to save tags to localStorage', err);
-    }
-  }, [tags]);
+    const unsub = onSnapshot(
+      doc(db, 'cebugo_config', 'notice_tags'),
+      (docSnap) => {
+        if (docSnap.exists() && docSnap.data()?.tags) {
+          setTags(docSnap.data().tags);
+        } else {
+          setDoc(doc(db, 'cebugo_config', 'notice_tags'), { tags: DEFAULT_TAGS });
+          setTags(DEFAULT_TAGS);
+        }
+      },
+      (err) => console.error('Firestore tags sync error:', err)
+    );
+    return () => unsub();
+  }, []);
 
   // Notice CRUD state backed by Firebase Firestore
   const [notices, setNotices] = useState(DEFAULT_NOTICES);
@@ -291,13 +292,13 @@ export default function DailyInfoPage() {
       (snapshot) => {
         if (!snapshot.empty) {
           const list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-          list.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+          list.sort((a, b) => (a.order !== undefined ? a.order : 0) - (b.order !== undefined ? b.order : 0));
           setNotices(list);
         } else {
-          DEFAULT_NOTICES.forEach(async (n) => {
-            await setDoc(doc(db, 'cebugo_notices', n.id), n);
+          DEFAULT_NOTICES.forEach(async (n, idx) => {
+            await setDoc(doc(db, 'cebugo_notices', n.id), { ...n, order: idx });
           });
-          setNotices(DEFAULT_NOTICES);
+          setNotices(DEFAULT_NOTICES.map((n, idx) => ({ ...n, order: idx })));
         }
       },
       (err) => console.error('Firestore notices sync error:', err)
@@ -523,12 +524,13 @@ export default function DailyInfoPage() {
       (snapshot) => {
         if (!snapshot.empty) {
           const list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+          list.sort((a, b) => (a.order !== undefined ? a.order : 0) - (b.order !== undefined ? b.order : 0));
           setTravelInfos(list);
         } else {
-          DEFAULT_TRAVEL_INFO.forEach(async (t) => {
-            await setDoc(doc(db, 'cebugo_travel_info', t.id), t);
+          DEFAULT_TRAVEL_INFO.forEach(async (t, idx) => {
+            await setDoc(doc(db, 'cebugo_travel_info', t.id), { ...t, order: idx });
           });
-          setTravelInfos(DEFAULT_TRAVEL_INFO);
+          setTravelInfos(DEFAULT_TRAVEL_INFO.map((t, idx) => ({ ...t, order: idx })));
         }
       },
       (err) => console.error('Firestore travel_info sync error:', err)
@@ -823,6 +825,124 @@ export default function DailyInfoPage() {
     }
   };
 
+  // Notice Reordering Handlers
+  const handleMoveNotice = async (index, direction) => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= notices.length) return;
+
+    const newList = [...notices];
+    const temp = newList[index];
+    newList[index] = newList[targetIndex];
+    newList[targetIndex] = temp;
+
+    const updatedList = newList.map((item, idx) => ({ ...item, order: idx }));
+    setNotices(updatedList);
+
+    try {
+      const batch = writeBatch(db);
+      updatedList.forEach((item) => {
+        batch.set(doc(db, 'cebugo_notices', item.id), item, { merge: true });
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error('Failed to update notice order in Firestore:', err);
+    }
+  };
+
+  const [isNoticeReorderModalOpen, setIsNoticeReorderModalOpen] = useState(false);
+  const [tempReorderNotices, setTempReorderNotices] = useState([]);
+
+  const handleOpenNoticeReorderModal = () => {
+    setTempReorderNotices([...notices]);
+    setIsNoticeReorderModalOpen(true);
+  };
+
+  const handleMoveTempNotice = (index, direction) => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= tempReorderNotices.length) return;
+
+    const updated = [...tempReorderNotices];
+    const temp = updated[index];
+    updated[index] = updated[targetIndex];
+    updated[targetIndex] = temp;
+    setTempReorderNotices(updated);
+  };
+
+  const handleSaveNoticeReorder = async () => {
+    const updatedList = tempReorderNotices.map((item, idx) => ({ ...item, order: idx }));
+    setNotices(updatedList);
+    setIsNoticeReorderModalOpen(false);
+
+    try {
+      const batch = writeBatch(db);
+      updatedList.forEach((item) => {
+        batch.set(doc(db, 'cebugo_notices', item.id), item, { merge: true });
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error('Failed to save reordered notices to Firestore:', err);
+    }
+  };
+
+  // Travel Info Reordering Handlers
+  const handleMoveInfo = async (index, direction) => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= travelInfos.length) return;
+
+    const newList = [...travelInfos];
+    const temp = newList[index];
+    newList[index] = newList[targetIndex];
+    newList[targetIndex] = temp;
+
+    const updatedList = newList.map((item, idx) => ({ ...item, order: idx }));
+    setTravelInfos(updatedList);
+
+    try {
+      const batch = writeBatch(db);
+      updatedList.forEach((item) => {
+        batch.set(doc(db, 'cebugo_travel_info', item.id), item, { merge: true });
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error('Failed to update travel info order in Firestore:', err);
+    }
+  };
+
+  const [isInfoReorderModalOpen, setIsInfoReorderModalOpen] = useState(false);
+  const [tempReorderInfos, setTempReorderInfos] = useState([]);
+
+  const handleOpenInfoReorderModal = () => {
+    setTempReorderInfos([...travelInfos]);
+    setIsInfoReorderModalOpen(true);
+  };
+
+  const handleMoveTempInfo = (index, direction) => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= tempReorderInfos.length) return;
+
+    const updated = [...tempReorderInfos];
+    const temp = updated[index];
+    updated[index] = updated[targetIndex];
+    updated[targetIndex] = temp;
+    setTempReorderInfos(updated);
+  };
+
+  const handleSaveInfoReorder = async () => {
+    const updatedList = tempReorderInfos.map((item, idx) => ({ ...item, order: idx }));
+    setTravelInfos(updatedList);
+    setIsInfoReorderModalOpen(false);
+
+    try {
+      const batch = writeBatch(db);
+      updatedList.forEach((item) => {
+        batch.set(doc(db, 'cebugo_travel_info', item.id), item, { merge: true });
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error('Failed to save reordered travel info to Firestore:', err);
+    }
+  };
+
   // Phone list handlers inside form
   const handleAddPhoneField = () => {
     setContactFormData((prev) => ({
@@ -918,15 +1038,21 @@ export default function DailyInfoPage() {
   const [editingTagIndex, setEditingTagIndex] = useState(null);
   const [editingTagValue, setEditingTagValue] = useState('');
 
-  const handleAddTag = () => {
+  const handleAddTag = async () => {
     const trimmed = newTagInput.trim();
     if (!trimmed) return;
     if (tags.includes(trimmed)) {
       alert('이미 존재하는 구분 태그입니다.');
       return;
     }
-    setTags((prev) => [...prev, trimmed]);
+    const newTags = [...tags, trimmed];
+    setTags(newTags);
     setNewTagInput('');
+    try {
+      await setDoc(doc(db, 'cebugo_config', 'notice_tags'), { tags: newTags });
+    } catch (err) {
+      console.error('Failed to save tag to Firestore:', err);
+    }
   };
 
   const handleStartEditTag = (index, val) => {
@@ -934,31 +1060,37 @@ export default function DailyInfoPage() {
     setEditingTagValue(val);
   };
 
-  const handleSaveEditTag = (index) => {
+  const handleSaveEditTag = async (index) => {
     const trimmed = editingTagValue.trim();
     if (!trimmed) return;
     if (tags.some((t, idx) => t === trimmed && idx !== index)) {
       alert('이미 같은 이름의 구분 태그가 존재합니다.');
       return;
     }
-    const oldTag = tags[index];
-    setTags((prev) => prev.map((t, idx) => (idx === index ? trimmed : t)));
-    // Also update any notice using oldTag
-    setNotices((prev) => prev.map((n) => (n.badge === oldTag ? { ...n, badge: trimmed } : n)));
+    const newTags = tags.map((t, idx) => (idx === index ? trimmed : t));
+    setTags(newTags);
+    try {
+      await setDoc(doc(db, 'cebugo_config', 'notice_tags'), { tags: newTags });
+    } catch (err) {
+      console.error('Failed to save edited tag to Firestore:', err);
+    }
     setEditingTagIndex(null);
   };
 
-  const handleDeleteTag = (index) => {
+  const handleDeleteTag = async (index) => {
     const tagToDelete = tags[index];
     if (tags.length <= 1) {
       alert('최소 하나 이상의 구분 태그가 존재해야 합니다.');
       return;
     }
     if (window.confirm(`'${tagToDelete}' 태그를 삭제하시겠습니까?`)) {
-      setTags((prev) => prev.filter((_, idx) => idx !== index));
-      // Re-assign default tag for affected notices
-      const fallbackTag = tags.find((_, idx) => idx !== index) || '일반공지';
-      setNotices((prev) => prev.map((n) => (n.badge === tagToDelete ? { ...n, badge: fallbackTag } : n)));
+      const newTags = tags.filter((_, idx) => idx !== index);
+      setTags(newTags);
+      try {
+        await setDoc(doc(db, 'cebugo_config', 'notice_tags'), { tags: newTags });
+      } catch (err) {
+        console.error('Failed to delete tag from Firestore:', err);
+      }
     }
   };
 
@@ -1127,6 +1259,13 @@ export default function DailyInfoPage() {
             <div className="admin-notice-actions">
               <button 
                 type="button" 
+                className="btn btn-secondary add-notice-btn"
+                onClick={handleOpenNoticeReorderModal}
+              >
+                <RiDragMove2Line /> 순서 변경
+              </button>
+              <button 
+                type="button" 
                 className="btn btn-secondary tag-manage-btn"
                 onClick={() => setIsTagModalOpen(true)}
               >
@@ -1143,7 +1282,7 @@ export default function DailyInfoPage() {
           )}
 
           <div className="news-list">
-            {notices.map((item) => (
+            {notices.map((item, index) => (
               <div key={item.id} className="glass-card notice-item-card">
                 <div className="notice-header">
                   <div className="notice-header-left">
@@ -1152,6 +1291,24 @@ export default function DailyInfoPage() {
                   </div>
                   {userProfile?.isAdmin && (
                     <div className="admin-card-actions">
+                      <button 
+                        type="button" 
+                        className="btn-icon-action move"
+                        onClick={() => handleMoveNotice(index, 'up')}
+                        disabled={index === 0}
+                        title="위로 이동"
+                      >
+                        <RiArrowUpLine />
+                      </button>
+                      <button 
+                        type="button" 
+                        className="btn-icon-action move"
+                        onClick={() => handleMoveNotice(index, 'down')}
+                        disabled={index === notices.length - 1}
+                        title="아래로 이동"
+                      >
+                        <RiArrowDownLine />
+                      </button>
                       <button 
                         type="button" 
                         className="btn-icon-action edit"
@@ -1384,6 +1541,68 @@ export default function DailyInfoPage() {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* Reorder Notices Modal */}
+          {isNoticeReorderModalOpen && (
+            <div className="modal-overlay fade-in">
+              <div className="modal-content glass-card reorder-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2><RiDragMove2Line /> 공지사항 표시 순서 변경</h2>
+                  <button className="modal-close-btn" onClick={() => setIsNoticeReorderModalOpen(false)}>
+                    <RiCloseLine />
+                  </button>
+                </div>
+                <div className="modal-body-scroll" style={{ padding: '16px 20px' }}>
+                  <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '16px' }}>
+                    공지사항 항목의 위/아래 버튼을 눌러 목록 표시 순서를 조정하세요.
+                  </p>
+                  <div className="reorder-list">
+                    {tempReorderNotices.map((item, idx) => (
+                      <div key={item.id} className="reorder-item-card">
+                        <div className="reorder-item-left">
+                          <span className="reorder-index-badge">{idx + 1}</span>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <span className="notice-badge-tag" style={{ fontSize: '0.7rem' }}>{item.badge}</span>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#1e293b', marginTop: '2px' }}>
+                              {item.title}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="reorder-item-actions">
+                          <button
+                            type="button"
+                            className="btn-icon-action move"
+                            onClick={() => handleMoveTempNotice(idx, 'up')}
+                            disabled={idx === 0}
+                            title="위로 이동"
+                          >
+                            <RiArrowUpLine /> 위로
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-icon-action move"
+                            onClick={() => handleMoveTempNotice(idx, 'down')}
+                            disabled={idx === tempReorderNotices.length - 1}
+                            title="아래로 이동"
+                          >
+                            <RiArrowDownLine /> 아래로
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-secondary" onClick={() => setIsNoticeReorderModalOpen(false)}>
+                    취소
+                  </button>
+                  <button type="button" className="btn btn-primary" onClick={handleSaveNoticeReorder}>
+                    <RiCheckLine /> 순서 저장하기
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1828,6 +2047,13 @@ export default function DailyInfoPage() {
             <div className="admin-notice-actions">
               <button 
                 type="button" 
+                className="btn btn-secondary add-notice-btn"
+                onClick={handleOpenInfoReorderModal}
+              >
+                <RiDragMove2Line /> 순서 변경
+              </button>
+              <button 
+                type="button" 
                 className="btn btn-primary add-notice-btn"
                 onClick={handleOpenCreateInfo}
               >
@@ -1837,7 +2063,7 @@ export default function DailyInfoPage() {
           )}
 
           <div className="news-list">
-            {travelInfos.map((item) => (
+            {travelInfos.map((item, index) => (
               <div key={item.id} className="glass-card notice-item-card">
                 <div className="notice-header">
                   <div className="notice-header-left">
@@ -1847,6 +2073,24 @@ export default function DailyInfoPage() {
                   </div>
                   {userProfile?.isAdmin && (
                     <div className="admin-card-actions">
+                      <button 
+                        type="button" 
+                        className="btn-icon-action move"
+                        onClick={() => handleMoveInfo(index, 'up')}
+                        disabled={index === 0}
+                        title="위로 이동"
+                      >
+                        <RiArrowUpLine />
+                      </button>
+                      <button 
+                        type="button" 
+                        className="btn-icon-action move"
+                        onClick={() => handleMoveInfo(index, 'down')}
+                        disabled={index === travelInfos.length - 1}
+                        title="아래로 이동"
+                      >
+                        <RiArrowDownLine />
+                      </button>
                       <button 
                         type="button" 
                         className="btn-icon-action edit"
@@ -1980,6 +2224,68 @@ export default function DailyInfoPage() {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* Reorder Travel Info Modal */}
+          {isInfoReorderModalOpen && (
+            <div className="modal-overlay fade-in">
+              <div className="modal-content glass-card reorder-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2><RiDragMove2Line /> 여행/생활 정보 표시 순서 변경</h2>
+                  <button className="modal-close-btn" onClick={() => setIsInfoReorderModalOpen(false)}>
+                    <RiCloseLine />
+                  </button>
+                </div>
+                <div className="modal-body-scroll" style={{ padding: '16px 20px' }}>
+                  <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '16px' }}>
+                    정보 항목의 위/아래 버튼을 눌러 목록 표시 순서를 조정하세요.
+                  </p>
+                  <div className="reorder-list">
+                    {tempReorderInfos.map((item, idx) => (
+                      <div key={item.id} className="reorder-item-card">
+                        <div className="reorder-item-left">
+                          <span className="reorder-index-badge">{idx + 1}</span>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <span className="notice-badge-tag" style={{ background: '#e0f2fe', color: '#0369a1', fontSize: '0.7rem' }}>{item.badge}</span>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#1e293b', marginTop: '2px' }}>
+                              {item.title}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="reorder-item-actions">
+                          <button
+                            type="button"
+                            className="btn-icon-action move"
+                            onClick={() => handleMoveTempInfo(idx, 'up')}
+                            disabled={idx === 0}
+                            title="위로 이동"
+                          >
+                            <RiArrowUpLine /> 위로
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-icon-action move"
+                            onClick={() => handleMoveTempInfo(idx, 'down')}
+                            disabled={idx === tempReorderInfos.length - 1}
+                            title="아래로 이동"
+                          >
+                            <RiArrowDownLine /> 아래로
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-secondary" onClick={() => setIsInfoReorderModalOpen(false)}>
+                    취소
+                  </button>
+                  <button type="button" className="btn btn-primary" onClick={handleSaveInfoReorder}>
+                    <RiCheckLine /> 순서 저장하기
+                  </button>
+                </div>
               </div>
             </div>
           )}
