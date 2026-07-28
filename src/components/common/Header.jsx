@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LevelBadge } from './Badge';
+import TopNoticeTickerBanner from './TopNoticeTickerBanner';
 import { RiGlobalLine, RiAdminLine, RiUser3Line, RiLockUnlockLine } from 'react-icons/ri';
 import './Header.css';
 
@@ -38,6 +39,9 @@ export default function Header() {
           </Link>
         </div>
       </div>
+
+      {/* Top Notice & News Ticker Banner (No '전광판' label text as requested) */}
+      <TopNoticeTickerBanner />
     </header>
   );
 }

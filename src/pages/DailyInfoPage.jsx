@@ -30,7 +30,8 @@ import {
   RiFileCopyLine,
   RiArrowUpLine,
   RiArrowDownLine,
-  RiDragMove2Line
+  RiDragMove2Line,
+  RiVolumeUpLine
 } from 'react-icons/ri';
 import './DailyInfoPage.css';
 
@@ -87,6 +88,7 @@ const DEFAULT_NOTICES = [
     date: '2026-07-24',
     badge: '중요공지',
     content: 'CebugoHub를 이용해 세부 현지 검증 업체 정보, 중고거래, 입국 정보 및 비상 연락망을 손쉽게 확인하세요.',
+    isTicker: true,
     images: [
       'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&fit=crop',
       'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?w=800&fit=crop'
@@ -424,7 +426,8 @@ export default function DailyInfoPage() {
       summary: '',
       url: '',
       moreUrl: '',
-      images: []
+      images: [],
+      isTicker: true
     });
     setIsNewsModalOpen(true);
   };
@@ -438,7 +441,8 @@ export default function DailyInfoPage() {
       summary: item.summary,
       url: item.url || '',
       moreUrl: item.moreUrl || '',
-      images: item.images || []
+      images: item.images || [],
+      isTicker: item.isTicker !== undefined ? item.isTicker : true
     });
     setIsNewsModalOpen(true);
   };
@@ -1112,7 +1116,8 @@ export default function DailyInfoPage() {
       badge: tags[0] || '중요공지',
       date: new Date().toISOString().split('T')[0],
       content: '',
-      images: []
+      images: [],
+      isTicker: true
     });
     setIsNoticeModalOpen(true);
   };
@@ -1124,9 +1129,30 @@ export default function DailyInfoPage() {
       badge: item.badge || tags[0] || '중요공지',
       date: item.date,
       content: item.content,
-      images: item.images || []
+      images: item.images || [],
+      isTicker: item.isTicker !== undefined ? item.isTicker : true
     });
     setIsNoticeModalOpen(true);
+  };
+
+  const handleToggleNoticeTicker = async (item) => {
+    const isCurrentlyTicker = item.isTicker === true || item.isTicker === 'true';
+    const nextStatus = !isCurrentlyTicker;
+    try {
+      await setDoc(doc(db, 'cebugo_notices', item.id), { isTicker: nextStatus }, { merge: true });
+    } catch (err) {
+      console.error('Failed to toggle notice ticker:', err);
+    }
+  };
+
+  const handleToggleNewsTicker = async (item) => {
+    const isCurrentlyTicker = item.isTicker === true || item.isTicker === 'true';
+    const nextStatus = !isCurrentlyTicker;
+    try {
+      await setDoc(doc(db, 'cebugo_ph_news', item.id), { isTicker: nextStatus }, { merge: true });
+    } catch (err) {
+      console.error('Failed to toggle news ticker:', err);
+    }
   };
 
   const handleDeleteNotice = async (id) => {
@@ -1291,6 +1317,20 @@ export default function DailyInfoPage() {
                   </div>
                   {userProfile?.isAdmin && (
                     <div className="admin-card-actions">
+                      <button
+                        type="button"
+                        className={`btn-icon-action move ${item.isTicker ? 'active' : ''}`}
+                        onClick={() => handleToggleNoticeTicker(item)}
+                        title={item.isTicker ? '상단 전광판 게시 해제' : '상단 전광판에 게시하기'}
+                        style={{
+                          background: (item.isTicker === true || item.isTicker === 'true') ? '#dbeafe' : '#f1f5f9',
+                          color: (item.isTicker === true || item.isTicker === 'true') ? '#1d4ed8' : '#64748b',
+                          borderColor: (item.isTicker === true || item.isTicker === 'true') ? '#93c5fd' : '#cbd5e1',
+                          fontWeight: 700
+                        }}
+                      >
+                        <RiVolumeUpLine /> {(item.isTicker === true || item.isTicker === 'true') ? '상단전광판 게시중' : '상단전광판 게시'}
+                      </button>
                       <button 
                         type="button" 
                         className="btn-icon-action move"
@@ -2388,6 +2428,20 @@ export default function DailyInfoPage() {
 
                     {userProfile?.isAdmin && (
                       <div className="admin-card-actions">
+                        <button
+                          type="button"
+                          className={`btn-icon-action move ${(item.isTicker === true || item.isTicker === 'true') ? 'active' : ''}`}
+                          onClick={() => handleToggleNewsTicker(item)}
+                          title={(item.isTicker === true || item.isTicker === 'true') ? '상단 전광판 게시 해제' : '상단 전광판에 게시하기'}
+                          style={{
+                            background: (item.isTicker === true || item.isTicker === 'true') ? '#dbeafe' : '#f1f5f9',
+                            color: (item.isTicker === true || item.isTicker === 'true') ? '#1d4ed8' : '#64748b',
+                            borderColor: (item.isTicker === true || item.isTicker === 'true') ? '#93c5fd' : '#cbd5e1',
+                            fontWeight: 700
+                          }}
+                        >
+                          <RiVolumeUpLine /> {(item.isTicker === true || item.isTicker === 'true') ? '상단전광판 게시중' : '상단전광판 게시'}
+                        </button>
                         <button 
                           type="button" 
                           className="btn-icon-action edit"
