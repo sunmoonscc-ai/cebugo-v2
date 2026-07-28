@@ -1,0 +1,120 @@
+.ad-ticker-bar {
+  position: fixed;
+  bottom: var(--bottom-nav-height);
+  left: 0;
+  right: 0;
+  z-index: 99;
+  background: linear-gradient(90deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+  border-top: 1px solid rgba(129, 140, 248, 0.3);
+  border-bottom: 1px solid rgba(129, 140, 248, 0.2);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.25);
+  height: 38px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  user-select: none;
+}
+
+.ad-ticker-inner {
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 10px;
+}
+
+.ad-ticker-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: white;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.4);
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.ad-ticker-badge .pulse-icon {
+  animation: tickerPulse 1.5s infinite ease-in-out;
+  color: #fef08a;
+}
+
+@keyframes tickerPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.8; }
+}
+
+.ad-ticker-track-wrap {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  margin-left: 10px;
+  mask-image: linear-gradient(to right, transparent, black 15px, black 95%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 15px, black 95%, transparent);
+}
+
+.ad-ticker-track {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  animation: marqueeScroll 25s linear infinite;
+  cursor: pointer;
+}
+
+.ad-ticker-track-wrap:hover .ad-ticker-track {
+  animation-play-state: paused;
+}
+
+.ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.83rem;
+  color: #f8fafc;
+  padding-right: 36px;
+  text-decoration: none;
+}
+
+.ticker-item-tag {
+  background: rgba(255, 255, 255, 0.15);
+  color: #93c5fd;
+  padding: 1px 7px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.ticker-item-title {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.ticker-item-desc {
+  color: #cbd5e1;
+  font-weight: 400;
+}
+
+.ticker-divider {
+  color: #6366f1;
+  font-weight: 900;
+  margin-left: 10px;
+}
+
+@keyframes marqueeScroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}

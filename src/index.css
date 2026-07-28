@@ -61,7 +61,7 @@ body {
   color: #1e293b;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  padding-bottom: calc(var(--bottom-nav-height) + 20px);
+  padding-bottom: calc(var(--bottom-nav-height) + 48px);
 }
 
 h1, h2, h3, h4, h5, h6 {

@@ -9,7 +9,8 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
     date: new Date().toISOString().split('T')[0],
     linkUrl: '',
     content: '',
-    images: []
+    images: [],
+    isTicker: true
   });
 
   useEffect(() => {
@@ -21,7 +22,8 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
         date: editingPost.date || new Date().toISOString().split('T')[0],
         linkUrl: editingPost.linkUrl || '',
         content: editingPost.content || '',
-        images: editingPost.images || (editingPost.image ? [editingPost.image] : [])
+        images: editingPost.images || (editingPost.image ? [editingPost.image] : []),
+        isTicker: editingPost.isTicker !== undefined ? editingPost.isTicker : true
       });
     }
   }, [editingPost, initialCategory]);
@@ -97,6 +99,18 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
                 <option value="ad">📣 광고</option>
                 <option value="event">🎉 이벤트</option>
               </select>
+            </div>
+
+            <div className="form-group" style={{ background: '#f0f9ff', padding: '12px 14px', borderRadius: '8px', border: '1px solid #bae6fd', marginBottom: '16px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 700, color: '#0369a1', fontSize: '0.9rem' }}>
+                <input
+                  type="checkbox"
+                  checked={formData.isTicker || false}
+                  onChange={(e) => setFormData({ ...formData, isTicker: e.target.checked })}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#0284c7' }}
+                />
+                <span>📢 하단 전광판(광고판) 텍스트 스크롤에 게재하기</span>
+              </label>
             </div>
 
             <div className="form-group-row" style={{ display: 'flex', gap: '10px' }}>

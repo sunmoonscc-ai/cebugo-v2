@@ -14,7 +14,8 @@ import {
   RiArrowUpLine, 
   RiArrowDownLine, 
   RiDragMove2Line,
-  RiExternalLinkLine
+  RiExternalLinkLine,
+  RiVolumeUpLine
 } from 'react-icons/ri';
 import './PlaceFeedPage.css';
 
@@ -29,7 +30,8 @@ const DEFAULT_POSTS = [
     content: '오늘 아침 현지 어시장에서 갓 수급한 A급 세부 알리망오 크랩 50kg이 입고되었습니다! 수량이 한정되어 있으니 카카오톡으로 사전 예약해 주세요.',
     linkUrl: 'k_jumboseafood',
     images: ['https://images.unsplash.com/photo-1559339352-11d035aa65de?w=800&q=80'],
-    order: 0
+    order: 0,
+    isTicker: true
   },
   {
     id: 'event_1',
@@ -40,7 +42,8 @@ const DEFAULT_POSTS = [
     content: '7월 한 달간 90분 스파 이용 시 시그니처 코코넛 페이셜 수면팩 무료 제공 및 전체 20% 할인 혜택을 드립니다.',
     linkUrl: 'k_treeshade',
     images: ['https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=800&q=80'],
-    order: 0
+    order: 0,
+    isTicker: true
   }
 ];
 
@@ -93,6 +96,15 @@ export default function PlaceFeedPage() {
   const handleOpenEditPost = (post) => {
     setEditingPost(post);
     setIsFormModalOpen(true);
+  };
+
+  const handleToggleTicker = async (post) => {
+    const nextStatus = !post.isTicker;
+    try {
+      await setDoc(doc(db, 'cebugo_ads', post.id), { isTicker: nextStatus }, { merge: true });
+    } catch (err) {
+      console.error('Failed to toggle ticker status:', err);
+    }
   };
 
   const handleSavePost = async (formData) => {
@@ -221,12 +233,31 @@ export default function PlaceFeedPage() {
                       {post.category === 'ad' ? '📣 광고' : '🎉 이벤트'}
                     </span>
                     <span className="post-place-name">{post.authorName || post.placeName}</span>
+                    {post.isTicker && (
+                      <span className="post-cat-badge" style={{ background: '#fef08a', color: '#854d0e', border: '1px solid #fde047' }}>
+                        📢 전광판 게시 중
+                      </span>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span className="post-date">{post.date}</span>
                     {canPost && (
                       <div className="admin-card-actions">
+                        <button
+                          type="button"
+                          className={`btn-icon-action move ${post.isTicker ? 'active' : ''}`}
+                          onClick={() => handleToggleTicker(post)}
+                          title={post.isTicker ? '하단 전광판 게시 해제' : '하단 전광판에 게시하기'}
+                          style={{
+                            background: post.isTicker ? '#dcfce7' : '#f1f5f9',
+                            color: post.isTicker ? '#15803d' : '#64748b',
+                            borderColor: post.isTicker ? '#86efac' : '#cbd5e1',
+                            fontWeight: 700
+                          }}
+                        >
+                          <RiVolumeUpLine /> {post.isTicker ? '전광판 게시중' : '전광판 게시'}
+                        </button>
                         <button
                           type="button"
                           className="btn-icon-action move"

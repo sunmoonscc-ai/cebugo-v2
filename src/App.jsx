@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Header from './components/common/Header';
 import BottomNav from './components/common/BottomNav';
+import AdTickerBanner from './components/common/AdTickerBanner';
 
 // Pages
 import ListPage from './pages/ListPage';
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/admin/config" element={<AdminConfigPage />} />
         </Routes>
       </main>
+      <AdTickerBanner />
       <BottomNav />
     </div>
   );
