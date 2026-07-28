@@ -1,10 +1,31 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { db } from '../firebase/config';
+import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { CATEGORY_MAP } from '../constants/categories';
 
 const PlacesContext = createContext();
 
 export const usePlaces = () => useContext(PlacesContext);
 
-// Initial Mock Places Data representing Cebu Local Businesses with new 12 categories
+// Sorting helper: Custom order overrides default, otherwise Fallback to Alphabetical Sort (가나다순)
+export function sortPlaces(list) {
+  return [...list].sort((a, b) => {
+    const hasOrderA = a.order !== undefined && a.order !== null;
+    const hasOrderB = b.order !== undefined && b.order !== null;
+
+    if (hasOrderA && hasOrderB) {
+      if (a.order !== b.order) return a.order - b.order;
+      return (a.name || '').localeCompare(b.name || '', 'ko');
+    }
+    if (hasOrderA) return -1;
+    if (hasOrderB) return 1;
+
+    // Fallback: Default Alphabetical Sort (가나다순)
+    return (a.name || '').localeCompare(b.name || '', 'ko');
+  });
+}
+
+// Initial Mock Places Data representing Cebu Local Businesses with 12 categories
 const INITIAL_PLACES = [
   {
     id: 'place_1',
@@ -186,7 +207,7 @@ const INITIAL_SUBMISSIONS = [
 ];
 
 export const PlacesProvider = ({ children }) => {
-  const [places, setPlaces] = useState(INITIAL_PLACES);
+  const [places, setPlaces] = useState([]);
   const [marketplace, setMarketplace] = useState(INITIAL_MARKETPLACE);
   const [submissions, setSubmissions] = useState(INITIAL_SUBMISSIONS);
   const [reviews, setReviews] = useState([
@@ -200,6 +221,113 @@ export const PlacesProvider = ({ children }) => {
       createdAt: '2026-07-20'
     }
   ]);
+
+  // Firestore real-time places synchronization
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, 'places'),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+          setPlaces(sortPlaces(list));
+        } else {
+          INITIAL_PLACES.forEach(async (p, idx) => {
+            await setDoc(doc(db, 'places', p.id), { ...p, order: idx });
+          });
+          setPlaces(sortPlaces(INITIAL_PLACES.map((p, idx) => ({ ...p, order: idx }))));
+        }
+      },
+      (err) => {
+        console.error('Firestore places sync error:', err);
+        setPlaces(sortPlaces(INITIAL_PLACES));
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  const addPlace = async (placeData) => {
+    const docId = `p_${Date.now()}`;
+    const categoryName = CATEGORY_MAP[placeData.category] || '기타';
+
+    const placeToSave = {
+      id: docId,
+      rating: 5.0,
+      reviewsCount: 0,
+      createdAt: new Date().toISOString(),
+      ...placeData,
+      categoryName
+    };
+
+    try {
+      await setDoc(doc(db, 'places', docId), placeToSave);
+    } catch (err) {
+      console.error('Failed to save place to Firestore:', err);
+      setPlaces((prev) => sortPlaces([...prev, placeToSave]));
+    }
+  };
+
+  const updatePlace = async (id, placeData) => {
+    const categoryName = CATEGORY_MAP[placeData.category] || placeData.categoryName || '기타';
+    const placeToSave = {
+      ...placeData,
+      categoryName,
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      await setDoc(doc(db, 'places', id), placeToSave, { merge: true });
+    } catch (err) {
+      console.error('Failed to update place in Firestore:', err);
+      setPlaces((prev) => sortPlaces(prev.map((p) => (p.id === id ? { ...p, ...placeToSave } : p))));
+    }
+  };
+
+  const deletePlace = async (id) => {
+    try {
+      await deleteDoc(doc(db, 'places', id));
+    } catch (err) {
+      console.error('Failed to delete place from Firestore:', err);
+      setPlaces((prev) => prev.filter((p) => p.id !== id));
+    }
+  };
+
+  const movePlace = async (index, direction) => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= places.length) return;
+
+    const newList = [...places];
+    const temp = newList[index];
+    newList[index] = newList[targetIndex];
+    newList[targetIndex] = temp;
+
+    const updatedList = newList.map((item, idx) => ({ ...item, order: idx }));
+    setPlaces(sortPlaces(updatedList));
+
+    try {
+      const batch = writeBatch(db);
+      updatedList.forEach((item) => {
+        batch.set(doc(db, 'places', item.id), { order: item.order }, { merge: true });
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error('Failed to update place order in Firestore:', err);
+    }
+  };
+
+  const reorderPlaces = async (updatedList) => {
+    const listWithOrder = updatedList.map((item, idx) => ({ ...item, order: idx }));
+    setPlaces(sortPlaces(listWithOrder));
+
+    try {
+      const batch = writeBatch(db);
+      listWithOrder.forEach((item) => {
+        batch.set(doc(db, 'places', item.id), { order: item.order }, { merge: true });
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error('Failed to reorder places in Firestore:', err);
+    }
+  };
 
   const addSubmission = (submissionData) => {
     const newSub = {
@@ -274,6 +402,11 @@ export const PlacesProvider = ({ children }) => {
         marketplace,
         submissions,
         reviews,
+        addPlace,
+        updatePlace,
+        deletePlace,
+        movePlace,
+        reorderPlaces,
         addSubmission,
         approveSubmission,
         rejectSubmission,
@@ -285,3 +418,4 @@ export const PlacesProvider = ({ children }) => {
     </PlacesContext.Provider>
   );
 };
+

@@ -1,0 +1,87 @@
+.place-form-modal {
+  max-width: 660px;
+  width: 92%;
+}
+
+.place-form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.form-group-row {
+  display: flex;
+  gap: 12px;
+}
+
+.flex-1 {
+  flex: 1;
+  min-width: 0;
+}
+
+.flex-2 {
+  flex: 2;
+  min-width: 0;
+}
+
+.sub-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 3px;
+  display: block;
+}
+
+.location-presets-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.preset-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.preset-btn:hover {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+.img-type-subtabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 6px;
+}
+
+.img-type-subtabs button {
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.img-type-subtabs button.active {
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.img-type-subtabs button:hover:not(.active) {
+  background: #f8fafc;
+  color: #1e293b;
+}

@@ -4,10 +4,20 @@ import { CarrierBadge } from '../common/Badge';
 import { classifyPhoneCarrier, parseSnsEntry } from '../../utils/phoneSnsClassifier';
 import { getOptimizedImageUrl } from '../../utils/imageHelper';
 import { useAuth } from '../../context/AuthContext';
-import { RiStarFill, RiMapPinLine, RiTimeLine, RiHeartFill, RiHeartLine } from 'react-icons/ri';
+import { 
+  RiStarFill, 
+  RiMapPinLine, 
+  RiTimeLine, 
+  RiHeartFill, 
+  RiHeartLine,
+  RiEditLine,
+  RiDeleteBinLine,
+  RiArrowUpLine,
+  RiArrowDownLine
+} from 'react-icons/ri';
 import './PlaceCard.css';
 
-export default function PlaceCard({ place }) {
+export default function PlaceCard({ place, index, totalCount, onMove, onEdit, onDelete }) {
   const { userProfile, toggleFavorite } = useAuth();
   const carrier = classifyPhoneCarrier(place.phone);
   const snsInfo = parseSnsEntry(place.sns);
@@ -35,7 +45,7 @@ export default function PlaceCard({ place }) {
 
       <div className="card-body">
         <div className="card-header-row">
-          <h3 className="place-title">
+          <h3 className="place-title" style={{ flex: 1, minWidth: 0 }}>
             <Link to={`/place/${place.id}`}>{place.name}</Link>
           </h3>
           <div className="rating-badge">
@@ -44,6 +54,53 @@ export default function PlaceCard({ place }) {
             <span className="reviews-cnt">({place.reviewsCount})</span>
           </div>
         </div>
+
+        {userProfile?.isAdmin && (
+          <div className="admin-card-actions" style={{ marginTop: '4px', marginBottom: '8px' }}>
+            {onMove && (
+              <>
+                <button
+                  type="button"
+                  className="btn-icon-action move"
+                  onClick={() => onMove(index, 'up')}
+                  disabled={index === 0}
+                  title="위로 이동"
+                >
+                  <RiArrowUpLine />
+                </button>
+                <button
+                  type="button"
+                  className="btn-icon-action move"
+                  onClick={() => onMove(index, 'down')}
+                  disabled={index === totalCount - 1}
+                  title="아래로 이동"
+                >
+                  <RiArrowDownLine />
+                </button>
+              </>
+            )}
+            {onEdit && (
+              <button
+                type="button"
+                className="btn-icon-action edit"
+                onClick={() => onEdit(place)}
+                title="업체 정보 수정"
+              >
+                <RiEditLine /> 수정
+              </button>
+            )}
+            {onDelete && (
+              <button
+                type="button"
+                className="btn-icon-action delete"
+                onClick={() => onDelete(place.id)}
+                title="업체 삭제"
+              >
+                <RiDeleteBinLine /> 삭제
+              </button>
+            )}
+          </div>
+        )}
 
         <p className="place-addr">
           <RiMapPinLine className="info-icon" />
