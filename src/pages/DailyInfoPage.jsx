@@ -23,7 +23,9 @@ import {
   RiPriceTag3Line,
   RiImageAddLine,
   RiHashtag,
-  RiRefreshLine
+  RiRefreshLine,
+  RiTimeLine,
+  RiFileCopyLine
 } from 'react-icons/ri';
 import './DailyInfoPage.css';
 
@@ -110,6 +112,7 @@ const DEFAULT_CONTACTS = [
     name: '주세부 대한민국 분공관',
     phones: ['+63-32-340-9900'],
     emergency: '+63-917-808-3904 (24시간 사건사고)',
+    hours: '월~금 08:00 - 17:00 (점심시간 12:00 - 13:00)',
     desc: '세부시티 아얄라 센트럴 블록 타워 12층',
     website: 'https://overseas.mofa.go.kr/ph-cebu-ko/index.do',
     facebook: 'https://facebook.com/mofa.cebu',
@@ -121,6 +124,7 @@ const DEFAULT_CONTACTS = [
     name: '외교부 영사콜센터 (한국)',
     phones: ['+82-2-3210-0404'],
     emergency: '24시간 연중무휴 긴급 상담',
+    hours: '24시간 365일 연중무휴',
     desc: '해외 긴급 상황 및 통역 서비스 지원',
     website: 'https://www.0404.go.kr',
     facebook: '',
@@ -132,6 +136,7 @@ const DEFAULT_CONTACTS = [
     name: '세부 한인회 비상연락처',
     phones: ['+63-917-319-3838', '+63-32-343-4100'],
     emergency: '+63-917-319-3838',
+    hours: '월~토 09:00 - 18:00',
     desc: '세부 거주 한인 및 관광객 긴급 구조 지원',
     website: 'https://cebukorean.org',
     facebook: 'https://facebook.com/cebukorean',
@@ -143,6 +148,7 @@ const DEFAULT_CONTACTS = [
     name: '필리핀 긴급합동신고센터',
     phones: ['911'],
     emergency: '경찰 / 소방 / 구급 통합 911',
+    hours: '24시간 연중무휴',
     desc: '필리핀 전역 통합 긴급 구조 번호',
     website: '',
     facebook: '',
@@ -154,6 +160,7 @@ const DEFAULT_CONTACTS = [
     name: '막탄-세부 국제공항 (MCIA)',
     phones: ['+63-32-494-7000'],
     emergency: '터미널 안내센터',
+    hours: '24시간 운항 및 고객 상담',
     desc: '항공편 운항 상태 및 수하물 관련 문의',
     website: 'https://mactancebuairport.com',
     facebook: 'https://facebook.com/mactancebuairport',
@@ -165,6 +172,7 @@ const DEFAULT_CONTACTS = [
     name: '세부 닥터스 종합병원 (Cebu Doctors Hospital)',
     phones: ['+63-32-255-5555'],
     emergency: '응급실 (Emergency Room)',
+    hours: '24시간 응급센터 (외래 08:00 - 17:00)',
     desc: '세부시티 위치 메이저 종합병원',
     website: 'https://cebudoctorshospital.com',
     facebook: '',
@@ -214,6 +222,14 @@ const DEFAULT_PH_NEWS = [
     url: 'https://bworldonline.com'
   }
 ];
+
+const getEmergencyTel = (emergencyStr) => {
+  if (!emergencyStr) return null;
+  const match = emergencyStr.match(/(\+?[0-9]{1,4}[-.\s]?)?(\(?\d{2,4}\)?[-.\s]?)?\d{3,4}[-.\s]?\d{3,4}/) || emergencyStr.match(/[0-9+]{3,}/);
+  if (!match) return null;
+  const cleaned = match[0].replace(/[^0-9+]/g, '');
+  return cleaned.length >= 3 ? cleaned : null;
+};
 
 export default function DailyInfoPage() {
   const { userProfile } = useAuth();
@@ -601,12 +617,64 @@ export default function DailyInfoPage() {
   };
 
   // Contact Modal / Form state
+  const PRESET_CONTACT_CATEGORIES = [
+    '공관 / 영사',
+    '영사콜센터',
+    '한인회',
+    '긴급신고',
+    '공항 / 교통',
+    '의료 / 병원',
+    '투어 / 액티비티',
+    '기타 비상연락'
+  ];
+
+  const [copiedBadgeKey, setCopiedBadgeKey] = useState(null);
+
+  const handleCopySns = (key, text, typeLabel) => {
+    if (!text) return;
+    const cleanVal = text.trim();
+
+    const onCopySuccess = () => {
+      setCopiedBadgeKey(key);
+      setTimeout(() => {
+        setCopiedBadgeKey(null);
+      }, 2000);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(cleanVal)
+        .then(onCopySuccess)
+        .catch(() => {
+          fallbackCopyText(cleanVal);
+          onCopySuccess();
+        });
+    } else {
+      fallbackCopyText(cleanVal);
+      onCopySuccess();
+    }
+  };
+
+  const fallbackCopyText = (text) => {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+    }
+    document.body.removeChild(textArea);
+  };
+
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
   const [contactFormData, setContactFormData] = useState({
     category: '공관 / 영사',
+    customCategory: '',
     name: '',
     desc: '',
+    hours: '',
     phones: [''],
     emergency: '',
     website: '',
@@ -618,8 +686,10 @@ export default function DailyInfoPage() {
     setEditingContact(null);
     setContactFormData({
       category: '공관 / 영사',
+      customCategory: '',
       name: '',
       desc: '',
+      hours: '',
       phones: [''],
       emergency: '',
       website: '',
@@ -631,10 +701,14 @@ export default function DailyInfoPage() {
 
   const handleOpenEditContact = (item) => {
     setEditingContact(item);
+    const cat = item.category || '공관 / 영사';
+    const isPreset = PRESET_CONTACT_CATEGORIES.includes(cat);
     setContactFormData({
-      category: item.category || '공관 / 영사',
+      category: isPreset ? cat : '직접입력',
+      customCategory: isPreset ? '' : cat,
       name: item.name || '',
       desc: item.desc || '',
+      hours: item.hours || '',
       phones: item.phones && item.phones.length > 0 ? [...item.phones] : [item.phone || ''],
       emergency: item.emergency || '',
       website: item.website || '',
@@ -703,14 +777,25 @@ export default function DailyInfoPage() {
       return;
     }
 
+    if (contactFormData.category === '직접입력' && !contactFormData.customCategory.trim()) {
+      alert('직접 입력 카테고리명을 입력해 주세요.');
+      return;
+    }
+
     const cleanPhones = contactFormData.phones.map((p) => p.trim()).filter(Boolean);
     const cleanSns = contactFormData.snsList.filter((s) => s.value.trim() !== '');
 
+    const finalCategory = contactFormData.category === '직접입력'
+      ? contactFormData.customCategory.trim()
+      : contactFormData.category;
+
     const contactToSave = {
       ...contactFormData,
+      category: finalCategory,
       phones: cleanPhones.length > 0 ? cleanPhones : ['미등록'],
       snsList: cleanSns
     };
+    delete contactToSave.customCategory;
 
     if (editingContact) {
       setContacts((prev) =>
@@ -999,7 +1084,7 @@ export default function DailyInfoPage() {
 
           {/* Admin Tag Manager Modal */}
           {isTagModalOpen && (
-            <div className="modal-overlay fade-in" onClick={() => setIsTagModalOpen(false)}>
+            <div className="modal-overlay fade-in">
               <div className="modal-content glass-card tag-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                   <h2><RiPriceTag3Line /> 공지사항 구분 태그 관리</h2>
@@ -1075,7 +1160,7 @@ export default function DailyInfoPage() {
 
           {/* Admin Notice Create / Edit Modal */}
           {isNoticeModalOpen && (
-            <div className="modal-overlay fade-in" onClick={() => setIsNoticeModalOpen(false)}>
+            <div className="modal-overlay fade-in">
               <div className="modal-content glass-card notice-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                   <h2>{editingNotice ? '공지사항 수정' : '신규 공지사항 작성'}</h2>
@@ -1223,12 +1308,14 @@ export default function DailyInfoPage() {
                 <div key={item.id} className="glass-card contact-card">
                   <div className="contact-top">
                     <div className="contact-top-left">
-                      <div className="icon-wrapper">
-                        <IconComp />
-                      </div>
-                      <div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <span className="contact-cat-badge">{item.category}</span>
-                        <h3 className="contact-name">{item.name}</h3>
+                        <h3 
+                          className="contact-name"
+                          style={{ fontSize: item.name && item.name.length >= 14 ? '0.82rem' : '0.9rem' }}
+                        >
+                          {item.name}
+                        </h3>
                       </div>
                     </div>
 
@@ -1254,7 +1341,7 @@ export default function DailyInfoPage() {
                     )}
                   </div>
 
-                  <p className="contact-desc">{item.desc}</p>
+                  {item.desc && <p className="contact-desc">{item.desc}</p>}
 
                   {/* Multiple Call Buttons */}
                   <div className="contact-phones-column">
@@ -1269,12 +1356,31 @@ export default function DailyInfoPage() {
                     ))}
                   </div>
 
-                  {/* Emergency line */}
-                  {item.emergency && (
-                    <div className="contact-emergency-line">
-                      <span>비상: {item.emergency}</span>
+                  {/* Business Hours */}
+                  {item.hours && (
+                    <div className="contact-hours-badge">
+                      <RiTimeLine className="hours-icon" />
+                      <span>근무시간: {item.hours}</span>
                     </div>
                   )}
+
+                  {/* Emergency line */}
+                  {item.emergency && (() => {
+                    const emergencyTel = getEmergencyTel(item.emergency);
+                    return emergencyTel ? (
+                      <a
+                        href={`tel:${emergencyTel}`}
+                        className="contact-emergency-line clickable"
+                        title="비상 전화 걸기"
+                      >
+                        <RiPhoneFill style={{ verticalAlign: '-1px', marginRight: '4px' }} /> 비상: {item.emergency}
+                      </a>
+                    ) : (
+                      <div className="contact-emergency-line">
+                        <span>비상: {item.emergency}</span>
+                      </div>
+                    );
+                  })()}
 
                   {/* Links Row: Website & Facebook & SNS */}
                   {(item.website || item.facebook || (item.snsList && item.snsList.length > 0)) && (
@@ -1289,11 +1395,23 @@ export default function DailyInfoPage() {
                           페이스북
                         </a>
                       )}
-                      {item.snsList && item.snsList.map((sns, sIdx) => (
-                        <span key={sIdx} className="contact-link-badge sns">
-                          {sns.type === 'kakao' ? '카톡: ' : 'SNS: '}{sns.value}
-                        </span>
-                      ))}
+                      {item.snsList && item.snsList.map((sns, sIdx) => {
+                        const badgeKey = `${item.id}_sns_${sIdx}`;
+                        const isCopied = copiedBadgeKey === badgeKey;
+                        const label = sns.type === 'kakao' ? '카톡' : (sns.type === 'line' ? '라인' : (sns.type === 'insta' ? '인스타' : 'SNS'));
+                        return (
+                          <button
+                            key={sIdx}
+                            type="button"
+                            className={`contact-link-badge sns ${isCopied ? 'copied' : ''}`}
+                            onClick={() => handleCopySns(badgeKey, sns.value, label)}
+                            title={`${label} 아이디 복사 (${sns.value})`}
+                          >
+                            <RiFileCopyLine style={{ verticalAlign: '-1px', marginRight: '2px' }} />
+                            {isCopied ? '✓ 복사완료!' : `${label}: ${sns.value}`}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1303,7 +1421,7 @@ export default function DailyInfoPage() {
 
           {/* Admin Contact Create / Edit Modal */}
           {isContactModalOpen && (
-            <div className="modal-overlay fade-in" onClick={() => setIsContactModalOpen(false)}>
+            <div className="modal-overlay fade-in">
               <div className="modal-content glass-card contact-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                   <h2>{editingContact ? '비상연락처 수정' : '신규 비상연락처 추가'}</h2>
@@ -1327,7 +1445,19 @@ export default function DailyInfoPage() {
                       <option value="의료 / 병원">의료 / 병원</option>
                       <option value="투어 / 액티비티">투어 / 액티비티</option>
                       <option value="기타 비상연락">기타 비상연락</option>
+                      <option value="직접입력">직접입력</option>
                     </select>
+                    {contactFormData.category === '직접입력' && (
+                      <input
+                        type="text"
+                        placeholder="카테고리를 직접 입력해 주세요 (예: 렌트카 / 기사)"
+                        value={contactFormData.customCategory}
+                        onChange={(e) => setContactFormData({ ...contactFormData, customCategory: e.target.value })}
+                        className="form-input"
+                        style={{ marginTop: '8px' }}
+                        required
+                      />
+                    )}
                   </div>
 
                   <div className="form-group">
@@ -1349,6 +1479,17 @@ export default function DailyInfoPage() {
                       placeholder="예: 세부시티 아얄라 센트럴 블록 타워 12층"
                       value={contactFormData.desc}
                       onChange={(e) => setContactFormData({ ...contactFormData, desc: e.target.value })}
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">근무시간 / 운영시간 (선택)</label>
+                    <input
+                      type="text"
+                      placeholder="예: 월~금 08:00 - 17:00 (점심시간 12:00 - 13:00)"
+                      value={contactFormData.hours}
+                      onChange={(e) => setContactFormData({ ...contactFormData, hours: e.target.value })}
                       className="form-input"
                     />
                   </div>
@@ -1548,7 +1689,7 @@ export default function DailyInfoPage() {
 
           {/* Admin Info Create / Edit Modal */}
           {isInfoModalOpen && (
-            <div className="modal-overlay fade-in" onClick={() => setIsInfoModalOpen(false)}>
+            <div className="modal-overlay fade-in">
               <div className="modal-content glass-card notice-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                   <h2>{editingInfo ? '여행/생활 정보 수정' : '신규 여행/생활 정보 작성'}</h2>
@@ -1775,7 +1916,7 @@ export default function DailyInfoPage() {
 
           {/* Admin PH News Create / Edit Modal */}
           {isNewsModalOpen && (
-            <div className="modal-overlay fade-in" onClick={() => setIsNewsModalOpen(false)}>
+            <div className="modal-overlay fade-in">
               <div className="modal-content glass-card notice-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                   <h2>{editingNews ? '필리핀/세부 뉴스 수정' : '신규 필리핀/세부 뉴스 작성'}</h2>

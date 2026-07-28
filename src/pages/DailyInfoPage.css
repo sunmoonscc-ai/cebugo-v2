@@ -644,6 +644,8 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
 .icon-wrapper {
@@ -669,16 +671,42 @@
 }
 
 .contact-name {
-  font-size: 0.98rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: #0f172a;
   margin-top: 2px;
+  word-break: keep-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .contact-desc {
   font-size: 0.82rem;
   color: #64748b;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+}
+
+.contact-hours-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-top: 6px;
+  border: 1px solid #dbeafe;
+}
+
+.contact-hours-badge .hours-icon {
+  font-size: 0.9rem;
+  color: #3b82f6;
+  flex-shrink: 0;
 }
 
 .contact-phones-column {
@@ -710,13 +738,30 @@
 
 .contact-emergency-line {
   margin-top: 8px;
-  font-size: 0.76rem;
-  font-weight: 600;
+  font-size: 0.78rem;
+  font-weight: 700;
   color: #e11d48;
   background: #fff1f2;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+a.contact-emergency-line.clickable {
+  cursor: pointer;
+  border: 1px solid #fecdd3;
+}
+
+a.contact-emergency-line.clickable:hover {
+  background: #ffe4e6;
+  color: #be123c;
+  border-color: #fda4af;
+  transform: translateY(-1px);
 }
 
 .contact-links-row {
@@ -764,6 +809,26 @@
   background: #fef3c7;
   color: #92400e;
   border: 1px solid rgba(146, 64, 14, 0.2);
+}
+
+button.contact-link-badge.sns {
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+button.contact-link-badge.sns:hover {
+  background: #fde68a;
+  color: #78350f;
+  border-color: rgba(120, 53, 15, 0.4);
+  transform: translateY(-1px);
+}
+
+button.contact-link-badge.sns.copied {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
 }
 
 /* Contact Edit Modal & Dynamic Rows */
