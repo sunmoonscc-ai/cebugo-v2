@@ -25,7 +25,7 @@ export default function ListPage() {
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortOption, setSortOption] = useState('default'); // 'default', 'name', 'latest', 'distance', 'open'
+  const [sortOption, setSortOption] = useState('distance'); // 'distance' (default), 'name', 'latest', 'open'
   const [userCoords, setUserCoords] = useState({ lat: 10.2858, lng: 123.9922 }); // Default Cebu Mactan center
 
   useEffect(() => {
@@ -64,12 +64,10 @@ export default function ListPage() {
     if (sortOption === 'latest') {
       return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     }
-    if (sortOption === 'distance') {
-      const distA = calculateDistanceKm(userCoords.lat, userCoords.lng, a.lat, a.lng);
-      const distB = calculateDistanceKm(userCoords.lat, userCoords.lng, b.lat, b.lng);
-      return distA - distB;
-    }
-    return 0;
+    // Default is distance sort ('distance' or 'open')
+    const distA = calculateDistanceKm(userCoords.lat, userCoords.lng, a.lat, a.lng);
+    const distB = calculateDistanceKm(userCoords.lat, userCoords.lng, b.lat, b.lng);
+    return distA - distB;
   });
 
   const handleOpenCreatePlace = () => {
@@ -188,10 +186,9 @@ export default function ListPage() {
                 onChange={(e) => setSortOption(e.target.value)}
                 className="sort-select"
               >
-                <option value="default">기본순 (관리자 추천 / 가나다)</option>
+                <option value="distance">거리순 (기본)</option>
                 <option value="name">이름순 (가나다)</option>
                 <option value="latest">최신순</option>
-                <option value="distance">거리순 (현위치/세부중심)</option>
                 <option value="open">영업중만 보기</option>
               </select>
             </div>
