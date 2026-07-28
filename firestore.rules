@@ -49,6 +49,9 @@ service cloud.firestore {
     match /cebugo_ph_news/{id} {
       allow read, write: if true;
     }
+    match /cebugo_ads/{id} {
+      allow read, write: if true;
+    }
 
     // Default Fallback: Allow authenticated read/write for development
     match /{document=**} {

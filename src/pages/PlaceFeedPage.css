@@ -17,28 +17,42 @@
   color: #64748b;
 }
 
-.feed-filter-bar {
+/* Sub-Tab Navigation Bar: 광고 vs 이벤트 */
+.feed-nav-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  padding: 6px;
+  margin-bottom: 20px;
+  background: white;
+}
+
+.feed-tab-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 8px;
   padding: 12px 16px;
-  margin-bottom: 20px;
-}
-
-.filter-icon {
-  font-size: 1.3rem;
-  color: var(--primary);
-}
-
-.place-select {
-  width: 100%;
   border: none;
   background: transparent;
   font-family: var(--font-heading);
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
+  color: #64748b;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.feed-tab-btn.active {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+.feed-tab-btn:hover:not(.active) {
+  background: #f8fafc;
   color: #1e293b;
-  outline: none;
 }
 
 .feed-list {
@@ -48,23 +62,41 @@
 }
 
 .post-card {
-  padding: 18px;
+  padding: 20px;
 }
 
 .post-header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.post-cat-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.post-cat-badge.ad {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.post-cat-badge.event {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
 }
 
 .post-place-name {
-  background: var(--primary-light);
-  color: var(--primary);
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  padding: 2px 10px;
-  border-radius: 12px;
+  color: #1e293b;
 }
 
 .post-date {
@@ -73,19 +105,16 @@
 }
 
 .post-title {
-  font-size: 1.15rem;
-  margin-bottom: 8px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 10px;
 }
 
 .post-content {
-  font-size: 0.9rem;
-  color: #475569;
-  margin-bottom: 14px;
-}
-
-.post-img {
-  width: 100%;
-  height: 220px;
-  object-fit: cover;
-  border-radius: var(--border-radius-sm);
+  font-size: 0.92rem;
+  color: #334155;
+  line-height: 1.6;
+  white-space: pre-line;
+  margin-bottom: 12px;
 }
