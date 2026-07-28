@@ -69,14 +69,21 @@ export default function TopNoticeTickerBanner() {
 
   if (tickerItems.length === 0) return null;
 
-  // Duplicate list for seamless infinite marquee loop
-  const displayItems = tickerItems.length < 4 ? [...tickerItems, ...tickerItems, ...tickerItems] : [...tickerItems, ...tickerItems];
+  // Duplicate 2 identical sets for seamless continuous marquee loop
+  const displayItems = [...tickerItems, ...tickerItems];
+
+  // Constant speed calibrated to 1 item selected (18s per item)
+  const durationSeconds = tickerItems.length * 18;
 
   return (
     <div className="top-notice-ticker-bar">
       <div className="top-notice-ticker-inner">
         <div className="top-notice-ticker-track-wrap">
-          <div className="top-notice-ticker-track" onClick={() => navigate('/daily-info')}>
+          <div 
+            className="top-notice-ticker-track" 
+            onClick={() => navigate('/daily-info')}
+            style={{ animationDuration: `${durationSeconds}s` }}
+          >
             {displayItems.map((item, idx) => (
               <span key={`${item.id}-${idx}`} className="top-ticker-item">
                 <span className="top-ticker-item-tag">{item.tagLabel}</span>

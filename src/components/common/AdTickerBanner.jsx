@@ -31,8 +31,11 @@ export default function AdTickerBanner() {
 
   if (tickerPosts.length === 0) return null;
 
-  // Duplicate for seamless infinite marquee loop
-  const displayItems = tickerPosts.length < 4 ? [...tickerPosts, ...tickerPosts, ...tickerPosts] : [...tickerPosts, ...tickerPosts];
+  // Duplicate 2 identical sets for seamless continuous marquee loop
+  const displayItems = [...tickerPosts, ...tickerPosts];
+
+  // Constant speed calibrated to 2 items selected (11s per item => 22s for 2 items)
+  const durationSeconds = tickerPosts.length * 11;
 
   return (
     <div className="ad-ticker-bar">
@@ -43,7 +46,11 @@ export default function AdTickerBanner() {
         </div>
 
         <div className="ad-ticker-track-wrap">
-          <div className="ad-ticker-track" onClick={() => navigate('/feed')}>
+          <div 
+            className="ad-ticker-track" 
+            onClick={() => navigate('/feed')}
+            style={{ animationDuration: `${durationSeconds}s` }}
+          >
             {displayItems.map((item, idx) => (
               <span key={`${item.id}-${idx}`} className="ticker-item">
                 <span className="ticker-item-tag">
