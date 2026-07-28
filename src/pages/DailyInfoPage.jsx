@@ -301,11 +301,19 @@ export default function DailyInfoPage() {
     }
   }, [notices]);
 
-  // Contacts CRUD state backed by localStorage
+  // Contacts CRUD state backed by localStorage (Always sync default items + preserve custom admin items)
   const [contacts, setContacts] = useState(() => {
     try {
-      const saved = localStorage.getItem('cebugo_contacts');
-      return saved ? JSON.parse(saved) : DEFAULT_CONTACTS;
+      localStorage.removeItem('cebugo_contacts');
+      localStorage.removeItem('cebugo_contacts_v2');
+      localStorage.removeItem('cebugo_contacts_v3');
+      localStorage.removeItem('cebugo_contacts_v4');
+      localStorage.removeItem('cebugo_contacts_v5');
+      const saved = localStorage.getItem('cebugo_contacts_v6');
+      if (!saved) return DEFAULT_CONTACTS;
+      const parsed = JSON.parse(saved);
+      const customItems = parsed.filter((c) => c.id && !c.id.startsWith('c'));
+      return [...DEFAULT_CONTACTS, ...customItems];
     } catch {
       return DEFAULT_CONTACTS;
     }
@@ -313,7 +321,7 @@ export default function DailyInfoPage() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('cebugo_contacts', JSON.stringify(contacts));
+      localStorage.setItem('cebugo_contacts_v6', JSON.stringify(contacts));
     } catch (err) {
       console.error('Failed to save contacts to localStorage', err);
     }
