@@ -1169,7 +1169,8 @@ export default function DailyInfoPage() {
                   </button>
                 </div>
                 <form onSubmit={handleSaveNotice} className="notice-form">
-                  <div className="form-group">
+                  <div className="modal-body-scroll">
+                    <div className="form-group">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <label className="form-label">구분 태그</label>
                       <button
@@ -1265,8 +1266,9 @@ export default function DailyInfoPage() {
                       ))}
                     </div>
                   </div>
+                </div>
 
-                  <div className="modal-actions">
+                <div className="modal-actions">
                     <button 
                       type="button" 
                       className="btn btn-secondary" 
@@ -1430,7 +1432,8 @@ export default function DailyInfoPage() {
                   </button>
                 </div>
                 <form onSubmit={handleSaveContact} className="notice-form">
-                  <div className="form-group">
+                  <div className="modal-body-scroll">
+                    <div className="form-group">
                     <label className="form-label">구분 카테고리</label>
                     <select
                       value={contactFormData.category}
@@ -1608,8 +1611,9 @@ export default function DailyInfoPage() {
                       </div>
                     ))}
                   </div>
+                </div>
 
-                  <div className="modal-actions">
+                <div className="modal-actions">
                     <button 
                       type="button" 
                       className="btn btn-secondary" 
@@ -1698,7 +1702,8 @@ export default function DailyInfoPage() {
                   </button>
                 </div>
                 <form onSubmit={handleSaveInfo} className="notice-form">
-                  <div className="form-group">
+                  <div className="modal-body-scroll">
+                    <div className="form-group">
                     <label className="form-label">구분 태그</label>
                     <input
                       type="text"
@@ -1771,8 +1776,9 @@ export default function DailyInfoPage() {
                       ))}
                     </div>
                   </div>
+                </div>
 
-                  <div className="modal-actions">
+                <div className="modal-actions">
                     <button 
                       type="button" 
                       className="btn btn-secondary" 
@@ -1925,7 +1931,8 @@ export default function DailyInfoPage() {
                   </button>
                 </div>
                 <form onSubmit={handleSaveNews} className="notice-form">
-                  <div className="form-group">
+                  <div className="modal-body-scroll">
+                    <div className="form-group">
                     <label className="form-label">구분 카테고리</label>
                     <select
                       value={newsFormData.category}
@@ -2025,8 +2032,9 @@ export default function DailyInfoPage() {
                       ))}
                     </div>
                   </div>
+                </div>
 
-                  <div className="modal-actions">
+                <div className="modal-actions">
                     <button 
                       type="button" 
                       className="btn btn-secondary" 
