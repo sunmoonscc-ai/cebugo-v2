@@ -876,3 +876,39 @@ button.contact-link-badge.sns.copied {
 .btn-text-link:hover {
   text-decoration: underline;
 }
+
+.news-title-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.news-title-link:hover .news-title {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.btn-news-more,
+.btn-news-read {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 6px 14px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-news-more:hover,
+.btn-news-read:hover {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+}

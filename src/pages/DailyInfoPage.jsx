@@ -180,48 +180,7 @@ const DEFAULT_CONTACTS = [
   }
 ];
 
-const DEFAULT_PH_NEWS = [
-  {
-    id: 'p1',
-    title: '막탄-세부 국제공항(MCIA) 2026 스마트 입국 심사대 및 eTravel 시스템 전면 도입',
-    date: '2026-07-24',
-    category: '세부소식 / 입국',
-    summary: '막탄 세부 공항 터미널2에 자동 입국 심사 게이트와 100% 모바일 eTravel QR 시스템이 결합되어 한국인 관광객의 입국 대기 시간이 대폭 단축되었습니다.',
-    url: 'https://etravel.gov.ph/'
-  },
-  {
-    id: 'p2',
-    title: '2026 미쉐린 가이드: 세부 포켓 가이드북 최초 발간, 미식 도시 재조명',
-    date: '2026-07-23',
-    category: '세부소식 / 관광',
-    summary: '세계적인 미식 평가서 미쉐린 가이드가 2026년 세부 포켓 가이드북을 출간하여 세부의 로컬 파인 다이닝과 해산물 요리가 글로벌 관광객들에게 주목받고 있습니다.',
-    url: 'https://mactancebuairport.com'
-  },
-  {
-    id: 'p3',
-    title: '세부 아얄라 몰 & IT파크 간 프리미엄 스마트 셔틀 버스 신규 개통',
-    date: '2026-07-22',
-    category: '세부소식 / 교통',
-    summary: '세부 대표 비즈니스 및 쇼핑 거점인 아얄라몰과 IT파크를 잇는 정찰제 스마트 셔틀버스가 상시 운행을 시작하여 자유 여행객들의 이동 편의성이 크게 높아졌습니다.',
-    url: 'https://sunstar.com.ph'
-  },
-  {
-    id: 'p4',
-    title: '필리핀 2026 글로벌 은퇴 & 장기 여행 목적지 세계 1위 선정',
-    date: '2026-07-20',
-    category: '필리핀 이슈 / 사회',
-    summary: '합리적인 생활비, 친절한 현지 주민, 우수한 온화한 기후와 의료 인프라를 바탕으로 필리핀이 2026 해외 은퇴 및 한달살기 선호지 1위로 꼽혔습니다.',
-    url: 'https://inquirer.net'
-  },
-  {
-    id: 'p5',
-    title: '필리핀 중앙은행 페소화 환율 변동성 대응 및 메트로 마닐라 최저임금 조정',
-    date: '2026-07-18',
-    category: '필리핀 이슈 / 경제',
-    summary: '달러 및 페소 교차 환율 변동 속에 필리핀 금융당국이 물가 안정 및 경제 성장을 위한 종합 기조 방안을 발표했습니다.',
-    url: 'https://bworldonline.com'
-  }
-];
+const DEFAULT_PH_NEWS = [];
 
 const getEmergencyTel = (emergencyStr) => {
   if (!emergencyStr) return null;
@@ -363,42 +322,74 @@ export default function DailyInfoPage() {
   // PH News CRUD state backed by localStorage
   const [phNews, setPhNews] = useState(() => {
     try {
-      const saved = localStorage.getItem('cebugo_ph_news');
-      return saved ? JSON.parse(saved) : DEFAULT_PH_NEWS;
+      localStorage.removeItem('cebugo_ph_news');
+      localStorage.removeItem('cebugo_ph_news_v2');
+      localStorage.removeItem('cebugo_ph_news_v3');
+      localStorage.removeItem('cebugo_ph_news_v4');
+      const saved = localStorage.getItem('cebugo_ph_news_live_v1');
+      if (!saved) return [];
+      return JSON.parse(saved);
     } catch {
-      return DEFAULT_PH_NEWS;
+      return [];
     }
   });
 
   useEffect(() => {
     try {
-      localStorage.setItem('cebugo_ph_news', JSON.stringify(phNews));
+      localStorage.setItem('cebugo_ph_news_live_v1', JSON.stringify(phNews));
     } catch (err) {
       console.error('Failed to save phNews to localStorage', err);
     }
   }, [phNews]);
 
   const [isFetchingNews, setIsFetchingNews] = useState(false);
-  const [lastNewsRefreshedAt, setLastNewsRefreshedAt] = useState(null);
+  const [lastNewsRefreshedAt, setLastNewsRefreshedAt] = useState(() => {
+    try {
+      const savedTime = localStorage.getItem('cebugo_ph_news_last_fetched_time');
+      if (savedTime) {
+        const dateObj = new Date(parseInt(savedTime, 10));
+        return `${dateObj.getMonth() + 1}/${dateObj.getDate()} ${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  });
 
   const handleRefreshGoogleNews = async () => {
     setIsFetchingNews(true);
     const liveItems = await fetchGoogleNews();
     if (liveItems && liveItems.length > 0) {
       setPhNews((prev) => {
-        // keep user manually created/edited news and merge new google items
         const manualItems = prev.filter((n) => !n.isAutoFetched);
         return [...manualItems, ...liveItems];
       });
-      setLastNewsRefreshedAt(new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }));
+      const now = Date.now();
+      try {
+        localStorage.setItem('cebugo_ph_news_last_fetched_time', now.toString());
+      } catch (e) {
+        console.error('Failed to save last fetched timestamp', e);
+      }
+      const dateObj = new Date(now);
+      setLastNewsRefreshedAt(`${dateObj.getMonth() + 1}/${dateObj.getDate()} ${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`);
     }
     setIsFetchingNews(false);
   };
 
   useEffect(() => {
-    // Auto fetch live google news when phnews tab is opened
-    if (activeTab === 'phnews' && (!lastNewsRefreshedAt || phNews.length <= 5)) {
-      handleRefreshGoogleNews();
+    // 6-hour auto update policy or if empty
+    if (activeTab === 'phnews') {
+      try {
+        const savedTimestamp = localStorage.getItem('cebugo_ph_news_last_fetched_time');
+        const sixHoursMs = 6 * 60 * 60 * 1000;
+        const isExpired = !savedTimestamp || Date.now() - parseInt(savedTimestamp, 10) > sixHoursMs;
+
+        if (phNews.length === 0 || isExpired) {
+          handleRefreshGoogleNews();
+        }
+      } catch {
+        if (phNews.length === 0) handleRefreshGoogleNews();
+      }
     }
   }, [activeTab]);
 
@@ -413,6 +404,7 @@ export default function DailyInfoPage() {
     date: new Date().toISOString().split('T')[0],
     summary: '',
     url: '',
+    moreUrl: '',
     images: []
   });
 
@@ -424,6 +416,7 @@ export default function DailyInfoPage() {
       date: new Date().toISOString().split('T')[0],
       summary: '',
       url: '',
+      moreUrl: '',
       images: []
     });
     setIsNewsModalOpen(true);
@@ -437,6 +430,7 @@ export default function DailyInfoPage() {
       date: item.date || new Date().toISOString().split('T')[0],
       summary: item.summary,
       url: item.url || '',
+      moreUrl: item.moreUrl || '',
       images: item.images || []
     });
     setIsNewsModalOpen(true);
@@ -624,7 +618,7 @@ export default function DailyInfoPage() {
     '긴급신고',
     '공항 / 교통',
     '의료 / 병원',
-    '투어 / 액티비티',
+    '유틸리티',
     '기타 비상연락'
   ];
 
@@ -1446,7 +1440,7 @@ export default function DailyInfoPage() {
                       <option value="긴급신고">긴급신고</option>
                       <option value="공항 / 교통">공항 / 교통</option>
                       <option value="의료 / 병원">의료 / 병원</option>
-                      <option value="투어 / 액티비티">투어 / 액티비티</option>
+                      <option value="유틸리티">유틸리티</option>
                       <option value="기타 비상연락">기타 비상연락</option>
                       <option value="직접입력">직접입력</option>
                     </select>
@@ -1851,7 +1845,23 @@ export default function DailyInfoPage() {
 
           {lastNewsRefreshedAt && (
             <div className="field-hint" style={{ marginBottom: '10px', textAlign: 'right', fontSize: '0.75rem', color: '#64748b' }}>
-              ※ 구글 뉴스 수집 완료 ({lastNewsRefreshedAt} 기준)
+              ※ 구글 실시간 한글 뉴스 ({lastNewsRefreshedAt} 기준 | 6시간 주기 자동 갱신)
+            </div>
+          )}
+
+          {isFetchingNews && phNews.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '50px 20px', color: '#64748b' }}>
+              <RiRefreshLine className="rotating" style={{ fontSize: '2.4rem', color: '#2563eb', marginBottom: '12px' }} />
+              <p style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e293b' }}>최신 필리핀/세부 실시간 한글 뉴스를 가져오는 중입니다...</p>
+            </div>
+          )}
+
+          {!isFetchingNews && phNews.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '50px 20px', color: '#64748b' }}>
+              <p style={{ marginBottom: '12px', fontWeight: 600 }}>수집된 최신 뉴스가 없습니다.</p>
+              <button type="button" className="btn btn-primary" onClick={handleRefreshGoogleNews}>
+                <RiRefreshLine /> 구글 실시간 뉴스 수집하기
+              </button>
             </div>
           )}
 
@@ -1861,6 +1871,11 @@ export default function DailyInfoPage() {
                 if (newsCategoryFilter === 'cebu') return item.category.includes('세부');
                 if (newsCategoryFilter === 'ph') return item.category.includes('필리핀');
                 return true;
+              })
+              .sort((a, b) => {
+                const timeA = a.pubTimestamp || (a.date ? new Date(a.date).getTime() : 0);
+                const timeB = b.pubTimestamp || (b.date ? new Date(b.date).getTime() : 0);
+                return timeB - timeA;
               })
               .map((item) => (
                 <div key={item.id} className="glass-card news-card fade-in">
@@ -1892,7 +1907,19 @@ export default function DailyInfoPage() {
                     )}
                   </div>
 
-                  <h3 className="news-title">{item.title}</h3>
+                  {item.url ? (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="news-title-link"
+                      title="클릭하여 해당 뉴스 본문 바로보기"
+                    >
+                      <h3 className="news-title">{item.title}</h3>
+                    </a>
+                  ) : (
+                    <h3 className="news-title">{item.title}</h3>
+                  )}
 
                   {/* Attached Images Carousel */}
                   {item.images && item.images.length > 0 && (
@@ -1904,15 +1931,15 @@ export default function DailyInfoPage() {
                   <p className="news-summary">{item.summary}</p>
 
                   {item.url && (
-                    <div className="news-url-row" style={{ marginTop: '10px', textAlign: 'right' }}>
+                    <div className="news-url-row" style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                       <a
                         href={item.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="btn-text-link"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.82rem', fontWeight: 700 }}
+                        className="btn-news-read"
+                        title="해당 기사 본문 전체 바로보기"
                       >
-                        <RiGlobalLine /> 원문 뉴스 바로가기 ↗
+                        <RiNewspaperLine /> 기사 자세히 보기 ↗
                       </a>
                     </div>
                   )}
@@ -1988,9 +2015,20 @@ export default function DailyInfoPage() {
                     <label className="form-label">뉴스 기사 원문 링크 (선택)</label>
                     <input
                       type="url"
-                      placeholder="https://news.google.com/..."
+                      placeholder="https://example.com/..."
                       value={newsFormData.url}
                       onChange={(e) => setNewsFormData({ ...newsFormData, url: e.target.value })}
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">구글 뉴스 / 상세 더보기 링크 (선택 - 미입력 시 제목 자동검색)</label>
+                    <input
+                      type="url"
+                      placeholder="https://news.google.com/..."
+                      value={newsFormData.moreUrl}
+                      onChange={(e) => setNewsFormData({ ...newsFormData, moreUrl: e.target.value })}
                       className="form-input"
                     />
                   </div>
