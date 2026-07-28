@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import ImageCarousel from '../components/places/ImageCarousel';
 import { fetchGoogleNews } from '../services/googleNewsService';
 import { fetchExchangeRates } from '../services/exchangeRateService';
+import { db } from '../firebase/config';
+import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { 
   RiExchangeDollarLine, 
   RiNewspaperLine, 
@@ -25,7 +27,10 @@ import {
   RiHashtag,
   RiRefreshLine,
   RiTimeLine,
-  RiFileCopyLine
+  RiFileCopyLine,
+  RiArrowUpLine,
+  RiArrowDownLine,
+  RiDragMove2Line
 } from 'react-icons/ri';
 import './DailyInfoPage.css';
 
@@ -110,8 +115,7 @@ const DEFAULT_CONTACTS = [
     id: 'c1',
     category: '공관 / 영사',
     name: '주세부 대한민국 분공관',
-    phones: ['+63-32-340-9900'],
-    emergency: '+63-917-808-3904 (24시간 사건사고)',
+    phones: ['+63-32-340-9900', '+63-917-808-3904 (24시간 사건사고)'],
     hours: '월~금 08:00 - 17:00 (점심시간 12:00 - 13:00)',
     desc: '세부시티 아얄라 센트럴 블록 타워 12층',
     website: 'https://overseas.mofa.go.kr/ph-cebu-ko/index.do',
@@ -123,7 +127,6 @@ const DEFAULT_CONTACTS = [
     category: '영사콜센터',
     name: '외교부 영사콜센터 (한국)',
     phones: ['+82-2-3210-0404'],
-    emergency: '24시간 연중무휴 긴급 상담',
     hours: '24시간 365일 연중무휴',
     desc: '해외 긴급 상황 및 통역 서비스 지원',
     website: 'https://www.0404.go.kr',
@@ -135,7 +138,6 @@ const DEFAULT_CONTACTS = [
     category: '한인회',
     name: '세부 한인회 비상연락처',
     phones: ['+63-917-319-3838', '+63-32-343-4100'],
-    emergency: '+63-917-319-3838',
     hours: '월~토 09:00 - 18:00',
     desc: '세부 거주 한인 및 관광객 긴급 구조 지원',
     website: 'https://cebukorean.org',
@@ -146,8 +148,7 @@ const DEFAULT_CONTACTS = [
     id: 'c4',
     category: '긴급신고',
     name: '필리핀 긴급합동신고센터',
-    phones: ['911'],
-    emergency: '경찰 / 소방 / 구급 통합 911',
+    phones: ['911 (경찰/소방/구급 통합)'],
     hours: '24시간 연중무휴',
     desc: '필리핀 전역 통합 긴급 구조 번호',
     website: '',
@@ -159,7 +160,6 @@ const DEFAULT_CONTACTS = [
     category: '공항 / 교통',
     name: '막탄-세부 국제공항 (MCIA)',
     phones: ['+63-32-494-7000'],
-    emergency: '터미널 안내센터',
     hours: '24시간 운항 및 고객 상담',
     desc: '항공편 운항 상태 및 수하물 관련 문의',
     website: 'https://mactancebuairport.com',
@@ -171,7 +171,6 @@ const DEFAULT_CONTACTS = [
     category: '의료 / 병원',
     name: '세부 닥터스 종합병원 (Cebu Doctors Hospital)',
     phones: ['+63-32-255-5555'],
-    emergency: '응급실 (Emergency Room)',
     hours: '24시간 응급센터 (외래 08:00 - 17:00)',
     desc: '세부시티 위치 메이저 종합병원',
     website: 'https://cebudoctorshospital.com',
@@ -283,72 +282,71 @@ export default function DailyInfoPage() {
     }
   }, [tags]);
 
-  // Notice CRUD state backed by localStorage
-  const [notices, setNotices] = useState(() => {
-    try {
-      const saved = localStorage.getItem('cebugo_notices');
-      return saved ? JSON.parse(saved) : DEFAULT_NOTICES;
-    } catch {
-      return DEFAULT_NOTICES;
-    }
-  });
+  // Notice CRUD state backed by Firebase Firestore
+  const [notices, setNotices] = useState(DEFAULT_NOTICES);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('cebugo_notices', JSON.stringify(notices));
-    } catch (err) {
-      console.error('Failed to save notices to localStorage', err);
-    }
-  }, [notices]);
+    const unsub = onSnapshot(
+      collection(db, 'cebugo_notices'),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+          list.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+          setNotices(list);
+        } else {
+          DEFAULT_NOTICES.forEach(async (n) => {
+            await setDoc(doc(db, 'cebugo_notices', n.id), n);
+          });
+          setNotices(DEFAULT_NOTICES);
+        }
+      },
+      (err) => console.error('Firestore notices sync error:', err)
+    );
+    return () => unsub();
+  }, []);
 
-  // Contacts CRUD state backed by localStorage (Always sync default items + preserve custom admin items)
-  const [contacts, setContacts] = useState(() => {
-    try {
-      localStorage.removeItem('cebugo_contacts');
-      localStorage.removeItem('cebugo_contacts_v2');
-      localStorage.removeItem('cebugo_contacts_v3');
-      localStorage.removeItem('cebugo_contacts_v4');
-      localStorage.removeItem('cebugo_contacts_v5');
-      const saved = localStorage.getItem('cebugo_contacts_v6');
-      if (!saved) return DEFAULT_CONTACTS;
-      const parsed = JSON.parse(saved);
-      const customItems = parsed.filter((c) => c.id && !c.id.startsWith('c'));
-      return [...DEFAULT_CONTACTS, ...customItems];
-    } catch {
-      return DEFAULT_CONTACTS;
-    }
-  });
+  // Contacts CRUD state backed by Firebase Firestore
+  const [contacts, setContacts] = useState(DEFAULT_CONTACTS);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('cebugo_contacts_v6', JSON.stringify(contacts));
-    } catch (err) {
-      console.error('Failed to save contacts to localStorage', err);
-    }
-  }, [contacts]);
+    const unsub = onSnapshot(
+      collection(db, 'cebugo_contacts'),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+          list.sort((a, b) => (a.order !== undefined ? a.order : 0) - (b.order !== undefined ? b.order : 0));
+          setContacts(list);
+        } else {
+          DEFAULT_CONTACTS.forEach(async (c, idx) => {
+            await setDoc(doc(db, 'cebugo_contacts', c.id), { ...c, order: idx });
+          });
+          setContacts(DEFAULT_CONTACTS.map((c, idx) => ({ ...c, order: idx })));
+        }
+      },
+      (err) => console.error('Firestore contacts sync error:', err)
+    );
+    return () => unsub();
+  }, []);
 
-  // PH News CRUD state backed by localStorage
-  const [phNews, setPhNews] = useState(() => {
-    try {
-      localStorage.removeItem('cebugo_ph_news');
-      localStorage.removeItem('cebugo_ph_news_v2');
-      localStorage.removeItem('cebugo_ph_news_v3');
-      localStorage.removeItem('cebugo_ph_news_v4');
-      const saved = localStorage.getItem('cebugo_ph_news_live_v1');
-      if (!saved) return [];
-      return JSON.parse(saved);
-    } catch {
-      return [];
-    }
-  });
+  // PH News CRUD state backed by Firebase Firestore + Google News RSS
+  const [phNews, setPhNews] = useState([]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('cebugo_ph_news_live_v1', JSON.stringify(phNews));
-    } catch (err) {
-      console.error('Failed to save phNews to localStorage', err);
-    }
-  }, [phNews]);
+    const unsub = onSnapshot(
+      collection(db, 'cebugo_ph_news'),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const manualItems = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+          setPhNews((prev) => {
+            const liveItems = prev.filter((n) => n.isAutoFetched);
+            return [...manualItems, ...liveItems];
+          });
+        }
+      },
+      (err) => console.error('Firestore phNews sync error:', err)
+    );
+    return () => unsub();
+  }, []);
 
   const [isFetchingNews, setIsFetchingNews] = useState(false);
   const [lastNewsRefreshedAt, setLastNewsRefreshedAt] = useState(() => {
@@ -444,8 +442,13 @@ export default function DailyInfoPage() {
     setIsNewsModalOpen(true);
   };
 
-  const handleDeleteNews = (id) => {
+  const handleDeleteNews = async (id) => {
     if (window.confirm('정말로 이 뉴스 항목을 삭제하시겠습니까?')) {
+      try {
+        await deleteDoc(doc(db, 'cebugo_ph_news', id));
+      } catch (err) {
+        console.error('Failed to delete news from Firestore:', err);
+      }
       setPhNews((prev) => prev.filter((item) => item.id !== id));
     }
   };
@@ -484,45 +487,54 @@ export default function DailyInfoPage() {
     }));
   };
 
-  const handleSaveNews = (e) => {
+  const handleSaveNews = async (e) => {
     e.preventDefault();
     if (!newsFormData.title.trim() || !newsFormData.summary.trim()) {
       alert('뉴스 제목과 요약 내용을 입력해 주세요.');
       return;
     }
 
-    if (editingNews) {
+    const docId = editingNews ? editingNews.id : `p_${Date.now()}`;
+    const newsToSave = {
+      id: docId,
+      ...newsFormData,
+      isAutoFetched: false,
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      await setDoc(doc(db, 'cebugo_ph_news', docId), newsToSave);
+    } catch (err) {
+      console.error('Failed to save news to Firestore:', err);
       setPhNews((prev) =>
-        prev.map((item) => (item.id === editingNews.id ? { ...item, ...newsFormData } : item))
+        editingNews ? prev.map((item) => (item.id === docId ? newsToSave : item)) : [newsToSave, ...prev]
       );
-    } else {
-      const newNews = {
-        id: `p_${Date.now()}`,
-        ...newsFormData
-      };
-      setPhNews((prev) => [newNews, ...prev]);
     }
 
     setIsNewsModalOpen(false);
   };
 
-  // Travel Info CRUD state backed by localStorage
-  const [travelInfos, setTravelInfos] = useState(() => {
-    try {
-      const saved = localStorage.getItem('cebugo_travel_info');
-      return saved ? JSON.parse(saved) : DEFAULT_TRAVEL_INFO;
-    } catch {
-      return DEFAULT_TRAVEL_INFO;
-    }
-  });
+  // Travel Info CRUD state backed by Firebase Firestore
+  const [travelInfos, setTravelInfos] = useState(DEFAULT_TRAVEL_INFO);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('cebugo_travel_info', JSON.stringify(travelInfos));
-    } catch (err) {
-      console.error('Failed to save travel info to localStorage', err);
-    }
-  }, [travelInfos]);
+    const unsub = onSnapshot(
+      collection(db, 'cebugo_travel_info'),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+          setTravelInfos(list);
+        } else {
+          DEFAULT_TRAVEL_INFO.forEach(async (t) => {
+            await setDoc(doc(db, 'cebugo_travel_info', t.id), t);
+          });
+          setTravelInfos(DEFAULT_TRAVEL_INFO);
+        }
+      },
+      (err) => console.error('Firestore travel_info sync error:', err)
+    );
+    return () => unsub();
+  }, []);
 
   // Info Modal / Form state
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
@@ -556,8 +568,13 @@ export default function DailyInfoPage() {
     setIsInfoModalOpen(true);
   };
 
-  const handleDeleteInfo = (id) => {
+  const handleDeleteInfo = async (id) => {
     if (window.confirm('정말로 이 정보 항목을 삭제하시겠습니까?')) {
+      try {
+        await deleteDoc(doc(db, 'cebugo_travel_info', id));
+      } catch (err) {
+        console.error('Failed to delete info from Firestore:', err);
+      }
       setTravelInfos((prev) => prev.filter((item) => item.id !== id));
     }
   };
@@ -596,23 +613,27 @@ export default function DailyInfoPage() {
     }));
   };
 
-  const handleSaveInfo = (e) => {
+  const handleSaveInfo = async (e) => {
     e.preventDefault();
     if (!infoFormData.title.trim() || !infoFormData.desc.trim()) {
       alert('제목과 상세 내용을 입력해 주세요.');
       return;
     }
 
-    if (editingInfo) {
+    const docId = editingInfo ? editingInfo.id : `i_${Date.now()}`;
+    const infoToSave = {
+      id: docId,
+      ...infoFormData,
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      await setDoc(doc(db, 'cebugo_travel_info', docId), infoToSave);
+    } catch (err) {
+      console.error('Failed to save travel info to Firestore:', err);
       setTravelInfos((prev) =>
-        prev.map((item) => (item.id === editingInfo.id ? { ...item, ...infoFormData } : item))
+        editingInfo ? prev.map((item) => (item.id === docId ? infoToSave : item)) : [infoToSave, ...prev]
       );
-    } else {
-      const newInfo = {
-        id: `i_${Date.now()}`,
-        ...infoFormData
-      };
-      setTravelInfos((prev) => [newInfo, ...prev]);
     }
 
     setIsInfoModalOpen(false);
@@ -705,6 +726,7 @@ export default function DailyInfoPage() {
     setEditingContact(item);
     const cat = item.category || '공관 / 영사';
     const isPreset = PRESET_CONTACT_CATEGORIES.includes(cat);
+    
     setContactFormData({
       category: isPreset ? cat : '직접입력',
       customCategory: isPreset ? '' : cat,
@@ -720,9 +742,84 @@ export default function DailyInfoPage() {
     setIsContactModalOpen(true);
   };
 
-  const handleDeleteContact = (id) => {
+  const handleDeleteContact = async (id) => {
     if (window.confirm('정말로 이 연락처 항목을 삭제하시겠습니까?')) {
+      try {
+        await deleteDoc(doc(db, 'cebugo_contacts', id));
+      } catch (err) {
+        console.error('Failed to delete contact from Firestore:', err);
+      }
       setContacts((prev) => prev.filter((item) => item.id !== id));
+    }
+  };
+
+  // Move Contact Up / Down (Direct action on card)
+  const handleMoveContact = async (index, direction) => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= contacts.length) return;
+
+    const newContacts = [...contacts];
+    const temp = newContacts[index];
+    newContacts[index] = newContacts[targetIndex];
+    newContacts[targetIndex] = temp;
+
+    const updatedList = newContacts.map((item, idx) => ({
+      ...item,
+      order: idx
+    }));
+
+    setContacts(updatedList);
+
+    try {
+      const batch = writeBatch(db);
+      updatedList.forEach((item) => {
+        const docRef = doc(db, 'cebugo_contacts', item.id);
+        batch.set(docRef, item, { merge: true });
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error('Failed to update contact order in Firestore:', err);
+    }
+  };
+
+  // Reorder Modal State & Handlers
+  const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
+  const [tempReorderContacts, setTempReorderContacts] = useState([]);
+
+  const handleOpenReorderModal = () => {
+    setTempReorderContacts([...contacts]);
+    setIsReorderModalOpen(true);
+  };
+
+  const handleMoveTempContact = (index, direction) => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= tempReorderContacts.length) return;
+
+    const updated = [...tempReorderContacts];
+    const temp = updated[index];
+    updated[index] = updated[targetIndex];
+    updated[targetIndex] = temp;
+    setTempReorderContacts(updated);
+  };
+
+  const handleSaveReorder = async () => {
+    const updatedList = tempReorderContacts.map((item, idx) => ({
+      ...item,
+      order: idx
+    }));
+
+    setContacts(updatedList);
+    setIsReorderModalOpen(false);
+
+    try {
+      const batch = writeBatch(db);
+      updatedList.forEach((item) => {
+        const docRef = doc(db, 'cebugo_contacts', item.id);
+        batch.set(docRef, item, { merge: true });
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error('Failed to save reordered contacts to Firestore:', err);
     }
   };
 
@@ -772,7 +869,7 @@ export default function DailyInfoPage() {
     }));
   };
 
-  const handleSaveContact = (e) => {
+  const handleSaveContact = async (e) => {
     e.preventDefault();
     if (!contactFormData.name.trim()) {
       alert('기관 및 연락처 이름을 입력해 주세요.');
@@ -791,24 +888,25 @@ export default function DailyInfoPage() {
       ? contactFormData.customCategory.trim()
       : contactFormData.category;
 
+    const docId = editingContact ? editingContact.id : `c_${Date.now()}`;
+
     const contactToSave = {
+      id: docId,
       ...contactFormData,
       category: finalCategory,
       phones: cleanPhones.length > 0 ? cleanPhones : ['미등록'],
-      snsList: cleanSns
+      snsList: cleanSns,
+      updatedAt: new Date().toISOString()
     };
     delete contactToSave.customCategory;
 
-    if (editingContact) {
+    try {
+      await setDoc(doc(db, 'cebugo_contacts', docId), contactToSave);
+    } catch (err) {
+      console.error('Failed to save contact to Firestore:', err);
       setContacts((prev) =>
-        prev.map((item) => (item.id === editingContact.id ? { ...item, ...contactToSave } : item))
+        editingContact ? prev.map((item) => (item.id === docId ? contactToSave : item)) : [...prev, contactToSave]
       );
-    } else {
-      const newContact = {
-        id: `c_${Date.now()}`,
-        ...contactToSave
-      };
-      setContacts((prev) => [...prev, newContact]);
     }
 
     setIsContactModalOpen(false);
@@ -899,9 +997,14 @@ export default function DailyInfoPage() {
     setIsNoticeModalOpen(true);
   };
 
-  const handleDeleteNotice = (id) => {
+  const handleDeleteNotice = async (id) => {
     if (window.confirm('정말로 이 공지사항을 삭제하시겠습니까?')) {
-      setNotices((prev) => prev.filter((item) => item.id !== id));
+      try {
+        await deleteDoc(doc(db, 'cebugo_notices', id));
+      } catch (err) {
+        console.error('Failed to delete notice from Firestore:', err);
+        setNotices((prev) => prev.filter((item) => item.id !== id));
+      }
     }
   };
 
@@ -939,29 +1042,27 @@ export default function DailyInfoPage() {
     }));
   };
 
-  const handleSaveNotice = (e) => {
+  const handleSaveNotice = async (e) => {
     e.preventDefault();
     if (!noticeFormData.title.trim() || !noticeFormData.content.trim()) {
       alert('제목과 내용을 입력해 주세요.');
       return;
     }
 
-    if (editingNotice) {
-      // Edit existing
+    const docId = editingNotice ? editingNotice.id : `n_${Date.now()}`;
+    const noticeToSave = {
+      id: docId,
+      ...noticeFormData,
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      await setDoc(doc(db, 'cebugo_notices', docId), noticeToSave);
+    } catch (err) {
+      console.error('Failed to save notice to Firestore:', err);
       setNotices((prev) =>
-        prev.map((item) =>
-          item.id === editingNotice.id
-            ? { ...item, ...noticeFormData }
-            : item
-        )
+        editingNotice ? prev.map((item) => (item.id === docId ? noticeToSave : item)) : [noticeToSave, ...prev]
       );
-    } else {
-      // Create new
-      const newNotice = {
-        id: `n_${Date.now()}`,
-        ...noticeFormData
-      };
-      setNotices((prev) => [newNotice, ...prev]);
     }
 
     setIsNoticeModalOpen(false);
@@ -1296,6 +1397,13 @@ export default function DailyInfoPage() {
             <div className="admin-notice-actions">
               <button 
                 type="button" 
+                className="btn btn-secondary add-notice-btn"
+                onClick={handleOpenReorderModal}
+              >
+                <RiDragMove2Line /> 순서 변경
+              </button>
+              <button 
+                type="button" 
                 className="btn btn-primary add-notice-btn"
                 onClick={handleOpenCreateContact}
               >
@@ -1305,7 +1413,7 @@ export default function DailyInfoPage() {
           )}
 
           <div className="contacts-grid">
-            {contacts.map((item) => {
+            {contacts.map((item, index) => {
               const IconComp = item.icon || RiPhoneFill;
               const phonesList = item.phones && item.phones.length > 0 ? item.phones : (item.phone ? [item.phone] : []);
               return (
@@ -1325,6 +1433,24 @@ export default function DailyInfoPage() {
 
                     {userProfile?.isAdmin && (
                       <div className="admin-card-actions">
+                        <button 
+                          type="button" 
+                          className="btn-icon-action move"
+                          onClick={() => handleMoveContact(index, 'up')}
+                          disabled={index === 0}
+                          title="위로 이동"
+                        >
+                          <RiArrowUpLine />
+                        </button>
+                        <button 
+                          type="button" 
+                          className="btn-icon-action move"
+                          onClick={() => handleMoveContact(index, 'down')}
+                          disabled={index === contacts.length - 1}
+                          title="아래로 이동"
+                        >
+                          <RiArrowDownLine />
+                        </button>
                         <button 
                           type="button" 
                           className="btn-icon-action edit"
@@ -1368,20 +1494,20 @@ export default function DailyInfoPage() {
                     </div>
                   )}
 
-                  {/* Emergency line */}
+                  {/* Emergency line without prepended '비상:' prefix */}
                   {item.emergency && (() => {
                     const emergencyTel = getEmergencyTel(item.emergency);
                     return emergencyTel ? (
                       <a
                         href={`tel:${emergencyTel}`}
                         className="contact-emergency-line clickable"
-                        title="비상 전화 걸기"
+                        title="긴급 전화 걸기"
                       >
-                        <RiPhoneFill style={{ verticalAlign: '-1px', marginRight: '4px' }} /> 비상: {item.emergency}
+                        <RiPhoneFill style={{ verticalAlign: '-1px', marginRight: '4px' }} /> {item.emergency}
                       </a>
                     ) : (
                       <div className="contact-emergency-line">
-                        <span>비상: {item.emergency}</span>
+                        <span>{item.emergency}</span>
                       </div>
                     );
                   })()}
@@ -1538,8 +1664,8 @@ export default function DailyInfoPage() {
                     <label className="form-label">비상 / 긴급 연락처 (선택)</label>
                     <input
                       type="text"
-                      placeholder="예: +63-917-808-3904 (24시간 사건사고)"
-                      value={contactFormData.emergency}
+                      placeholder="예: 긴급당직번호 +63-917-817-5703"
+                      value={contactFormData.emergency || ''}
                       onChange={(e) => setContactFormData({ ...contactFormData, emergency: e.target.value })}
                       className="form-input"
                     />
@@ -1616,18 +1742,79 @@ export default function DailyInfoPage() {
                 </div>
 
                 <div className="modal-actions">
-                    <button 
-                      type="button" 
-                      className="btn btn-secondary" 
-                      onClick={() => setIsContactModalOpen(false)}
-                    >
-                      취소
-                    </button>
-                    <button type="submit" className="btn btn-primary">
-                      <RiCheckLine /> {editingContact ? '수정 완료' : '등록 하기'}
-                    </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    onClick={() => setIsContactModalOpen(false)}
+                  >
+                    취소
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    <RiCheckLine /> {editingContact ? '수정 완료' : '등록 하기'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+          {/* Reorder Contacts Modal */}
+          {isReorderModalOpen && (
+            <div className="modal-overlay fade-in">
+              <div className="modal-content glass-card reorder-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2><RiDragMove2Line /> 비상연락처 표시 순서 변경</h2>
+                  <button className="modal-close-btn" onClick={() => setIsReorderModalOpen(false)}>
+                    <RiCloseLine />
+                  </button>
+                </div>
+                <div className="modal-body-scroll" style={{ padding: '16px 20px' }}>
+                  <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '16px' }}>
+                    비상연락처 항목의 위/아래 버튼을 눌러 목록 표시 순서를 조정하세요.
+                  </p>
+                  <div className="reorder-list">
+                    {tempReorderContacts.map((item, idx) => (
+                      <div key={item.id} className="reorder-item-card">
+                        <div className="reorder-item-left">
+                          <span className="reorder-index-badge">{idx + 1}</span>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <span className="contact-cat-badge" style={{ fontSize: '0.7rem' }}>{item.category}</span>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#1e293b', marginTop: '2px' }}>
+                              {item.name}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="reorder-item-actions">
+                          <button
+                            type="button"
+                            className="btn-icon-action move"
+                            onClick={() => handleMoveTempContact(idx, 'up')}
+                            disabled={idx === 0}
+                            title="위로 이동"
+                          >
+                            <RiArrowUpLine /> 위로
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-icon-action move"
+                            onClick={() => handleMoveTempContact(idx, 'down')}
+                            disabled={idx === tempReorderContacts.length - 1}
+                            title="아래로 이동"
+                          >
+                            <RiArrowDownLine /> 아래로
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </form>
+                </div>
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-secondary" onClick={() => setIsReorderModalOpen(false)}>
+                    취소
+                  </button>
+                  <button type="button" className="btn btn-primary" onClick={handleSaveReorder}>
+                    <RiCheckLine /> 순서 저장하기
+                  </button>
+                </div>
               </div>
             </div>
           )}
