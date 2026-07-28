@@ -99,7 +99,8 @@ export default function PlaceFeedPage() {
   };
 
   const handleToggleTicker = async (post) => {
-    const nextStatus = !post.isTicker;
+    const isCurrentlyTicker = post.isTicker === true || post.isTicker === 'true';
+    const nextStatus = !isCurrentlyTicker;
     try {
       await setDoc(doc(db, 'cebugo_ads', post.id), { isTicker: nextStatus }, { merge: true });
     } catch (err) {
@@ -225,6 +226,7 @@ export default function PlaceFeedPage() {
         ) : (
           tabPosts.map((post, index) => {
             const imagesList = post.images && post.images.length > 0 ? post.images : (post.image ? [post.image] : []);
+            const isTickerActive = post.isTicker === true || post.isTicker === 'true';
             return (
               <div key={post.id} className="glass-card post-card fade-in">
                 <div className="post-header-row">
@@ -233,7 +235,7 @@ export default function PlaceFeedPage() {
                       {post.category === 'ad' ? '📣 광고' : '🎉 이벤트'}
                     </span>
                     <span className="post-place-name">{post.authorName || post.placeName}</span>
-                    {post.isTicker && (
+                    {isTickerActive && (
                       <span className="post-cat-badge" style={{ background: '#fef08a', color: '#854d0e', border: '1px solid #fde047' }}>
                         📢 전광판 게시 중
                       </span>
@@ -246,17 +248,17 @@ export default function PlaceFeedPage() {
                       <div className="admin-card-actions">
                         <button
                           type="button"
-                          className={`btn-icon-action move ${post.isTicker ? 'active' : ''}`}
+                          className={`btn-icon-action move ${isTickerActive ? 'active' : ''}`}
                           onClick={() => handleToggleTicker(post)}
-                          title={post.isTicker ? '하단 전광판 게시 해제' : '하단 전광판에 게시하기'}
+                          title={isTickerActive ? '하단 전광판 게시 해제' : '하단 전광판에 게시하기'}
                           style={{
-                            background: post.isTicker ? '#dcfce7' : '#f1f5f9',
-                            color: post.isTicker ? '#15803d' : '#64748b',
-                            borderColor: post.isTicker ? '#86efac' : '#cbd5e1',
+                            background: isTickerActive ? '#dcfce7' : '#f1f5f9',
+                            color: isTickerActive ? '#15803d' : '#64748b',
+                            borderColor: isTickerActive ? '#86efac' : '#cbd5e1',
                             fontWeight: 700
                           }}
                         >
-                          <RiVolumeUpLine /> {post.isTicker ? '전광판 게시중' : '전광판 게시'}
+                          <RiVolumeUpLine /> {isTickerActive ? '전광판 게시중' : '전광판 게시'}
                         </button>
                         <button
                           type="button"

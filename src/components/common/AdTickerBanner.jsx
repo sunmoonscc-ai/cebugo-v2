@@ -15,32 +15,11 @@ export default function AdTickerBanner() {
       (snapshot) => {
         if (!snapshot.empty) {
           const list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-          // Filter admin-selected ticker items (isTicker === true)
+          // Filter strictly admin-selected ticker items (isTicker === true)
           const selected = list.filter((p) => p.isTicker === true || p.isTicker === 'true');
-          
-          if (selected.length > 0) {
-            setTickerPosts(selected);
-          } else {
-            // Fallback: If no explicit selection, pick all items
-            setTickerPosts(list);
-          }
+          setTickerPosts(selected);
         } else {
-          setTickerPosts([
-            {
-              id: 'ad_1',
-              category: 'ad',
-              authorName: '점보씨푸드 막탄',
-              title: '당일 수급 신선 알리망오 크랩 입고 안내',
-              content: '오늘 아침 현지 어시장에서 갓 수급한 A급 세부 알리망오 크랩 50kg 입고!'
-            },
-            {
-              id: 'event_1',
-              category: 'event',
-              authorName: '트리쉐이드 스파 막탄점',
-              title: '여름 시즌 한정 오가닉 코코넛 스파 20% 할인 이벤트',
-              content: '7월 한 달간 90분 스파 이용 시 시그니처 코코넛 페이셜 수면팩 무료 서비스!'
-            }
-          ]);
+          setTickerPosts([]);
         }
       },
       (err) => {
