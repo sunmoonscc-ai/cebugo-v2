@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePlaces } from '../../context/PlacesContext';
 import { useAuth } from '../../context/AuthContext';
 import { RiCloseLine, RiSendPlaneFill } from 'react-icons/ri';
@@ -11,6 +11,23 @@ export default function SuggestEditModal({ place, onClose }) {
   const [field, setField] = useState('영업시간');
   const [newValue, setNewValue] = useState('');
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    window.history.pushState({ modalOpen: 'suggest_edit' }, '');
+
+    const handlePopState = () => {
+      onClose();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (window.history.state?.modalOpen === 'suggest_edit') {
+        window.history.back();
+      }
+    };
+  }, [onClose]);
 
   const handleSubmit = (e) => {
     e.preventDefault();

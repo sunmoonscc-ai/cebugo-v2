@@ -19,6 +19,24 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
     setDragOffsetX(0);
   }, [currentIndex]);
 
+  // Intercept smartphone / browser back button so back gesture closes modal first
+  useEffect(() => {
+    window.history.pushState({ modalOpen: 'fullscreen_image' }, '');
+
+    const handlePopState = () => {
+      onClose();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (window.history.state?.modalOpen === 'fullscreen_image') {
+        window.history.back();
+      }
+    };
+  }, [onClose]);
+
   if (!images || images.length === 0) return null;
 
   const handlePrev = (e) => {

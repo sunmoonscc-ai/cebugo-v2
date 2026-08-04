@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { CarrierBadge } from '../common/Badge';
 import { classifyPhoneCarrier, parseSnsEntry, getSnsLinkUrl } from '../../utils/phoneSnsClassifier';
 import { getOptimizedImageUrl, getDefaultImageForCategory } from '../../utils/imageHelper';
@@ -20,9 +20,14 @@ import {
 import './PlaceCard.css';
 
 export default function PlaceCard({ place, index, totalCount, onMove, onEdit, onDelete }) {
+  const navigate = useNavigate();
   const { userProfile, toggleFavorite } = useAuth();
-  const [zoomImgIndex, setZoomImgIndex] = useState(null);
+  const [zoomImgIndex, setZoomImgIndex] = React.useState(null);
   const isFavorite = userProfile?.favorites?.includes(place.id);
+
+  const goToDetail = () => {
+    navigate(`/place/${place.id}`);
+  };
 
   // Gather all images from cover, facility, product, menu
   const allImages = [
@@ -43,7 +48,7 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
 
   return (
     <div className="glass-card place-card fade-in">
-      <div className="card-image-wrap">
+      <div className="card-image-wrap" onClick={goToDetail} style={{ cursor: 'pointer' }} title="클릭하여 업체 세부 페이지로 이동">
         <div className={`card-image-scroll-container ${layoutClass}`}>
           {imagesToDisplay.map((imgSrc, imgIdx) => (
             <img
@@ -51,7 +56,6 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
               src={getOptimizedImageUrl(imgSrc, 500)}
               alt={`${place.name} - ${imgIdx + 1}`}
               className="card-item-img"
-              onClick={() => setZoomImgIndex(imgIdx)}
               onError={(e) => {
                 if (e.target.src !== imgSrc) {
                   e.target.src = imgSrc;
@@ -67,6 +71,7 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
           className={`favorite-btn ${isFavorite ? 'active' : ''}`}
           onClick={(e) => {
             e.preventDefault();
+            e.stopPropagation();
             toggleFavorite(place.id);
           }}
           title="즐겨찾기"
@@ -80,7 +85,7 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
           <h3 className="place-title" style={{ flex: 1, minWidth: 0 }}>
             <Link to={`/place/${place.id}`}>{place.name}</Link>
           </h3>
-          <div className="rating-badge">
+          <div className="rating-badge" onClick={goToDetail} style={{ cursor: 'pointer' }}>
             <RiStarFill className="star-icon" />
             <span>{place.rating}</span>
             <span className="reviews-cnt">({place.reviewsCount})</span>
@@ -134,12 +139,12 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
           </div>
         )}
 
-        <p className="place-addr">
+        <p className="place-addr" onClick={goToDetail} style={{ cursor: 'pointer' }}>
           <RiMapPinLine className="info-icon" />
           {place.addr}
         </p>
 
-        <p className="place-hours">
+        <p className="place-hours" onClick={goToDetail} style={{ cursor: 'pointer' }}>
           <RiTimeLine className="info-icon" />
           {place.open}
         </p>
@@ -150,13 +155,13 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
           const isLong = text.length > MAX_LENGTH;
 
           return (
-            <p className="place-desc">
+            <p className="place-desc" onClick={goToDetail} style={{ cursor: 'pointer' }} title="클릭하여 상세 정보 보기">
               {isLong ? text.slice(0, MAX_LENGTH) : text}
               {isLong && (
-                <Link to={`/place/${place.id}`} className="desc-more-link" title="상세페이지 이동">
+                <span className="desc-more-link" title="상세페이지 이동">
                   <strong className="desc-dots">...</strong>
                   <span className="more-btn-text">(더보기)</span>
-                </Link>
+                </span>
               )}
             </p>
           );
@@ -217,34 +222,24 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
               };
 
               if (isKakaoOrWechat || !linkUrl) {
+                const tagLabel = snsInfo.key === 'kakao' || snsInfo.key === 'k_' || (snsInfo.name || '').includes('카카오톡') ? '카카오톡' : (snsInfo.name || 'SNS');
                 return (
                   <span
                     key={sIdx}
-                    className="sns-tag kakao-copy-badge"
-                    onClick={(e) => handleCopyText(e, snsInfo.handle, snsInfo.name || '카카오톡')}
+                    className="sns-tag copyable"
+                    onClick={(e) => handleCopyText(e, snsInfo.handle, tagLabel)}
                     style={{
-                      backgroundColor: `${snsInfo.color}25`,
+                      backgroundColor: `${snsInfo.color}20`,
                       color: '#1e293b',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      border: '1px solid rgba(0, 0, 0, 0.1)'
+                      cursor: 'pointer'
                     }}
-                    title={`클릭하여 ${snsInfo.name} ID (${snsInfo.handle}) 복사`}
+                    title="클릭하여 ID 복사"
                   >
-                    <RiFileCopyLine style={{ fontSize: '0.85rem', color: '#475569' }} />
-                    {snsInfo.name}: {snsInfo.handle}
-                    <small style={{ fontSize: '0.7rem', color: '#64748b', marginLeft: '2px' }}>(복사)</small>
+                    <RiFileCopyLine style={{ fontSize: '0.85rem', color: '#475569', marginRight: '4px' }} />
+                    {tagLabel}: {snsInfo.handle}
                   </span>
                 );
               }
-
-              const tagElement = (
-                <span className="sns-tag" style={{ backgroundColor: `${snsInfo.color}20`, color: '#1e293b', cursor: 'pointer' }}>
-                  {snsInfo.name}: {snsInfo.handle}
-                </span>
-              );
 
               return (
                 <a
@@ -256,7 +251,9 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
                   style={{ textDecoration: 'none' }}
                   title={`${snsInfo.name} ${snsInfo.handle} 페이지 이동`}
                 >
-                  {tagElement}
+                  <span className="sns-tag" style={{ backgroundColor: `${snsInfo.color}20`, color: '#1e293b', cursor: 'pointer' }}>
+                    {snsInfo.name}: {snsInfo.handle}
+                  </span>
                 </a>
               );
             });
@@ -264,7 +261,6 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
         </div>
       </div>
 
-      {/* True Full-Screen Viewport Zoom Modal using Portal */}
       {zoomImgIndex !== null && (
         <FullScreenImageModal
           images={imagesToDisplay}

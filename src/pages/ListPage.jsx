@@ -80,6 +80,21 @@ export default function ListPage() {
       return addrStr.includes('cordova') || addrStr.includes('코르도바');
     }
 
+    if (cityKey === 'other') {
+      const isKnownMain4 = (
+        (addrStr.includes('cebu') && !addrStr.includes('oslob') && !addrStr.includes('consolacion') && !addrStr.includes('liloan') && !addrStr.includes('minglanilla') && !addrStr.includes('talisay') && !addrStr.includes('naga') && !addrStr.includes('moalboal')) ||
+        addrStr.includes('lapu-lapu') ||
+        addrStr.includes('lapulapu') ||
+        addrStr.includes('mactan') ||
+        addrStr.includes('막탄') ||
+        addrStr.includes('mandaue') ||
+        addrStr.includes('만다우에') ||
+        addrStr.includes('cordova') ||
+        addrStr.includes('코르도바')
+      );
+      return !isKnownMain4 || addrStr.includes('oslob') || addrStr.includes('consolacion') || addrStr.includes('liloan') || addrStr.includes('minglanilla') || addrStr.includes('talisay') || addrStr.includes('naga') || addrStr.includes('moalboal') || addrStr.includes('badian') || addrStr.includes('오스롭') || addrStr.includes('콘솔라시온');
+    }
+
     return true;
   };
 
@@ -279,6 +294,7 @@ export default function ListPage() {
                   <option value="Cordova">Cordova</option>
                   <option value="Lapu-Lapu">Lapu-Lapu</option>
                   <option value="Mandaue">Mandaue</option>
+                  <option value="Other">그 외</option>
                 </select>
               </div>
 
