@@ -43,7 +43,7 @@ export default function SuggestEditModal({ place, onClose }) {
         {submitted ? (
           <div className="modal-success">
             <h4>제안이 성공적으로 제출되었습니다!</h4>
-            <p>관리자 승인 완료 시 <strong>+50p</strong>가 적립됩니다.</p>
+            <p>관리자 승인 완료 시 <strong>+15p</strong>가 적립됩니다.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="modal-form">

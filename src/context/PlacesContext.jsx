@@ -114,9 +114,11 @@ const INITIAL_PLACES = [
     "reviewsCount": 0,
     "images": {
       "cover": [
-        "https://firebasestorage.googleapis.com/v0/b/cebugo-v2.firebasestorage.app/o/places%2F33oz_cafe_cover_1785823774208.png?alt=media&token=d483d045-b07f-4a3a-bf97-7f4fde6a1fc8"
+        "https://firebasestorage.googleapis.com/v0/b/cebugo-v2.firebasestorage.app/o/places%2F33oz_cafe_photo_1785828266458.jpg?alt=media&token=1f8f618f-72b6-4487-91eb-1669062bbad9"
       ],
-      "facility": [],
+      "facility": [
+        "https://firebasestorage.googleapis.com/v0/b/cebugo-v2.firebasestorage.app/o/places%2F33oz_cafe_photo_1785828266458.jpg?alt=media&token=1f8f618f-72b6-4487-91eb-1669062bbad9"
+      ],
       "product": [],
       "menu": []
     }
@@ -315,20 +317,16 @@ const INITIAL_SUBMISSIONS = [
 ];
 
 const getInitialPlaces = () => {
-  let list = [...INITIAL_PLACES];
   try {
-    const localSaved = localStorage.getItem('cebugo_custom_places');
-    if (localSaved) {
-      const customList = JSON.parse(localSaved);
-      const existingIds = new Set(list.map((p) => p.id));
-      customList.forEach((cItem) => {
-        if (!existingIds.has(cItem.id)) {
-          list.push(cItem);
-        }
-      });
+    const cached = localStorage.getItem('cebugo_cached_places');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return sortPlaces(parsed);
+      }
     }
   } catch (e) {}
-  return deduplicateAndSortPlaces(list);
+  return sortPlaces([...INITIAL_PLACES]);
 };
 
 export const PlacesProvider = ({ children }) => {
@@ -347,7 +345,14 @@ export const PlacesProvider = ({ children }) => {
     }
   ]);
 
-  // Firestore real-time places synchronization with LocalStorage dual persistence
+  // Clean legacy local storage caches on startup
+  useEffect(() => {
+    try {
+      localStorage.removeItem('cebugo_custom_places');
+    } catch (e) {}
+  }, []);
+
+  // Firestore real-time synchronization (Firestore is 100% Single Source of Truth)
   useEffect(() => {
     const unsub = onSnapshot(
       collection(db, 'places'),
@@ -356,45 +361,34 @@ export const PlacesProvider = ({ children }) => {
         if (!snapshot.empty) {
           list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
         } else {
+          // If Firestore collection is empty, seed it with clean INITIAL_PLACES once
           list = INITIAL_PLACES.map((p, idx) => ({ ...p, order: idx }));
           list.forEach(async (p) => {
             try { await setDoc(doc(db, 'places', p.id), p); } catch(e){}
           });
         }
 
-        // Merge with local storage custom places backup so no locally created place is ever lost
-        try {
-          const localSaved = localStorage.getItem('cebugo_custom_places');
-          if (localSaved) {
-            const customList = JSON.parse(localSaved);
-            const existingIds = new Set(list.map((p) => p.id));
-            customList.forEach((cItem) => {
-              if (!existingIds.has(cItem.id)) {
-                list.push(cItem);
-                setDoc(doc(db, 'places', cItem.id), cItem).catch(() => {});
-              }
-            });
-          }
-        } catch (e) {}
+        const sorted = sortPlaces(list);
+        setPlaces(sorted);
 
-        setPlaces(deduplicateAndSortPlaces(list));
+        // Save synced Firestore snapshot to offline cache
+        try {
+          localStorage.setItem('cebugo_cached_places', JSON.stringify(sorted));
+        } catch (e) {}
       },
       (err) => {
         console.error('Firestore places sync error:', err);
-        let list = [...INITIAL_PLACES];
         try {
-          const localSaved = localStorage.getItem('cebugo_custom_places');
-          if (localSaved) {
-            const customList = JSON.parse(localSaved);
-            const existingIds = new Set(list.map((p) => p.id));
-            customList.forEach((cItem) => {
-              if (!existingIds.has(cItem.id)) {
-                list.push(cItem);
-              }
-            });
+          const cached = localStorage.getItem('cebugo_cached_places');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setPlaces(sortPlaces(parsed));
+              return;
+            }
           }
         } catch (e) {}
-        setPlaces(deduplicateAndSortPlaces(list));
+        setPlaces(sortPlaces([...INITIAL_PLACES]));
       }
     );
     return () => unsub();
@@ -413,23 +407,12 @@ export const PlacesProvider = ({ children }) => {
       categoryName
     };
 
-    // Auto-compress & sanitize images so total document size stays under Firestore's 1MB limit
     placeToSave = await sanitizePlaceForFirestore(placeToSave);
 
-    // 1. Dual Backup to LocalStorage first (fail-safe)
-    try {
-      const localSaved = localStorage.getItem('cebugo_custom_places');
-      const customList = localSaved ? JSON.parse(localSaved) : [];
-      const updatedCustom = [placeToSave, ...customList.filter((p) => p.id !== docId)];
-      localStorage.setItem('cebugo_custom_places', JSON.stringify(updatedCustom));
-    } catch (e) {
-      console.warn('LocalStorage backup warning:', e);
-    }
+    // Update local React state immediately for instant feedback
+    setPlaces((prev) => sortPlaces([placeToSave, ...prev.filter((p) => p.id !== docId)]));
 
-    // 2. React state update with deduplication
-    setPlaces((prev) => deduplicateAndSortPlaces([placeToSave, ...prev.filter((p) => p.id !== docId)]));
-
-    // 3. Save to Firestore
+    // Save to Firestore
     try {
       await setDoc(doc(db, 'places', docId), placeToSave);
       console.log('Successfully saved place to Firestore:', docId);
@@ -448,26 +431,15 @@ export const PlacesProvider = ({ children }) => {
       updatedAt: new Date().toISOString()
     };
 
-    // Auto-compress & sanitize images so total document size stays under Firestore's 1MB limit
     placeToSave = await sanitizePlaceForFirestore(placeToSave);
 
-    // 1. Dual Backup to LocalStorage
-    try {
-      const localSaved = localStorage.getItem('cebugo_custom_places');
-      const customList = localSaved ? JSON.parse(localSaved) : [];
-      const updatedCustom = [...customList.filter((p) => p.id !== targetId), placeToSave];
-      localStorage.setItem('cebugo_custom_places', JSON.stringify(updatedCustom));
-    } catch (e) {
-      console.warn('LocalStorage backup warning:', e);
-    }
-
-    // 2. Update React State with deduplication
+    // Update local React State immediately
     setPlaces((prev) => {
       const filtered = prev.filter((p) => p.id !== targetId);
-      return deduplicateAndSortPlaces([placeToSave, ...filtered]);
+      return sortPlaces([placeToSave, ...filtered]);
     });
 
-    // 3. Update Firestore
+    // Update Firestore
     try {
       await setDoc(doc(db, 'places', targetId), placeToSave, { merge: true });
       console.log('Successfully updated place in Firestore:', targetId);
@@ -477,22 +449,19 @@ export const PlacesProvider = ({ children }) => {
   };
 
   const deletePlace = async (id) => {
-    // 1. Remove from LocalStorage Backup
-    try {
-      const localSaved = localStorage.getItem('cebugo_custom_places');
-      if (localSaved) {
-        const customList = JSON.parse(localSaved);
-        const updatedCustom = customList.filter((p) => p.id !== id);
-        localStorage.setItem('cebugo_custom_places', JSON.stringify(updatedCustom));
-      }
-    } catch (e) {}
+    // 1. Remove from local state immediately
+    setPlaces((prev) => {
+      const updated = prev.filter((p) => p.id !== id);
+      try {
+        localStorage.setItem('cebugo_cached_places', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
 
-    // 2. Remove from React State
-    setPlaces((prev) => prev.filter((p) => p.id !== id));
-
-    // 3. Remove from Firestore
+    // 2. Remove from Firestore
     try {
       await deleteDoc(doc(db, 'places', id));
+      console.log('Successfully deleted place from Firestore:', id);
     } catch (err) {
       console.error('Failed to delete place from Firestore:', err);
     }
@@ -536,7 +505,7 @@ export const PlacesProvider = ({ children }) => {
     }
   };
 
-  const addSubmission = (submissionData) => {
+  const addSubmission = async (submissionData) => {
     const newSub = {
       id: `sub_${Date.now()}`,
       status: 'pending',
@@ -544,6 +513,11 @@ export const PlacesProvider = ({ children }) => {
       ...submissionData
     };
     setSubmissions((prev) => [newSub, ...prev]);
+    try {
+      await setDoc(doc(db, 'cebugo_submissions', newSub.id), newSub);
+    } catch (e) {
+      console.error('Failed to save submission to Firestore:', e);
+    }
   };
 
   const approveSubmission = (subId) => {

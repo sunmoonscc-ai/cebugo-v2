@@ -18,7 +18,8 @@ import {
   RiDragMove2Line,
   RiStore2Line,
   RiHeartFill,
-  RiHeartLine
+  RiHeartLine,
+  RiMapPinLine
 } from 'react-icons/ri';
 import './ListPage.css';
 
@@ -29,6 +30,7 @@ export default function ListPage() {
 
   const [viewMode, setViewMode] = useState(location.state?.fromView || 'list'); // 'list' or 'map'
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCity, setSelectedCity] = useState('all'); // 'all', 'Cebu', 'Cordova', 'Lapu-Lapu', 'Mandaue'
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('distance'); // 'distance' (default), 'name', 'latest', 'open'
   const [userCoords, setUserCoords] = useState({ lat: 10.324581378196822, lng: 124.01394151354162 }); // Fixed user location
@@ -36,6 +38,50 @@ export default function ListPage() {
   useEffect(() => {
     setUserCoords({ lat: 10.324581378196822, lng: 124.01394151354162 });
   }, []);
+
+  // Helper function for matching city locations
+  const matchesCityFilter = (place, city) => {
+    if (!city || city === 'all') return true;
+
+    const addrStr = `${place.addr || ''} ${place.location || ''}`.toLowerCase();
+    const cityKey = city.toLowerCase();
+
+    if (cityKey === 'cebu') {
+      if (
+        addrStr.includes('lapu-lapu') ||
+        addrStr.includes('lapulapu') ||
+        addrStr.includes('mactan') ||
+        addrStr.includes('막탄') ||
+        addrStr.includes('mandaue') ||
+        addrStr.includes('만다우에') ||
+        addrStr.includes('cordova') ||
+        addrStr.includes('코르도바')
+      ) {
+        return false;
+      }
+      return addrStr.includes('cebu') || addrStr.includes('세부');
+    }
+
+    if (cityKey === 'lapu-lapu') {
+      return (
+        addrStr.includes('lapu-lapu') ||
+        addrStr.includes('lapulapu') ||
+        addrStr.includes('mactan') ||
+        addrStr.includes('막탄') ||
+        addrStr.includes('라푸라푸')
+      );
+    }
+
+    if (cityKey === 'mandaue') {
+      return addrStr.includes('mandaue') || addrStr.includes('만다우에');
+    }
+
+    if (cityKey === 'cordova') {
+      return addrStr.includes('cordova') || addrStr.includes('코르도바');
+    }
+
+    return true;
+  };
 
   // Admin Modals state
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -71,15 +117,17 @@ export default function ListPage() {
       ? userFavs.includes(place.id)
       : (selectedCategory === 'all' || place.category === selectedCategory);
 
+    const matchesCity = matchesCityFilter(place, selectedCity);
+
     const matchesSearch =
       (place.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (place.addr || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (place.explaination || '').toLowerCase().includes(searchQuery.toLowerCase());
     
     if (sortOption === 'open') {
-      return matchesCat && matchesSearch && isOpenNow(place.open);
+      return matchesCat && matchesCity && matchesSearch && isOpenNow(place.open);
     }
-    return matchesCat && matchesSearch;
+    return matchesCat && matchesCity && matchesSearch;
   });
 
   const sortedPlaces = [...filteredPlaces].sort((a, b) => {
@@ -217,18 +265,37 @@ export default function ListPage() {
         <>
           <div className="list-meta-header">
             <h2>업체 목록 <span>({sortedPlaces.length})</span></h2>
-            <div className="sort-filter-select-wrap">
-              <RiFilter3Line className="filter-icon" />
-              <select
-                value={sortOption}
-                onChange={(e) => setSortOption(e.target.value)}
-                className="sort-select"
-              >
-                <option value="distance">거리순 (기본)</option>
-                <option value="name">이름순 (가나다)</option>
-                <option value="latest">최신순</option>
-                <option value="open">영업중만 보기</option>
-              </select>
+            <div className="list-meta-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <div className="sort-filter-select-wrap">
+                <RiMapPinLine className="filter-icon" />
+                <select
+                  value={selectedCity}
+                  onChange={(e) => setSelectedCity(e.target.value)}
+                  className="sort-select"
+                  title="지역 선택"
+                >
+                  <option value="all">전체 지역</option>
+                  <option value="Cebu">Cebu</option>
+                  <option value="Cordova">Cordova</option>
+                  <option value="Lapu-Lapu">Lapu-Lapu</option>
+                  <option value="Mandaue">Mandaue</option>
+                </select>
+              </div>
+
+              <div className="sort-filter-select-wrap">
+                <RiFilter3Line className="filter-icon" />
+                <select
+                  value={sortOption}
+                  onChange={(e) => setSortOption(e.target.value)}
+                  className="sort-select"
+                  title="정렬 기준"
+                >
+                  <option value="distance">거리순 (기본)</option>
+                  <option value="name">이름순 (가나다)</option>
+                  <option value="latest">최신순</option>
+                  <option value="open">영업중만 보기</option>
+                </select>
+              </div>
             </div>
           </div>
 

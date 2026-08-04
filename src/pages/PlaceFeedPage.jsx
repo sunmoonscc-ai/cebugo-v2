@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
 import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
@@ -51,8 +52,16 @@ const DEFAULT_POSTS = [
 
 export default function PlaceFeedPage() {
   const { userProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState('ad'); // 'ad' (광고) or 'event' (이벤트)
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.category || 'ad'); // 'ad' (광고) or 'event' (이벤트)
   const [posts, setPosts] = useState([]);
+
+  useEffect(() => {
+    if (location.state?.category) {
+      setActiveTab(location.state.category);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [location.state]);
   
   // Modals state
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -101,10 +110,15 @@ export default function PlaceFeedPage() {
 
   const canPost = userProfile?.isAdmin || (userProfile?.level && userProfile.level >= 5);
 
-  const tabPosts = posts
+  const rawTabPosts = posts
     .filter((p) => p.category === activeTab)
     .filter((p) => canPost || getPostStatus(p).active)
     .sort((a, b) => (a.order !== undefined ? a.order : 0) - (b.order !== undefined ? b.order : 0));
+
+  const targetPostId = location.state?.postId;
+  const tabPosts = targetPostId
+    ? [...rawTabPosts].sort((a, b) => (a.id === targetPostId ? -1 : b.id === targetPostId ? 1 : 0))
+    : rawTabPosts;
 
   const handleOpenCreatePost = () => {
     setEditingPost(null);

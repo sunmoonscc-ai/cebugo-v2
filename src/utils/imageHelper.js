@@ -251,3 +251,44 @@ export function getLevelProgress(points = 0) {
     pointsToNext: nextLevelData.totalPt - points
   };
 }
+
+/**
+ * Smartly parse breakTime / offDay string into natural Korean description
+ * Examples:
+ * - "일요일 휴" -> " (휴무: 일요일)"
+ * - "매주 일요일 휴무" -> " (휴무: 매주 일요일)"
+ * - "15:00~17:00" -> " (브레이크타임: 15:00~17:00)"
+ * - "연중무휴" / "없음" -> "" (no extra suffix)
+ */
+export function formatBreakAndOffTime(input) {
+  if (!input || typeof input !== 'string') return '';
+  const raw = input.trim();
+  if (!raw || raw === '없음' || raw === '연중무휴' || raw === '쉬는시간 없음') return '';
+
+  if (raw.startsWith('(') && raw.endsWith(')')) {
+    return ` ${raw}`;
+  }
+
+  const parts = raw.split(/[/,\n]+/).map((p) => p.trim()).filter(Boolean);
+
+  const formattedParts = parts.map((part) => {
+    if (part.includes('브레이크타임') || part.includes('휴무:')) {
+      return part;
+    }
+
+    const isOffDay = /[휴|일요일|월요일|화요일|수요일|목요일|금요일|토요일|주말|공휴일]/.test(part) && !/\d{1,2}:\d{2}/.test(part);
+
+    if (isOffDay) {
+      let clean = part.replace(/휴무$/, '').replace(/휴$/, '').trim();
+      return clean ? `휴무: ${clean}` : part;
+    }
+
+    if (/\d/.test(part)) {
+      return `브레이크타임: ${part}`;
+    }
+
+    return part;
+  });
+
+  return ` (${formattedParts.join(' / ')})`;
+}

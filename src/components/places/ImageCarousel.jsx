@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { getOptimizedImageUrl, extractDateFromImageUrl } from '../../utils/imageHelper';
-import { RiArrowLeftSLine, RiArrowRightSLine, RiCloseLine, RiZoomInLine } from 'react-icons/ri';
+import { getOptimizedImageUrl } from '../../utils/imageHelper';
+import { RiArrowLeftSLine, RiArrowRightSLine, RiZoomInLine } from 'react-icons/ri';
+import FullScreenImageModal from '../modals/FullScreenImageModal';
 import './ImageCarousel.css';
 
-export default function ImageCarousel({ images = [], maxWidth = '50%' }) {
+export default function ImageCarousel({ images = [], maxWidth = '100%' }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const touchStartRef = useRef(0);
@@ -49,12 +50,12 @@ export default function ImageCarousel({ images = [], maxWidth = '50%' }) {
     <>
       <div 
         className="carousel-container" 
-        style={{ maxWidth: maxWidth || '50%' }}
+        style={{ maxWidth: maxWidth || '100%' }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <div className="carousel-img-wrapper" onClick={() => setIsZoomOpen(true)} title="클릭하여 원본 크기로 확대보기">
+        <div className="carousel-img-wrapper" onClick={() => setIsZoomOpen(true)} title="클릭하여 화면 전체 크기로 확대보기">
           <img
             src={getOptimizedImageUrl(currentImgUrl, 800)}
             alt={`slide-${safeIndex}`}
@@ -95,50 +96,13 @@ export default function ImageCarousel({ images = [], maxWidth = '50%' }) {
         )}
       </div>
 
-      {/* Full-screen Zoom Modal */}
+      {/* Unified Full-screen Image Modal */}
       {isZoomOpen && (
-        <div 
-          className="image-zoom-modal fade-in" 
-          onClick={() => setIsZoomOpen(false)}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          <div className="zoom-modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="zoom-close-btn" onClick={() => setIsZoomOpen(false)} title="닫기">
-              <RiCloseLine />
-            </button>
-
-            <div className="zoom-img-container">
-              <img
-                src={currentImgUrl}
-                alt={`zoom-${safeIndex}`}
-                className="zoom-main-img"
-                onError={(e) => {
-                  e.target.src = '/default_cafe.png';
-                }}
-              />
-            </div>
-
-            <div className="zoom-date-badge">
-              {extractDateFromImageUrl(currentImgUrl)}
-            </div>
-
-            {displayImages.length > 1 && (
-              <>
-                <button type="button" className="zoom-btn prev" onClick={prevSlide} title="이전 사진">
-                  <RiArrowLeftSLine />
-                </button>
-                <button type="button" className="zoom-btn next" onClick={nextSlide} title="다음 사진">
-                  <RiArrowRightSLine />
-                </button>
-                <div className="zoom-counter">
-                  {safeIndex + 1} / {displayImages.length}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        <FullScreenImageModal
+          images={displayImages}
+          initialIndex={safeIndex}
+          onClose={() => setIsZoomOpen(false)}
+        />
       )}
     </>
   );

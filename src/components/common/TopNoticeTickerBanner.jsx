@@ -56,7 +56,7 @@ export default function TopNoticeTickerBanner() {
             .map((item) => ({
               id: item.id,
               type: 'news',
-              tagLabel: '📰 필리핀뉴스',
+              tagLabel: '📰 뉴스',
               title: item.title,
               content: item.summary || item.content
             }));

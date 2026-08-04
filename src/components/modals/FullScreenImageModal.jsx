@@ -8,22 +8,28 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [dragOffsetX, setDragOffsetX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+
   const touchStartRef = useRef({ x: 0, y: 0, dist: 0, time: 0 });
 
   useEffect(() => {
     setScale(1);
     setPosition({ x: 0, y: 0 });
+    setDragOffsetX(0);
   }, [currentIndex]);
 
   if (!images || images.length === 0) return null;
 
   const handlePrev = (e) => {
     e?.stopPropagation();
+    setDragOffsetX(0);
     setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   };
 
   const handleNext = (e) => {
     e?.stopPropagation();
+    setDragOffsetX(0);
     setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
@@ -77,7 +83,9 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
         dist: 0,
         time: Date.now()
       };
+      if (scale === 1) setIsDragging(true);
     } else if (e.touches.length === 2) {
+      setIsDragging(false);
       const dist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
@@ -99,22 +107,33 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
         return newScale;
       });
       touchStartRef.current.dist = newDist;
+      return;
+    }
+
+    if (e.touches.length === 1 && scale === 1 && isDragging) {
+      const deltaX = e.touches[0].clientX - touchStartRef.current.x;
+      const deltaY = e.touches[0].clientY - touchStartRef.current.y;
+
+      // Follow finger horizontally if swipe gesture is horizontal
+      if (Math.abs(deltaX) > Math.abs(deltaY) * 0.8) {
+        setDragOffsetX(deltaX);
+      }
     }
   };
 
   const handleTouchEnd = (e) => {
-    if (e.changedTouches.length === 1 && scale === 1) {
-      const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x;
-      const deltaY = e.changedTouches[0].clientY - touchStartRef.current.y;
-      const deltaTime = Date.now() - touchStartRef.current.time;
-
-      if (Math.abs(deltaX) > 40 && Math.abs(deltaY) < 100 && deltaTime < 400) {
-        if (deltaX < 0) {
-          handleNext();
-        } else {
-          handlePrev();
-        }
+    setIsDragging(false);
+    if (scale === 1) {
+      const threshold = 60; // minimum drag distance in px to trigger slide change
+      if (dragOffsetX < -threshold) {
+        handleNext();
+      } else if (dragOffsetX > threshold) {
+        handlePrev();
+      } else {
+        setDragOffsetX(0);
       }
+    } else {
+      setDragOffsetX(0);
     }
   };
 
@@ -144,7 +163,7 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
         </button>
       </div>
 
-      {/* Main Image Stage */}
+      {/* Main Image Stage Slider Track */}
       <div 
         className="fullscreen-image-stage"
         onClick={(e) => e.stopPropagation()}
@@ -154,16 +173,28 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <img
-          src={images[currentIndex]}
-          alt={`full-${currentIndex}`}
-          className="fullscreen-image"
+        <div 
+          className="fullscreen-slider-track"
           style={{
-            transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
-            transition: scale === 1 ? 'transform 0.25s ease' : 'none'
+            transform: `translateX(calc(-${currentIndex * 100}% + ${dragOffsetX}px))`,
+            transition: isDragging ? 'none' : 'transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
-          draggable={false}
-        />
+        >
+          {images.map((imgUrl, idx) => (
+            <div key={idx} className="fullscreen-slide-item">
+              <img
+                src={imgUrl}
+                alt={`full-${idx}`}
+                className="fullscreen-image"
+                style={idx === currentIndex ? {
+                  transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
+                  transition: isDragging ? 'none' : 'transform 0.25s ease'
+                } : {}}
+                draggable={false}
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Navigation Arrows */}

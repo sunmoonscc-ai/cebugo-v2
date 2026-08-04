@@ -20,7 +20,7 @@ import {
   RiDeleteBinLine,
   RiFileCopyLine
 } from 'react-icons/ri';
-import { getDefaultImageForCategory } from '../utils/imageHelper';
+import { getDefaultImageForCategory, formatBreakAndOffTime } from '../utils/imageHelper';
 import './DetailPage.css';
 
 export default function DetailPage() {
@@ -205,7 +205,7 @@ export default function DetailPage() {
               <strong>영업시간 & 휴무</strong>
               <p>
                 {place.open}
-                {hasBreakTime && ` (브레이크타임: ${place.breakTime})`}
+                {formatBreakAndOffTime(place.breakTime)}
               </p>
             </div>
           </div>
@@ -332,8 +332,14 @@ export default function DetailPage() {
             <p>{place.explaination}</p>
           </div>
 
-          <button className="btn btn-secondary suggest-btn" onClick={() => setShowSuggestModal(true)}>
-            <RiEditBoxLine /> 정보 수정 제안하기 (+50p)
+          <button
+            className="btn btn-secondary suggest-btn"
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setShowSuggestModal(true);
+            }}
+          >
+            <RiEditBoxLine /> 정보 수정 제안하기 (+15p)
           </button>
         </div>
       </div>

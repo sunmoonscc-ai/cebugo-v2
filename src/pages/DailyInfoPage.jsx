@@ -1347,7 +1347,7 @@ export default function DailyInfoPage() {
           onClick={() => setActiveTab('phnews')}
         >
           <RiGlobalLine className="tab-icon" />
-          <span>필리핀뉴스</span>
+          <span>뉴스</span>
         </button>
 
         <button 

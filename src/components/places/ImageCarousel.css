@@ -1,7 +1,7 @@
 .carousel-container {
   position: relative;
   width: 100%;
-  max-width: 50%;
+  max-width: 100%;
   margin: 0 auto;
   border-radius: 12px;
   overflow: hidden;
@@ -11,7 +11,7 @@
 
 @media (max-width: 600px) {
   .carousel-container {
-    max-width: 80%;
+    max-width: 100%;
   }
 }
 
@@ -29,7 +29,7 @@
 .carousel-main-img {
   width: 100%;
   height: auto;
-  max-height: 480px;
+  max-height: 540px;
   object-fit: contain;
   display: block;
 }

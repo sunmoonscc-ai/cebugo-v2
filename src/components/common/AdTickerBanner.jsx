@@ -41,13 +41,20 @@ export default function AdTickerBanner() {
   // Duplicate 2 identical sets for seamless continuous marquee loop
   const displayItems = [...tickerPosts, ...tickerPosts];
 
-  // Constant speed calibrated to 2 items selected (11s per item => 22s for 2 items)
-  const durationSeconds = tickerPosts.length * 11;
+  // Constant speed calibrated to 18s per item (exactly matching top notice ticker speed)
+  const durationSeconds = tickerPosts.length * 18;
 
   return (
     <div className="ad-ticker-bar">
       <div className="ad-ticker-inner">
-        <div className="ad-ticker-badge" onClick={() => navigate('/feed')} style={{ cursor: 'pointer' }}>
+        <div 
+          className="ad-ticker-badge" 
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate('/feed', { state: { category: 'ad' } });
+          }} 
+          style={{ cursor: 'pointer' }}
+        >
           <RiMegaphoneFill className="pulse-icon" />
           <span>전광판</span>
         </div>
@@ -59,7 +66,14 @@ export default function AdTickerBanner() {
             style={{ animationDuration: `${durationSeconds}s` }}
           >
             {displayItems.map((item, idx) => (
-              <span key={`${item.id}-${idx}`} className="ticker-item">
+              <span 
+                key={`${item.id}-${idx}`} 
+                className="ticker-item"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate('/feed', { state: { category: item.category || 'ad', postId: item.id } });
+                }}
+              >
                 <span className="ticker-item-tag">
                   {item.category === 'ad' ? '📣 광고' : '🎉 이벤트'} | {item.authorName || 'CEBUGO'}
                 </span>
