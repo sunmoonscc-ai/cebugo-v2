@@ -223,16 +223,55 @@ const compressImageFile = (file) => {
 };
 
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgressCount, setUploadProgressCount] = useState(0);
+  const isPendingSubmitRef = React.useRef(false);
+
+  const doFinalSave = (currentFormData = formData) => {
+    const finalCoords = parseCoordinates(coordInput, MAGELLAN_BAY_LAT, MAGELLAN_BAY_LNG);
+
+    const validPhones = phoneList
+      .map((p) => ({ number: p.number.trim(), type: p.type }))
+      .filter((p) => p.number.length > 0);
+
+    const validSnsList = snsList
+      .map((s) => ({ platform: s.platform, handle: s.handle.trim() }))
+      .filter((s) => s.handle.length > 0);
+
+    const primaryPhone = validPhones[0]?.number || '';
+    const primaryPhoneType = validPhones[0]?.type || 'none';
+
+    let primarySns = '';
+    if (validSnsList[0]) {
+      const firstSns = validSnsList[0];
+      primarySns = `${firstSns.platform}${firstSns.handle}`;
+    }
+
+    onSave({
+      ...currentFormData,
+      lat: finalCoords.lat,
+      lng: finalCoords.lng,
+      phone: primaryPhone,
+      phoneType: primaryPhoneType,
+      phones: validPhones,
+      sns: primarySns,
+      snsList: validSnsList
+    });
+  };
 
   const handleImageFileUpload = async (e, imgType) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
 
     setIsUploading(true);
+    setUploadProgressCount((prev) => prev + files.length);
+
     try {
       for (const file of files) {
         const compressedDataUrl = await compressImageFile(file);
-        if (!compressedDataUrl) continue;
+        if (!compressedDataUrl) {
+          setUploadProgressCount((prev) => Math.max(0, prev - 1));
+          continue;
+        }
 
         // Upload to Firebase Cloud Storage for universal access across all devices
         const cloudUrl = await uploadImageToFirebaseStorage(compressedDataUrl, 'places');
@@ -243,14 +282,26 @@ const compressImageFile = (file) => {
             alert('각 분류당 최대 20개까지 첨부 가능합니다.');
             return prev;
           }
-          return {
-            ...prev,
-            images: {
-              ...prev.images,
-              [imgType]: [...currentTypeImgs, cloudUrl]
-            }
+          const nextImages = {
+            ...prev.images,
+            [imgType]: [...currentTypeImgs, cloudUrl]
           };
+          const updated = { ...prev, images: nextImages };
+          
+          // If pending submit requested by user, auto save updated state
+          if (isPendingSubmitRef.current) {
+            setTimeout(() => {
+              if (isPendingSubmitRef.current) {
+                isPendingSubmitRef.current = false;
+                alert('✅ 사진 업로드가 완료되어 백그라운드 저장이 완료되었습니다!');
+                doFinalSave(updated);
+              }
+            }, 300);
+          }
+
+          return updated;
         });
+        setUploadProgressCount((prev) => Math.max(0, prev - 1));
       }
     } catch (err) {
       console.error('Image upload error:', err);
@@ -284,35 +335,13 @@ const compressImageFile = (file) => {
       return;
     }
 
-    const finalCoords = parseCoordinates(coordInput, MAGELLAN_BAY_LAT, MAGELLAN_BAY_LNG);
-
-    const validPhones = phoneList
-      .map((p) => ({ number: p.number.trim(), type: p.type }))
-      .filter((p) => p.number.length > 0);
-
-    const validSnsList = snsList
-      .map((s) => ({ platform: s.platform, handle: s.handle.trim() }))
-      .filter((s) => s.handle.length > 0);
-
-    const primaryPhone = validPhones[0]?.number || '';
-    const primaryPhoneType = validPhones[0]?.type || 'none';
-
-    let primarySns = '';
-    if (validSnsList[0]) {
-      const firstSns = validSnsList[0];
-      primarySns = `${firstSns.platform}${firstSns.handle}`;
+    if (isUploading || uploadProgressCount > 0) {
+      isPendingSubmitRef.current = true;
+      alert(`📷 사진을 백그라운드로 업로드 중입니다 (${uploadProgressCount > 0 ? uploadProgressCount + '개 남아있음' : '처리 중'}).\n업로드가 완료되면 자동으로 저장 및 반영됩니다!`);
+      return;
     }
 
-    onSave({
-      ...formData,
-      lat: finalCoords.lat,
-      lng: finalCoords.lng,
-      phone: primaryPhone,
-      phoneType: primaryPhoneType,
-      phones: validPhones,
-      sns: primarySns,
-      snsList: validSnsList
-    });
+    doFinalSave(formData);
   };
 
   const selectableCategories = CATEGORIES.filter((c) => c.id !== 'all');

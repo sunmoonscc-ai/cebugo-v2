@@ -128,6 +128,25 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
     }));
   };
 
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgressCount, setUploadProgressCount] = useState(0);
+  const isPendingSubmitRef = React.useRef(false);
+
+  const doFinalSave = (currentFormData = formData) => {
+    onSave({
+      category: currentFormData.category || 'ad',
+      title: currentFormData.title.trim(),
+      authorName: currentFormData.authorName.trim(),
+      date: currentFormData.date || new Date().toISOString().split('T')[0],
+      startDate: currentFormData.startDate || '',
+      endDate: currentFormData.endDate || '',
+      location: currentFormData.location || '전체',
+      content: currentFormData.content.trim(),
+      images: currentFormData.images || [],
+      isTicker: currentFormData.isTicker !== undefined ? currentFormData.isTicker : true
+    });
+  };
+
   const handleImageFileUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
@@ -137,22 +156,37 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
       return;
     }
 
+    setIsUploading(true);
+    setUploadProgressCount((prev) => prev + files.length);
+
     for (const file of files) {
       try {
         const compressed = await compressImage(file, 800, 800, 0.7);
         if (compressed) {
           setFormData((prev) => {
             if (prev.images.length >= 20) return prev;
-            return {
-              ...prev,
-              images: [...prev.images, compressed]
-            };
+            const updatedImages = [...prev.images, compressed];
+            const updated = { ...prev, images: updatedImages };
+            
+            if (isPendingSubmitRef.current) {
+              setTimeout(() => {
+                if (isPendingSubmitRef.current) {
+                  isPendingSubmitRef.current = false;
+                  alert('✅ 사진 업로드가 완료되어 게시물 저장을 완료했습니다!');
+                  doFinalSave(updated);
+                }
+              }, 300);
+            }
+            return updated;
           });
         }
       } catch (err) {
         console.error('Image compression error:', err);
+      } finally {
+        setUploadProgressCount((prev) => Math.max(0, prev - 1));
       }
     }
+    setIsUploading(false);
   };
 
   const handleRemoveImage = (index) => {
@@ -177,18 +211,13 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
       return;
     }
 
-    onSave({
-      category: formData.category || 'ad',
-      title: formData.title.trim(),
-      authorName: formData.authorName.trim(),
-      date: formData.date || new Date().toISOString().split('T')[0],
-      startDate: formData.startDate || '',
-      endDate: formData.endDate || '',
-      location: formData.location || '전체',
-      content: formData.content.trim(),
-      images: formData.images || [],
-      isTicker: formData.isTicker !== undefined ? formData.isTicker : true
-    });
+    if (isUploading || uploadProgressCount > 0) {
+      isPendingSubmitRef.current = true;
+      alert(`📷 사진을 백그라운드로 업로드 중입니다 (${uploadProgressCount > 0 ? uploadProgressCount + '개 남아있음' : '처리 중'}).\n업로드가 완료되면 자동으로 저장 및 반영됩니다!`);
+      return;
+    }
+
+    doFinalSave(formData);
   };
 
   return (
