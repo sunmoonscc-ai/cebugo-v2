@@ -43,9 +43,40 @@ function formatNumberWithCommas(valStr) {
   return parts.join('.');
 }
 
-// Helper to parse input back to clean numeric string
-function cleanNumberInput(valStr) {
-  return valStr.replace(/,/g, '');
+function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.7) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          if (width / height > maxWidth / maxHeight) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataUrl);
+      };
+      img.onerror = () => resolve(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
 }
 
 const DEFAULT_TAGS = ['중요공지', '안전공지', '입국안내', '행사/이벤트', '일반공지'];
@@ -1105,8 +1136,11 @@ export default function DailyInfoPage() {
     title: '',
     badge: tags[0] || '중요공지',
     date: new Date().toISOString().split('T')[0],
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: '',
     content: '',
-    images: []
+    images: [],
+    isTicker: true
   });
 
   const handleOpenCreateNotice = () => {
@@ -1115,6 +1149,8 @@ export default function DailyInfoPage() {
       title: '',
       badge: tags[0] || '중요공지',
       date: new Date().toISOString().split('T')[0],
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: '',
       content: '',
       images: [],
       isTicker: true
@@ -1125,10 +1161,12 @@ export default function DailyInfoPage() {
   const handleOpenEditNotice = (item) => {
     setEditingNotice(item);
     setNoticeFormData({
-      title: item.title,
+      title: item.title || '',
       badge: item.badge || tags[0] || '중요공지',
-      date: item.date,
-      content: item.content,
+      date: item.date || new Date().toISOString().split('T')[0],
+      startDate: item.startDate || '',
+      endDate: item.endDate || '',
+      content: item.content || '',
       images: item.images || [],
       isTicker: item.isTicker !== undefined ? item.isTicker : true
     });
@@ -1166,7 +1204,7 @@ export default function DailyInfoPage() {
     }
   };
 
-  const handleImageFileUpload = (e) => {
+  const handleImageFileUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
 
@@ -1176,19 +1214,22 @@ export default function DailyInfoPage() {
       return;
     }
 
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNoticeFormData((prev) => {
-          if (prev.images.length >= 20) return prev;
-          return {
-            ...prev,
-            images: [...prev.images, reader.result]
-          };
-        });
-      };
-      reader.readAsDataURL(file);
-    });
+    for (const file of files) {
+      try {
+        const compressed = await compressImage(file, 800, 800, 0.7);
+        if (compressed) {
+          setNoticeFormData((prev) => {
+            if (prev.images.length >= 20) return prev;
+            return {
+              ...prev,
+              images: [...prev.images, compressed]
+            };
+          });
+        }
+      } catch (err) {
+        console.error('Notice image compression error:', err);
+      }
+    }
 
     e.target.value = '';
   };
@@ -1210,20 +1251,35 @@ export default function DailyInfoPage() {
     const docId = editingNotice ? editingNotice.id : `n_${Date.now()}`;
     const noticeToSave = {
       id: docId,
-      ...noticeFormData,
+      title: noticeFormData.title.trim(),
+      badge: noticeFormData.badge || '중요공지',
+      date: noticeFormData.date || new Date().toISOString().split('T')[0],
+      startDate: noticeFormData.startDate || '',
+      endDate: noticeFormData.endDate || '',
+      content: noticeFormData.content.trim(),
+      images: noticeFormData.images || [],
+      isTicker: noticeFormData.isTicker !== undefined ? noticeFormData.isTicker : true,
       updatedAt: new Date().toISOString()
     };
+
+    setNotices((prev) => {
+      const idx = prev.findIndex((n) => n.id === docId);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = { ...copy[idx], ...noticeToSave };
+        return copy;
+      }
+      return [noticeToSave, ...prev];
+    });
+
+    setIsNoticeModalOpen(false);
 
     try {
       await setDoc(doc(db, 'cebugo_notices', docId), noticeToSave);
     } catch (err) {
       console.error('Failed to save notice to Firestore:', err);
-      setNotices((prev) =>
-        editingNotice ? prev.map((item) => (item.id === docId ? noticeToSave : item)) : [noticeToSave, ...prev]
-      );
+      alert('공지사항 저장 중 오류가 발생했습니다: ' + (err.message || '다시 시도해주세요.'));
     }
-
-    setIsNoticeModalOpen(false);
   };
 
   return (
@@ -1308,13 +1364,46 @@ export default function DailyInfoPage() {
           )}
 
           <div className="news-list">
-            {notices.map((item, index) => (
-              <div key={item.id} className="glass-card notice-item-card">
-                <div className="notice-header">
-                  <div className="notice-header-left">
-                    <span className="notice-badge-tag">{item.badge}</span>
-                    <span className="news-date">{item.date}</span>
-                  </div>
+            {notices
+              .filter((item) => userProfile?.isAdmin || (() => {
+                const todayStr = new Date().toISOString().split('T')[0];
+                if (item.startDate && todayStr < item.startDate) return false;
+                if (item.endDate && todayStr > item.endDate) return false;
+                return true;
+              })())
+              .map((item, index) => {
+                const todayStr = new Date().toISOString().split('T')[0];
+                const isScheduled = item.startDate && todayStr < item.startDate;
+                const isExpired = item.endDate && todayStr > item.endDate;
+                const hasPeriod = Boolean(item.startDate || item.endDate);
+                const periodRange = item.startDate && item.endDate ? `${item.startDate} ~ ${item.endDate}` : (item.startDate ? `${item.startDate}~` : `~${item.endDate}`);
+
+                return (
+                  <div key={item.id} className="glass-card notice-item-card">
+                    <div className="notice-header">
+                      <div className="notice-header-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className="notice-badge-tag">{item.badge}</span>
+                        <span className="news-date">{item.date}</span>
+                        {userProfile?.isAdmin && (
+                          <>
+                            {isScheduled && (
+                              <span className="post-cat-badge" style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', fontWeight: 600, padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem' }}>
+                                ⏳ 게시 예정 ({item.startDate}~)
+                              </span>
+                            )}
+                            {isExpired && (
+                              <span className="post-cat-badge" style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', fontWeight: 600, padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem' }}>
+                                🔴 게시 종료 (~{item.endDate})
+                              </span>
+                            )}
+                            {!isScheduled && !isExpired && hasPeriod && (
+                              <span className="post-cat-badge" style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', fontWeight: 600, padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem' }}>
+                                🟢 게시 중 ({periodRange})
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </div>
                   {userProfile?.isAdmin && (
                     <div className="admin-card-actions">
                       <button
@@ -1379,12 +1468,174 @@ export default function DailyInfoPage() {
 
                 <p className="notice-content-text">{item.content}</p>
               </div>
-            ))}
-          </div>
+            );
+          })}
+      </div>
 
-          {/* Admin Tag Manager Modal */}
-          {isTagModalOpen && (
+          {/* Admin Notice Create / Edit Modal */}
+          {isNoticeModalOpen && (
             <div className="modal-overlay fade-in">
+              <div className="modal-content glass-card notice-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', width: '92%' }}>
+                <div className="modal-header">
+                  <h2>{editingNotice ? '공지사항 수정' : '신규 공지사항 작성'}</h2>
+                  <button className="modal-close-btn" onClick={() => setIsNoticeModalOpen(false)}>
+                    <RiCloseLine />
+                  </button>
+                </div>
+                <form onSubmit={handleSaveNotice} className="notice-form">
+                  <div className="modal-body-scroll">
+                    <div className="form-group" style={{ background: '#f0f9ff', padding: '12px 14px', borderRadius: '8px', border: '1px solid #bae6fd', marginBottom: '16px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 700, color: '#0369a1', fontSize: '0.9rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={noticeFormData.isTicker || false}
+                          onChange={(e) => setNoticeFormData({ ...noticeFormData, isTicker: e.target.checked })}
+                          style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#0284c7' }}
+                        />
+                        <span>📢 상단 전광판(공지판) 텍스트 스크롤에 게재하기</span>
+                      </label>
+                    </div>
+
+                    <div className="form-group">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label className="form-label">구분 태그 *</label>
+                        <button
+                          type="button"
+                          style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                          onClick={() => setIsTagModalOpen(true)}
+                        >
+                          <RiPriceTag3Line /> 태그 관리
+                        </button>
+                      </div>
+                      <select
+                        value={noticeFormData.badge}
+                        onChange={(e) => setNoticeFormData({ ...noticeFormData, badge: e.target.value })}
+                        className="form-select"
+                      >
+                        {tags.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group-row" style={{ display: 'flex', gap: '10px' }}>
+                      <div className="form-group" style={{ flex: 2 }}>
+                        <label className="form-label">공지 제목 *</label>
+                        <input
+                          type="text"
+                          placeholder="공지사항 제목을 입력하세요"
+                          value={noticeFormData.title}
+                          onChange={(e) => setNoticeFormData({ ...noticeFormData, title: e.target.value })}
+                          className="form-input"
+                          required
+                        />
+                      </div>
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label className="form-label">작성일자</label>
+                        <input
+                          type="date"
+                          value={noticeFormData.date}
+                          onChange={(e) => setNoticeFormData({ ...noticeFormData, date: e.target.value })}
+                          className="form-input"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group-row" style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label className="form-label">게시 시작일 (선택)</label>
+                        <input
+                          type="date"
+                          value={noticeFormData.startDate || ''}
+                          onChange={(e) => setNoticeFormData({ ...noticeFormData, startDate: e.target.value })}
+                          className="form-input"
+                        />
+                      </div>
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label className="form-label">게시 종료일 (선택)</label>
+                        <input
+                          type="date"
+                          value={noticeFormData.endDate || ''}
+                          onChange={(e) => setNoticeFormData({ ...noticeFormData, endDate: e.target.value })}
+                          className="form-input"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">공지 상세 내용 *</label>
+                      <textarea
+                        rows="5"
+                        placeholder="상세 공지 내용을 입력하세요"
+                        value={noticeFormData.content}
+                        onChange={(e) => setNoticeFormData({ ...noticeFormData, content: e.target.value })}
+                        className="form-textarea"
+                        required
+                      />
+                    </div>
+
+                  {/* Image Attachment (Max 10) */}
+                  <div className="form-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label className="form-label">이미지 첨부 ({noticeFormData.images.length} / 20개)</label>
+                      <span className="field-hint">최대 20개 파일 첨부 가능</span>
+                    </div>
+
+                    <div className="image-upload-wrapper">
+                      {noticeFormData.images.length < 10 && (
+                        <label className="image-upload-dropzone">
+                          <RiImageAddLine className="upload-icon" />
+                          <span>이미지 추가</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleImageFileUpload}
+                            style={{ display: 'none' }}
+                          />
+                        </label>
+                      )}
+
+                      {noticeFormData.images.map((imgUrl, idx) => (
+                        <div key={idx} className="uploaded-img-preview">
+                          <img src={imgUrl} alt={`preview-${idx}`} />
+                          <button
+                            type="button"
+                            className="remove-img-btn"
+                            onClick={() => handleRemoveImage(idx)}
+                            title="이미지 삭제"
+                          >
+                            <RiCloseLine />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="modal-actions">
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary" 
+                      onClick={() => setIsNoticeModalOpen(false)}
+                    >
+                      취소
+                    </button>
+                    <button type="submit" className="btn btn-primary">
+                      <RiCheckLine /> {editingNotice ? '수정 완료' : '등록 하기'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Admin Tag Manager Modal (Rendered on top with zIndex: 1100) */}
+          {isTagModalOpen && (
+            <div className="modal-overlay fade-in" style={{ zIndex: 1100 }}>
               <div className="modal-content glass-card tag-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                   <h2><RiPriceTag3Line /> 공지사항 구분 태그 관리</h2>
@@ -1454,133 +1705,6 @@ export default function DailyInfoPage() {
                     닫기
                   </button>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* Admin Notice Create / Edit Modal */}
-          {isNoticeModalOpen && (
-            <div className="modal-overlay fade-in">
-              <div className="modal-content glass-card notice-modal" onClick={(e) => e.stopPropagation()}>
-                <div className="modal-header">
-                  <h2>{editingNotice ? '공지사항 수정' : '신규 공지사항 작성'}</h2>
-                  <button className="modal-close-btn" onClick={() => setIsNoticeModalOpen(false)}>
-                    <RiCloseLine />
-                  </button>
-                </div>
-                <form onSubmit={handleSaveNotice} className="notice-form">
-                  <div className="modal-body-scroll">
-                    <div className="form-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label className="form-label">구분 태그</label>
-                      <button
-                        type="button"
-                        style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
-                        onClick={() => setIsTagModalOpen(true)}
-                      >
-                        <RiPriceTag3Line /> 태그 관리
-                      </button>
-                    </div>
-                    <select
-                      value={noticeFormData.badge}
-                      onChange={(e) => setNoticeFormData({ ...noticeFormData, badge: e.target.value })}
-                      className="form-input"
-                    >
-                      {tags.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">작성일자</label>
-                    <input
-                      type="date"
-                      value={noticeFormData.date}
-                      onChange={(e) => setNoticeFormData({ ...noticeFormData, date: e.target.value })}
-                      className="form-input"
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">공지 제목</label>
-                    <input
-                      type="text"
-                      placeholder="공지사항 제목을 입력하세요"
-                      value={noticeFormData.title}
-                      onChange={(e) => setNoticeFormData({ ...noticeFormData, title: e.target.value })}
-                      className="form-input"
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">공지 상세 내용</label>
-                    <textarea
-                      rows="4"
-                      placeholder="상세 공지 내용을 입력하세요"
-                      value={noticeFormData.content}
-                      onChange={(e) => setNoticeFormData({ ...noticeFormData, content: e.target.value })}
-                      className="form-textarea"
-                      required
-                    />
-                  </div>
-
-                  {/* Image Attachment (Max 10) */}
-                  <div className="form-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label className="form-label">이미지 첨부 ({noticeFormData.images.length} / 20개)</label>
-                      <span className="field-hint">최대 20개 파일 첨부 가능</span>
-                    </div>
-
-                    <div className="image-upload-wrapper">
-                      {noticeFormData.images.length < 10 && (
-                        <label className="image-upload-dropzone">
-                          <RiImageAddLine className="upload-icon" />
-                          <span>이미지 추가</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={handleImageFileUpload}
-                            style={{ display: 'none' }}
-                          />
-                        </label>
-                      )}
-
-                      {noticeFormData.images.map((imgUrl, idx) => (
-                        <div key={idx} className="uploaded-img-preview">
-                          <img src={imgUrl} alt={`preview-${idx}`} />
-                          <button
-                            type="button"
-                            className="remove-img-btn"
-                            onClick={() => handleRemoveImage(idx)}
-                            title="이미지 삭제"
-                          >
-                            <RiCloseLine />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="modal-actions">
-                    <button 
-                      type="button" 
-                      className="btn btn-secondary" 
-                      onClick={() => setIsNoticeModalOpen(false)}
-                    >
-                      취소
-                    </button>
-                    <button type="submit" className="btn btn-primary">
-                      <RiCheckLine /> {editingNotice ? '수정 완료' : '등록 하기'}
-                    </button>
-                  </div>
-                </form>
               </div>
             </div>
           )}

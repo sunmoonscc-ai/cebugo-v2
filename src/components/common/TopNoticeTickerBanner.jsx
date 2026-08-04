@@ -21,9 +21,16 @@ export default function TopNoticeTickerBanner() {
       collection(db, 'cebugo_notices'),
       (snapshot) => {
         if (!snapshot.empty) {
+          const todayStr = new Date().toISOString().split('T')[0];
           noticeItems = snapshot.docs
             .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-            .filter((item) => item.isTicker === true || item.isTicker === 'true')
+            .filter((item) => {
+              const isTicker = item.isTicker === true || item.isTicker === 'true';
+              if (!isTicker) return false;
+              if (item.startDate && todayStr < item.startDate) return false;
+              if (item.endDate && todayStr > item.endDate) return false;
+              return true;
+            })
             .map((item) => ({
               id: item.id,
               type: 'notice',
