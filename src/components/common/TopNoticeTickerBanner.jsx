@@ -1,12 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebase/config';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
 import './TopNoticeTickerBanner.css';
 
 export default function TopNoticeTickerBanner() {
   const [tickerItems, setTickerItems] = useState([]);
+  const [speedMultiplier, setSpeedMultiplier] = useState(1);
+  const [durationSeconds, setDurationSeconds] = useState(25);
+  const trackRef = useRef(null);
   const navigate = useNavigate();
+
+  // Sync speed multiplier from Firestore
+  useEffect(() => {
+    const unsubSpeed = onSnapshot(doc(db, 'cebugo_config', 'ticker_speed'), (docSnap) => {
+      if (docSnap.exists()) {
+        setSpeedMultiplier(docSnap.data().noticeSpeedMultiplier || 1);
+      }
+    });
+    return () => unsubSpeed();
+  }, []);
 
   useEffect(() => {
     let noticeItems = [];
@@ -74,19 +87,27 @@ export default function TopNoticeTickerBanner() {
     };
   }, []);
 
-  if (tickerItems.length === 0) return null;
-
-  // Duplicate 2 identical sets for seamless continuous marquee loop
   const displayItems = [...tickerItems, ...tickerItems];
 
-  // Constant speed calibrated to 1 item selected (18s per item)
-  const durationSeconds = tickerItems.length * 18;
+  // Calculate duration based on actual rendered pixel width (Constant physical speed of ~50 px/sec at 1x)
+  useEffect(() => {
+    if (trackRef.current && displayItems.length > 0) {
+      const fullWidth = trackRef.current.scrollWidth;
+      const halfWidth = fullWidth / 2;
+      const baseSpeedPxPerSec = 45; // 1x constant physical reading speed (45px/sec)
+      const calculatedDuration = Math.max(6, halfWidth / (baseSpeedPxPerSec * speedMultiplier));
+      setDurationSeconds(calculatedDuration);
+    }
+  }, [tickerItems, speedMultiplier]);
+
+  if (tickerItems.length === 0) return null;
 
   return (
     <div className="top-notice-ticker-bar">
       <div className="top-notice-ticker-inner">
         <div className="top-notice-ticker-track-wrap">
           <div 
+            ref={trackRef}
             className="top-notice-ticker-track" 
             onClick={() => navigate('/daily-info')}
             style={{ animationDuration: `${durationSeconds}s` }}

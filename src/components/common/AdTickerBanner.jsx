@@ -1,13 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebase/config';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { RiMegaphoneFill } from 'react-icons/ri';
 import './AdTickerBanner.css';
 
 export default function AdTickerBanner() {
   const [tickerPosts, setTickerPosts] = useState([]);
+  const [speedMultiplier, setSpeedMultiplier] = useState(1);
+  const [durationSeconds, setDurationSeconds] = useState(25);
+  const trackRef = useRef(null);
   const navigate = useNavigate();
+
+  // Sync speed multiplier from Firestore
+  useEffect(() => {
+    const unsubSpeed = onSnapshot(doc(db, 'cebugo_config', 'ticker_speed'), (docSnap) => {
+      if (docSnap.exists()) {
+        setSpeedMultiplier(docSnap.data().adSpeedMultiplier || 1);
+      }
+    });
+    return () => unsubSpeed();
+  }, []);
 
   useEffect(() => {
     const unsub = onSnapshot(
@@ -36,13 +49,20 @@ export default function AdTickerBanner() {
     return () => unsub();
   }, []);
 
-  if (tickerPosts.length === 0) return null;
-
-  // Duplicate 2 identical sets for seamless continuous marquee loop
   const displayItems = [...tickerPosts, ...tickerPosts];
 
-  // Constant speed calibrated to 18s per item (exactly matching top notice ticker speed)
-  const durationSeconds = tickerPosts.length * 18;
+  // Calculate duration based on actual rendered pixel width (Constant physical speed of ~50 px/sec at 1x)
+  useEffect(() => {
+    if (trackRef.current && displayItems.length > 0) {
+      const fullWidth = trackRef.current.scrollWidth;
+      const halfWidth = fullWidth / 2;
+      const baseSpeedPxPerSec = 45; // 1x constant physical reading speed (45px/sec)
+      const calculatedDuration = Math.max(6, halfWidth / (baseSpeedPxPerSec * speedMultiplier));
+      setDurationSeconds(calculatedDuration);
+    }
+  }, [tickerPosts, speedMultiplier]);
+
+  if (tickerPosts.length === 0) return null;
 
   return (
     <div className="ad-ticker-bar">
@@ -61,6 +81,7 @@ export default function AdTickerBanner() {
 
         <div className="ad-ticker-track-wrap">
           <div 
+            ref={trackRef}
             className="ad-ticker-track" 
             onClick={() => navigate('/feed')}
             style={{ animationDuration: `${durationSeconds}s` }}
