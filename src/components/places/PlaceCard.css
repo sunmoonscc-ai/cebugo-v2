@@ -76,9 +76,7 @@
 }
 
 .category-chip {
-  position: absolute;
-  top: 12px;
-  left: 12px;
+  display: inline-block;
   background: rgba(15, 23, 42, 0.75);
   color: white;
   padding: 4px 10px;
@@ -86,6 +84,12 @@
   font-size: 0.75rem;
   font-weight: 600;
   backdrop-filter: blur(8px);
+}
+
+.card-image-wrap .category-chip {
+  position: absolute;
+  top: 12px;
+  left: 12px;
 }
 
 .favorite-btn {

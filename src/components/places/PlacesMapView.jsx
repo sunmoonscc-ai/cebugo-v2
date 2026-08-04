@@ -31,10 +31,11 @@ function RecenterMap({ center }) {
   return null;
 }
 
+const FIXED_USER_LOCATION = [10.324581378196822, 124.01394151354162];
+
 export default function PlacesMapView({ places }) {
-  // Default center: Cebu Mactan center coordinates (10.29, 123.99)
-  const [mapCenter, setMapCenter] = useState([10.29, 123.99]);
-  const [userLocation, setUserLocation] = useState(null);
+  const [mapCenter, setMapCenter] = useState(FIXED_USER_LOCATION);
+  const [userLocation, setUserLocation] = useState(FIXED_USER_LOCATION);
   const [locating, setLocating] = useState(false);
 
   useEffect(() => {
@@ -42,25 +43,8 @@ export default function PlacesMapView({ places }) {
   }, []);
 
   const handleFindLocation = () => {
-    if ('geolocation' in navigator) {
-      setLocating(true);
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const coords = [position.coords.latitude, position.coords.longitude];
-          setUserLocation(coords);
-          setMapCenter(coords);
-          setLocating(false);
-        },
-        (error) => {
-          console.warn('Geolocation fallback to default Cebu center:', error);
-          // Fallback to Mactan Cebu center
-          setUserLocation([10.2921, 123.9890]);
-          setMapCenter([10.2921, 123.9890]);
-          setLocating(false);
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    }
+    setUserLocation(FIXED_USER_LOCATION);
+    setMapCenter(FIXED_USER_LOCATION);
   };
 
   return (

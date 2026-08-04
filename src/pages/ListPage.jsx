@@ -26,17 +26,10 @@ export default function ListPage() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('distance'); // 'distance' (default), 'name', 'latest', 'open'
-  const [userCoords, setUserCoords] = useState({ lat: 10.2858, lng: 123.9922 }); // Default Cebu Mactan center
+  const [userCoords, setUserCoords] = useState({ lat: 10.324581378196822, lng: 124.01394151354162 }); // Fixed user location
 
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        },
-        () => {}
-      );
-    }
+    setUserCoords({ lat: 10.324581378196822, lng: 124.01394151354162 });
   }, []);
 
   // Admin Modals state
