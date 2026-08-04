@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { RiMapPinFill, RiNavigationFill, RiStarFill } from 'react-icons/ri';
-import { Link } from 'react-router-dom';
+import { RiNavigationFill, RiStarFill } from 'react-icons/ri';
+import { Link, useNavigate } from 'react-router-dom';
 
 // Fix default marker icon issues in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -15,10 +15,53 @@ L.Icon.Default.mergeOptions({
 // Custom user location pin icon
 const userIcon = L.divIcon({
   className: 'user-custom-pin',
-  html: `<div style="background:#0284c7; width:24px; height:24px; border-radius:50%; border:3px solid white; box-shadow:0 0 12px rgba(2,132,199,0.8); animation: pulse 2s infinite;"></div>`,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12]
+  html: `<div style="background:#0284c7; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow:0 0 12px rgba(2,132,199,0.8); animation: pulse 2s infinite;"></div>`,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10]
 });
+
+const isFoodOrCafeOrBar = (place) => {
+  const cat = (place.category || '').toLowerCase();
+  const catName = (place.categoryName || '').toLowerCase();
+  const name = (place.name || '').toLowerCase();
+
+  return (
+    cat === 'restaurant' ||
+    cat === 'cafe' ||
+    catName.includes('먹을거리') ||
+    catName.includes('마실거리') ||
+    catName.includes('음식') ||
+    catName.includes('카페') ||
+    catName.includes('바') ||
+    name.includes('카페') ||
+    name.includes('cafe') ||
+    name.includes('베이커리') ||
+    name.includes('bakery') ||
+    name.includes('bar') ||
+    name.includes('pub') ||
+    name.includes('식당')
+  );
+};
+
+const createCustomCircleMarker = (place) => {
+  // Vibrant blue circle marker for clear map location distinction
+  const circleBg = '#2563eb';
+  const circleSize = '12px';
+
+  return L.divIcon({
+    className: 'custom-circle-place-marker',
+    html: `
+      <div style="display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap;">
+        <div style="width: ${circleSize}; height: ${circleSize}; border-radius: 50%; background-color: ${circleBg}; border: 2px solid #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.35); flex-shrink: 0;"></div>
+        <span style="font-size: 11.5px; font-weight: 700; color: #000000; text-shadow: -1.5px -1.5px 0 #ffffff, 1.5px -1.5px 0 #ffffff, -1.5px 1.5px 0 #ffffff, 1.5px 1.5px 0 #ffffff, 0 0 4px #ffffff; line-height: 1;">
+          ${place.name}
+        </span>
+      </div>
+    `,
+    iconSize: [160, 20],
+    iconAnchor: [6, 10]
+  });
+};
 
 // Component to dynamically recenter map view
 function RecenterMap({ center }) {
@@ -34,6 +77,7 @@ function RecenterMap({ center }) {
 const FIXED_USER_LOCATION = [10.324581378196822, 124.01394151354162];
 
 export default function PlacesMapView({ places }) {
+  const navigate = useNavigate();
   const [mapCenter, setMapCenter] = useState(FIXED_USER_LOCATION);
   const [userLocation, setUserLocation] = useState(FIXED_USER_LOCATION);
   const [locating, setLocating] = useState(false);
@@ -89,11 +133,20 @@ export default function PlacesMapView({ places }) {
 
         {/* Places Markers */}
         {places.map((place) => (
-          <Marker key={place.id} position={[place.lat, place.lng]}>
+          <Marker 
+            key={place.id} 
+            position={[place.lat, place.lng]}
+            icon={createCustomCircleMarker(place)}
+            eventHandlers={{
+              click: () => {
+                navigate(`/place/${place.id}`, { state: { fromView: 'map' } });
+              }
+            }}
+          >
             <Popup>
               <div style={{ padding: '4px', maxWidth: '200px' }}>
                 <strong style={{ fontSize: '0.95rem', display: 'block', marginBottom: '4px' }}>
-                  <Link to={`/place/${place.id}`} style={{ color: '#0284c7' }}>{place.name}</Link>
+                  <Link to={`/place/${place.id}`} state={{ fromView: 'map' }} style={{ color: '#0284c7' }}>{place.name}</Link>
                 </strong>
                 <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '2px 0' }}>{place.addr}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ca8a04', fontSize: '0.8rem', marginTop: '4px' }}>

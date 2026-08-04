@@ -177,10 +177,40 @@
   font-size: 0.88rem;
   color: #334155;
   margin: 10px 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.desc-more-link {
+  color: var(--primary, #0284c7);
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-block;
+  margin-left: 2px;
+  cursor: pointer;
+}
+
+.desc-more-link:hover {
+  text-decoration: underline;
+  color: #0369a1;
+}
+
+.desc-dots {
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 1px;
+  color: #1e293b;
+  margin: 0 4px;
+}
+
+.more-btn-text {
+  font-weight: 700;
+  color: var(--primary, #0284c7);
+}
+
+.custom-circle-place-marker {
+  background: transparent !important;
+  border: none !important;
 }
 
 .card-footer-tags {

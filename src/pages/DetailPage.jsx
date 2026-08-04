@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { usePlaces } from '../context/PlacesContext';
 import { useAuth } from '../context/AuthContext';
 import ImageCarousel from '../components/places/ImageCarousel';
@@ -13,14 +13,19 @@ import {
   RiPhoneLine, 
   RiEditBoxLine, 
   RiChat1Line,
-  RiCheckDoubleLine
+  RiCheckDoubleLine,
+  RiNavigationFill
 } from 'react-icons/ri';
 import './DetailPage.css';
 
 export default function DetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { places, reviews, addReview } = usePlaces();
   const { userProfile } = useAuth();
+
+  const fromView = location.state?.fromView || 'list';
 
   const place = places.find((p) => p.id === id) || places[0];
   const placeReviews = reviews.filter((r) => r.placeId === place.id);
@@ -54,9 +59,18 @@ export default function DetailPage() {
     return place.images[activeTab] || place.images.cover || [];
   };
 
+  const handleBack = (e) => {
+    e.preventDefault();
+    navigate('/', { state: { fromView } });
+  };
+
+  const hasBreakTime = place.breakTime && place.breakTime.trim() !== '' && place.breakTime !== '없음';
+
   return (
     <div className="page-content fade-in">
-      <Link to="/" className="back-link">← 목록으로 돌아가기</Link>
+      <a href="/" onClick={handleBack} className="back-link">
+        ← {fromView === 'map' ? '지도로 돌아가기' : '목록으로 돌아가기'}
+      </a>
 
       {/* Main Place Overview Card */}
       <div className="glass-card detail-header-card">
@@ -84,9 +98,35 @@ export default function DetailPage() {
         <div className="detail-info-section">
           <div className="info-row">
             <RiMapPinLine className="info-icon" />
-            <div>
+            <div style={{ width: '100%' }}>
               <strong>주소</strong>
-              <p>{place.addr}</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginTop: '2px' }}>
+                <p style={{ margin: 0, flex: 1, minWidth: '180px' }}>{place.addr}</p>
+                {place.addr && (
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&origin=10.324581378196822,124.01394151354162&destination=${place.lat && place.lng ? `${place.lat},${place.lng}` : encodeURIComponent(place.addr)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="nav-directions-btn"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 10px',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      borderRadius: '8px',
+                      backgroundColor: '#e0f2fe',
+                      color: '#0284c7',
+                      border: '1px solid #bae6fd',
+                      textDecoration: 'none',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <RiNavigationFill /> 길찾기
+                  </a>
+                )}
+              </div>
             </div>
           </div>
 
@@ -94,14 +134,17 @@ export default function DetailPage() {
             <RiTimeLine className="info-icon" />
             <div>
               <strong>영업시간 & 휴무</strong>
-              <p>{place.open} (브레이크타임: {place.breakTime})</p>
+              <p>
+                {place.open}
+                {hasBreakTime && ` (브레이크타임: ${place.breakTime})`}
+              </p>
             </div>
           </div>
 
           <div className="info-row">
             <RiPhoneLine className="info-icon" />
             <div>
-              <strong>연락처 / 통신사</strong>
+              <strong>연락처</strong>
               <div className="phone-line" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
                 {(() => {
                   const phonesList = place.phones && Array.isArray(place.phones) && place.phones.length > 0
@@ -122,7 +165,7 @@ export default function DetailPage() {
           <div className="info-row">
             <RiCheckDoubleLine className="info-icon" />
             <div>
-              <strong>SNS / 카카오톡</strong>
+              <strong>SNS</strong>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
                 {(() => {
                   const snsArray = place.snsList && Array.isArray(place.snsList) && place.snsList.length > 0

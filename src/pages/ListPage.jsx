@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { usePlaces } from '../context/PlacesContext';
 import { useAuth } from '../context/AuthContext';
 import PlaceCard from '../components/places/PlaceCard';
@@ -19,10 +20,11 @@ import {
 import './ListPage.css';
 
 export default function ListPage() {
+  const location = useLocation();
   const { places, addPlace, updatePlace, deletePlace, movePlace, reorderPlaces } = usePlaces();
   const { userProfile } = useAuth();
 
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
+  const [viewMode, setViewMode] = useState(location.state?.fromView || 'list'); // 'list' or 'map'
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('distance'); // 'distance' (default), 'name', 'latest', 'open'

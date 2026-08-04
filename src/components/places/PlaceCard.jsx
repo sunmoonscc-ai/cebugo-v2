@@ -138,7 +138,23 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
           {place.open}
         </p>
 
-        <p className="place-desc">{place.explaination}</p>
+        {(() => {
+          const text = place.explaination || '';
+          const MAX_LENGTH = 70;
+          const isLong = text.length > MAX_LENGTH;
+
+          return (
+            <p className="place-desc">
+              {isLong ? text.slice(0, MAX_LENGTH) : text}
+              {isLong && (
+                <Link to={`/place/${place.id}`} className="desc-more-link" title="상세페이지 이동">
+                  <strong className="desc-dots">...</strong>
+                  <span className="more-btn-text">(더보기)</span>
+                </Link>
+              )}
+            </p>
+          );
+        })()}
 
         <div className="card-footer-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
           {(() => {
