@@ -93,17 +93,62 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
     }
   };
 
+  const [isPanDragging, setIsPanDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
+
+  const handleMouseDown = (e) => {
+    if (scale > 1) {
+      e.preventDefault();
+      setIsPanDragging(true);
+      dragStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        posX: position.x,
+        posY: position.y
+      };
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (scale > 1 && isPanDragging) {
+      e.preventDefault();
+      const deltaX = ((e.clientX - dragStartRef.current.x) * 4) / scale;
+      const deltaY = ((e.clientY - dragStartRef.current.y) * 4) / scale;
+      setPosition({
+        x: dragStartRef.current.posX + deltaX,
+        y: dragStartRef.current.posY + deltaY
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (isPanDragging) {
+      setIsPanDragging(false);
+    }
+  };
+
   const handleTouchStart = (e) => {
     if (e.touches.length === 1) {
-      touchStartRef.current = {
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY,
-        dist: 0,
-        time: Date.now()
-      };
-      if (scale === 1) setIsDragging(true);
+      if (scale > 1) {
+        setIsPanDragging(true);
+        dragStartRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+          posX: position.x,
+          posY: position.y
+        };
+      } else {
+        touchStartRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+          dist: 0,
+          time: Date.now()
+        };
+        setIsDragging(true);
+      }
     } else if (e.touches.length === 2) {
       setIsDragging(false);
+      setIsPanDragging(false);
       const dist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
@@ -128,21 +173,30 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
       return;
     }
 
-    if (e.touches.length === 1 && scale === 1 && isDragging) {
-      const deltaX = e.touches[0].clientX - touchStartRef.current.x;
-      const deltaY = e.touches[0].clientY - touchStartRef.current.y;
+    if (e.touches.length === 1) {
+      if (scale > 1 && isPanDragging) {
+        const deltaX = ((e.touches[0].clientX - dragStartRef.current.x) * 4) / scale;
+        const deltaY = ((e.touches[0].clientY - dragStartRef.current.y) * 4) / scale;
+        setPosition({
+          x: dragStartRef.current.posX + deltaX,
+          y: dragStartRef.current.posY + deltaY
+        });
+      } else if (scale === 1 && isDragging) {
+        const deltaX = e.touches[0].clientX - touchStartRef.current.x;
+        const deltaY = e.touches[0].clientY - touchStartRef.current.y;
 
-      // Follow finger horizontally if swipe gesture is horizontal
-      if (Math.abs(deltaX) > Math.abs(deltaY) * 0.8) {
-        setDragOffsetX(deltaX);
+        if (Math.abs(deltaX) > Math.abs(deltaY) * 0.8) {
+          setDragOffsetX(deltaX);
+        }
       }
     }
   };
 
-  const handleTouchEnd = (e) => {
+  const handleTouchEnd = () => {
     setIsDragging(false);
+    setIsPanDragging(false);
     if (scale === 1) {
-      const threshold = 60; // minimum drag distance in px to trigger slide change
+      const threshold = 60;
       if (dragOffsetX < -threshold) {
         handleNext();
       } else if (dragOffsetX > threshold) {
@@ -187,15 +241,20 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
         onClick={(e) => e.stopPropagation()}
         onDoubleClick={handleDoubleClick}
         onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        style={{ cursor: scale > 1 ? (isPanDragging ? 'grabbing' : 'grab') : 'default' }}
       >
         <div 
           className="fullscreen-slider-track"
           style={{
             transform: `translateX(calc(-${currentIndex * 100}% + ${dragOffsetX}px))`,
-            transition: isDragging ? 'none' : 'transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)'
+            transition: isDragging || isPanDragging ? 'none' : 'transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
         >
           {images.map((imgUrl, idx) => (
@@ -205,8 +264,8 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
                 alt={`full-${idx}`}
                 className="fullscreen-image"
                 style={idx === currentIndex ? {
-                  transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
-                  transition: isDragging ? 'none' : 'transform 0.25s ease'
+                  transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                  transition: isPanDragging || isDragging ? 'none' : 'transform 0.2s ease-out'
                 } : {}}
                 draggable={false}
               />
