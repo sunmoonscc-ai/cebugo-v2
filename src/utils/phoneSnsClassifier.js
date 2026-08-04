@@ -21,26 +21,50 @@ export const DEFAULT_SNS_PREFIXES = [
 ];
 
 /**
- * Classifies a phone number string into carrier (Globe, Smart, TNT, DITO or Unknown)
+ * Classifies a phone number string into carrier (Globe, Smart, TNT, DITO) or Landline Region (Cebu, Manila, Bohol, etc.)
  */
 export function classifyPhoneCarrier(phoneStr, carrierMap = DEFAULT_PHONE_PREFIXES) {
   if (!phoneStr) return null;
   const cleanNum = phoneStr.replace(/[^0-9]/g, '');
+  if (!cleanNum) return null;
   
-  // Normalize +639XX to 09XX
-  let prefix = cleanNum;
-  if (cleanNum.startsWith('63')) {
-    prefix = '0' + cleanNum.substring(2);
+  // Normalize +63 or 63 prefix to 0 prefix
+  let normalized = cleanNum;
+  if (normalized.startsWith('63')) {
+    normalized = '0' + normalized.substring(2);
+  } else if (!normalized.startsWith('0')) {
+    normalized = '0' + normalized;
   }
-  prefix = prefix.substring(0, 4);
 
+  // 1. Philippine Landline Area Code Detection (Non-09 numbers)
+  if (!normalized.startsWith('09')) {
+    if (normalized.startsWith('032')) return 'Cebu';
+    if (normalized.startsWith('02')) return 'Manila';
+    if (normalized.startsWith('038')) return 'Bohol';
+    if (normalized.startsWith('033')) return 'Iloilo';
+    if (normalized.startsWith('034')) return 'Bacolod';
+    if (normalized.startsWith('035')) return 'Dumaguete';
+    if (normalized.startsWith('082')) return 'Davao';
+    if (normalized.startsWith('045')) return 'Pampanga';
+    if (normalized.startsWith('047')) return 'Subic';
+    if (normalized.startsWith('049')) return 'Laguna';
+    if (normalized.startsWith('074')) return 'Baguio';
+    if (normalized.startsWith('088')) return 'Cagayan de Oro';
+    if (normalized.startsWith('043')) return 'Batangas';
+    if (normalized.startsWith('044')) return 'Bulacan';
+    if (normalized.startsWith('046')) return 'Cavite';
+    return 'Landline';
+  }
+
+  // 2. Mobile Carrier Prefix Detection (09XX)
+  const prefix4 = normalized.substring(0, 4);
   for (const [carrier, prefixes] of Object.entries(carrierMap)) {
-    if (prefixes.includes(prefix)) {
+    if (prefixes.includes(prefix4)) {
       return carrier;
     }
   }
 
-  return 'Globe'; // Default fallback in Cebu region
+  return 'Globe'; // Default fallback for unidentified mobile
 }
 
 /**
