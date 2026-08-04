@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { RiArrowLeftSLine, RiArrowRightSLine, RiCloseLine, RiZoomInLine, RiZoomOutLine, RiRefreshLine } from 'react-icons/ri';
+import { extractDateFromImageUrl } from '../../utils/imageHelper';
 import './FullScreenImageModal.css';
 
 export default function FullScreenImageModal({ images = [], initialIndex = 0, onClose }) {
@@ -176,6 +177,11 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
           </button>
         </>
       )}
+
+      {/* Bottom Center Date Overlay Badge */}
+      <div className="fullscreen-date-badge">
+        {extractDateFromImageUrl(images[currentIndex])}
+      </div>
     </div>,
     document.body
   );

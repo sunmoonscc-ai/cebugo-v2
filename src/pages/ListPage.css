@@ -1,7 +1,21 @@
-.hero-banner {
-  text-align: center;
-  padding: 24px 16px 16px;
+.daily-header {
   margin-bottom: 16px;
+}
+
+.daily-header h1 {
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 0;
+  color: #0f172a;
+}
+
+.daily-header-sub {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: #64748b;
 }
 
 .hero-badge {

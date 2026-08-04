@@ -14,7 +14,8 @@ import {
   RiEditLine,
   RiDeleteBinLine,
   RiArrowUpLine,
-  RiArrowDownLine
+  RiArrowDownLine,
+  RiFileCopyLine
 } from 'react-icons/ri';
 import './PlaceCard.css';
 
@@ -194,29 +195,70 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
                 );
               }
               const linkUrl = getSnsLinkUrl(snsInfo);
+              const isKakaoOrWechat = !linkUrl && (
+                snsInfo.key === 'kakao' || snsInfo.key === 'k_' || (snsInfo.name || '').includes('카카오톡') ||
+                snsInfo.key === 'wechat' || snsInfo.key === 'w_' || (snsInfo.name || '').includes('위챗')
+              );
+
+              const handleCopyText = (e, text, label) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!text) return;
+                const cleanText = text.trim();
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(cleanText).then(() => {
+                    alert(`${label} ID가 복사되었습니다: ${cleanText}`);
+                  }).catch(() => {
+                    prompt(`${label} ID를 복사하세요:`, cleanText);
+                  });
+                } else {
+                  prompt(`${label} ID를 복사하세요:`, cleanText);
+                }
+              };
+
+              if (isKakaoOrWechat || !linkUrl) {
+                return (
+                  <span
+                    key={sIdx}
+                    className="sns-tag kakao-copy-badge"
+                    onClick={(e) => handleCopyText(e, snsInfo.handle, snsInfo.name || '카카오톡')}
+                    style={{
+                      backgroundColor: `${snsInfo.color}25`,
+                      color: '#1e293b',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      border: '1px solid rgba(0, 0, 0, 0.1)'
+                    }}
+                    title={`클릭하여 ${snsInfo.name} ID (${snsInfo.handle}) 복사`}
+                  >
+                    <RiFileCopyLine style={{ fontSize: '0.85rem', color: '#475569' }} />
+                    {snsInfo.name}: {snsInfo.handle}
+                    <small style={{ fontSize: '0.7rem', color: '#64748b', marginLeft: '2px' }}>(복사)</small>
+                  </span>
+                );
+              }
+
               const tagElement = (
-                <span className="sns-tag" style={{ backgroundColor: `${snsInfo.color}20`, color: '#1e293b', cursor: linkUrl ? 'pointer' : 'default' }}>
+                <span className="sns-tag" style={{ backgroundColor: `${snsInfo.color}20`, color: '#1e293b', cursor: 'pointer' }}>
                   {snsInfo.name}: {snsInfo.handle}
                 </span>
               );
 
-              if (linkUrl) {
-                return (
-                  <a
-                    key={sIdx}
-                    href={linkUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ textDecoration: 'none' }}
-                    title={`${snsInfo.name} ${snsInfo.handle} 페이지 이동`}
-                  >
-                    {tagElement}
-                  </a>
-                );
-              }
-
-              return <React.Fragment key={sIdx}>{tagElement}</React.Fragment>;
+              return (
+                <a
+                  key={sIdx}
+                  href={linkUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ textDecoration: 'none' }}
+                  title={`${snsInfo.name} ${snsInfo.handle} 페이지 이동`}
+                >
+                  {tagElement}
+                </a>
+              );
             });
           })()}
         </div>

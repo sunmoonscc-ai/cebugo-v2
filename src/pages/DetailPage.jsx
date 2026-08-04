@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { usePlaces } from '../context/PlacesContext';
 import { useAuth } from '../context/AuthContext';
 import ImageCarousel from '../components/places/ImageCarousel';
 import SuggestEditModal from '../components/modals/SuggestEditModal';
+import PlaceFormModal from '../components/modals/PlaceFormModal';
 import { LevelBadge, CarrierBadge } from '../components/common/Badge';
 import { classifyPhoneCarrier, parseSnsEntry, getSnsLinkUrl } from '../utils/phoneSnsClassifier';
 import { 
@@ -14,23 +15,33 @@ import {
   RiEditBoxLine, 
   RiChat1Line,
   RiCheckDoubleLine,
-  RiNavigationFill
+  RiNavigationFill,
+  RiEditLine,
+  RiDeleteBinLine,
+  RiFileCopyLine
 } from 'react-icons/ri';
+import { getDefaultImageForCategory } from '../utils/imageHelper';
 import './DetailPage.css';
 
 export default function DetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { places, reviews, addReview } = usePlaces();
+  const { places, reviews, addReview, updatePlace, deletePlace } = usePlaces();
   const { userProfile } = useAuth();
 
   const fromView = location.state?.fromView || 'list';
+
+  // Automatically scroll to very top when Detail Page is loaded or ID changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
 
   const place = places.find((p) => String(p.id) === String(id)) || places.find((p) => (p.name || '').toLowerCase().includes((id || '').toLowerCase())) || places[0];
 
   const [activeTab, setActiveTab] = useState('cover'); // cover, facility, product, menu
   const [showSuggestModal, setShowSuggestModal] = useState(false);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
 
   // Review Form state
   const [rating, setRating] = useState(5);
@@ -104,7 +115,36 @@ export default function DetailPage() {
       {/* Main Place Overview Card */}
       <div className="glass-card detail-header-card">
         <div className="detail-title-wrap">
-          <span className="category-chip">{place.categoryName}</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '6px' }}>
+            <span className="category-chip" style={{ margin: 0 }}>{place.categoryName}</span>
+            {userProfile?.isAdmin && (
+              <div className="admin-actions" style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '3px 9px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px', borderRadius: '6px' }}
+                  onClick={() => setIsFormModalOpen(true)}
+                  title="업체 정보 수정"
+                >
+                  <RiEditLine /> 수정
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  style={{ padding: '3px 9px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                  onClick={() => {
+                    if (window.confirm('정말로 이 업체 정보를 삭제하시겠습니까?')) {
+                      deletePlace(place.id);
+                      navigate('/', { state: { fromView } });
+                    }
+                  }}
+                  title="업체 삭제"
+                >
+                  <RiDeleteBinLine /> 삭제
+                </button>
+              </div>
+            )}
+          </div>
           <h1 className="detail-title">{place.name}</h1>
           
           <div className="rating-row">
@@ -176,13 +216,14 @@ export default function DetailPage() {
               <strong>연락처</strong>
               <div className="phone-line" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
                 {(() => {
-                  const phonesList = place.phones && Array.isArray(place.phones) && place.phones.length > 0
+                  const phonesList = (place.phones && Array.isArray(place.phones) && place.phones.length > 0
                     ? place.phones
-                    : (place.phone ? [{ number: place.phone, type: place.phoneType || 'none' }] : []);
+                    : (place.phone ? [{ number: place.phone, type: place.phoneType || 'none' }] : [])).filter(Boolean);
 
                   return phonesList.map((ph, pIdx) => {
-                    const num = typeof ph === 'object' ? ph.number : ph;
-                    const pType = typeof ph === 'object' ? ph.type : 'none';
+                    const num = ph && typeof ph === 'object' ? (ph.number || '') : (ph || '');
+                    const pType = ph && typeof ph === 'object' ? (ph.type || 'none') : 'none';
+                    if (!num) return null;
                     const c = classifyPhoneCarrier(num);
                     return <CarrierBadge key={pIdx} carrier={c} phone={num} type={pType} />;
                   });
@@ -197,17 +238,17 @@ export default function DetailPage() {
               <strong>SNS</strong>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
                 {(() => {
-                  const snsArray = place.snsList && Array.isArray(place.snsList) && place.snsList.length > 0
+                  const snsArray = (place.snsList && Array.isArray(place.snsList) && place.snsList.length > 0
                     ? place.snsList
-                    : (place.sns ? [place.sns] : []);
+                    : (place.sns ? [place.sns] : [])).filter(Boolean);
 
                   return snsArray.map((snsItem, sIdx) => {
-                    const rawStr = typeof snsItem === 'object'
-                      ? (snsItem.platform === 'custom' ? snsItem.handle : `${snsItem.platform}${snsItem.handle}`)
-                      : snsItem;
+                    const rawStr = snsItem && typeof snsItem === 'object'
+                      ? (snsItem.platform === 'custom' ? (snsItem.handle || '') : `${snsItem.platform || ''}${snsItem.handle || ''}`)
+                      : (snsItem || '');
+                    if (!rawStr) return null;
                     const parsed = parseSnsEntry(rawStr);
                     if (!parsed) {
-                      if (!rawStr) return null;
                       return (
                         <span key={sIdx} className="sns-tag" style={{ backgroundColor: '#f1f5f9', color: '#1e293b' }}>
                           {rawStr}
@@ -215,29 +256,71 @@ export default function DetailPage() {
                       );
                     }
                     const linkUrl = getSnsLinkUrl(parsed);
+                    const isKakaoOrWechat = !linkUrl && (
+                      parsed.key === 'kakao' || parsed.key === 'k_' || (parsed.name || '').includes('카카오톡') ||
+                      parsed.key === 'wechat' || parsed.key === 'w_' || (parsed.name || '').includes('위챗')
+                    );
+
+                    const handleCopyText = (e, text, label) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!text) return;
+                      const cleanText = text.trim();
+                      if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(cleanText).then(() => {
+                          alert(`${label} ID가 복사되었습니다: ${cleanText}`);
+                        }).catch(() => {
+                          prompt(`${label} ID를 복사하세요:`, cleanText);
+                        });
+                      } else {
+                        prompt(`${label} ID를 복사하세요:`, cleanText);
+                      }
+                    };
+
+                    if (isKakaoOrWechat || !linkUrl) {
+                      return (
+                        <span
+                          key={sIdx}
+                          className="sns-tag kakao-copy-badge"
+                          onClick={(e) => handleCopyText(e, parsed.handle, parsed.name || '카카오톡')}
+                          style={{
+                            backgroundColor: `${parsed.color}25`,
+                            color: '#1e293b',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            border: '1px solid rgba(0, 0, 0, 0.1)',
+                            userSelect: 'all'
+                          }}
+                          title={`클릭하여 ${parsed.name} ID (${parsed.handle}) 복사`}
+                        >
+                          <RiFileCopyLine style={{ fontSize: '0.85rem', color: '#475569' }} />
+                          {parsed.name}: {parsed.handle}
+                          <small style={{ fontSize: '0.7rem', color: '#64748b', marginLeft: '2px' }}>(복사)</small>
+                        </span>
+                      );
+                    }
+
                     const tagElement = (
-                      <span className="sns-tag" style={{ backgroundColor: `${parsed.color}20`, color: '#1e293b', cursor: linkUrl ? 'pointer' : 'default' }}>
+                      <span className="sns-tag" style={{ backgroundColor: `${parsed.color}20`, color: '#1e293b', cursor: 'pointer' }}>
                         {parsed.name}: {parsed.handle}
                       </span>
                     );
 
-                    if (linkUrl) {
-                      return (
-                        <a
-                          key={sIdx}
-                          href={linkUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          style={{ textDecoration: 'none' }}
-                          title={`${parsed.name} ${parsed.handle} 페이지 이동`}
-                        >
-                          {tagElement}
-                        </a>
-                      );
-                    }
-
-                    return <React.Fragment key={sIdx}>{tagElement}</React.Fragment>;
+                    return (
+                      <a
+                        key={sIdx}
+                        href={linkUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ textDecoration: 'none' }}
+                        title={`${parsed.name} ${parsed.handle} 페이지 이동`}
+                      >
+                        {tagElement}
+                      </a>
+                    );
                   });
                 })()}
               </div>
@@ -296,7 +379,7 @@ export default function DetailPage() {
                 <span className="review-date">{rev.createdAt}</span>
               </div>
               <div className="review-stars">
-                {[...Array(rev.rating)].map((_, i) => (
+                {[...Array(Math.max(1, Math.min(5, Math.floor(rev.rating || 5))))].map((_, i) => (
                   <RiStarFill key={i} className="star-icon" />
                 ))}
               </div>
@@ -307,6 +390,16 @@ export default function DetailPage() {
       </section>
 
       {showSuggestModal && <SuggestEditModal place={place} onClose={() => setShowSuggestModal(false)} />}
+      {isFormModalOpen && (
+        <PlaceFormModal
+          editingPlace={place}
+          onClose={() => setIsFormModalOpen(false)}
+          onSave={(formData) => {
+            updatePlace(place.id, formData);
+            setIsFormModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

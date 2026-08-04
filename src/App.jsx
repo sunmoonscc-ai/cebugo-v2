@@ -1,8 +1,18 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/common/Header';
 import BottomNav from './components/common/BottomNav';
 import AdTickerBanner from './components/common/AdTickerBanner';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [pathname]);
+
+  return null;
+}
 
 // Pages
 import ListPage from './pages/ListPage';
@@ -19,6 +29,7 @@ import AdminConfigPage from './pages/admin/AdminConfigPage';
 export default function App() {
   return (
     <div className="app-container">
+      <ScrollToTop />
       <Header />
       <main>
         <Routes>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CATEGORIES } from '../../constants/categories';
 import { RiCloseLine, RiCheckLine, RiImageAddLine, RiMapPinLine, RiAddLine, RiDeleteBinLine } from 'react-icons/ri';
+import { uploadImageToFirebaseStorage } from '../../utils/imageHelper';
 import './PlaceFormModal.css';
 
 const MAGELLAN_BAY_LAT = 10.324571024254213;
@@ -221,28 +222,40 @@ const compressImageFile = (file) => {
   });
 };
 
+  const [isUploading, setIsUploading] = useState(false);
+
   const handleImageFileUpload = async (e, imgType) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
 
-    for (const file of files) {
-      const compressedDataUrl = await compressImageFile(file);
-      if (!compressedDataUrl) continue;
+    setIsUploading(true);
+    try {
+      for (const file of files) {
+        const compressedDataUrl = await compressImageFile(file);
+        if (!compressedDataUrl) continue;
 
-      setFormData((prev) => {
-        const currentTypeImgs = prev.images[imgType] || [];
-        if (currentTypeImgs.length >= 20) {
-          alert('각 분류당 최대 20개까지 첨부 가능합니다.');
-          return prev;
-        }
-        return {
-          ...prev,
-          images: {
-            ...prev.images,
-            [imgType]: [...currentTypeImgs, compressedDataUrl]
+        // Upload to Firebase Cloud Storage for universal access across all devices
+        const cloudUrl = await uploadImageToFirebaseStorage(compressedDataUrl, 'places');
+
+        setFormData((prev) => {
+          const currentTypeImgs = prev.images[imgType] || [];
+          if (currentTypeImgs.length >= 20) {
+            alert('각 분류당 최대 20개까지 첨부 가능합니다.');
+            return prev;
           }
-        };
-      });
+          return {
+            ...prev,
+            images: {
+              ...prev.images,
+              [imgType]: [...currentTypeImgs, cloudUrl]
+            }
+          };
+        });
+      }
+    } catch (err) {
+      console.error('Image upload error:', err);
+    } finally {
+      setIsUploading(false);
     }
   };
 

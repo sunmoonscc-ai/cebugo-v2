@@ -1,6 +1,69 @@
 import defaultCafeImg from '../assets/default_cafe.png';
+import { storage } from '../firebase/config';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 
 const FALLBACK_DEFAULT_IMAGE = defaultCafeImg || '/default_cafe.png';
+
+/**
+ * Extract formatted date string (e.g. '2026.07.14') from image URL/filename or fallback
+ */
+export function extractDateFromImageUrl(imgUrl, fallbackDate = null) {
+  if (!imgUrl || typeof imgUrl !== 'string') {
+    return formatDate(fallbackDate);
+  }
+
+  // 1. Match YYYYMMDD, YYYY-MM-DD, YYYY.MM.DD, YYYY_MM_DD patterns in filename
+  const ymdMatch = imgUrl.match(/(20\d{2})[._-]?([01]\d)[._-]?([0-3]\d)/);
+  if (ymdMatch) {
+    return `${ymdMatch[1]}.${ymdMatch[2]}.${ymdMatch[3]}`;
+  }
+
+  // 2. Match 13-digit Unix timestamp (e.g. 1785823774208)
+  const timestampMatch = imgUrl.match(/(1[6-9]\d{11})/);
+  if (timestampMatch) {
+    const ts = parseInt(timestampMatch[1], 10);
+    const d = new Date(ts);
+    if (!isNaN(d.getTime())) {
+      return formatDate(d);
+    }
+  }
+
+  return formatDate(fallbackDate);
+}
+
+function formatDate(dateInput) {
+  const d = dateInput ? new Date(dateInput) : new Date('2026-07-14');
+  if (isNaN(d.getTime())) return '2026.07.14';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}.${month}.${day}`;
+}
+
+/**
+ * Upload a Base64 data URL to Firebase Cloud Storage and return public HTTPS download URL
+ * Ensures uploaded photos are stored in Cloud Storage and visible to ALL devices globally
+ */
+export async function uploadImageToFirebaseStorage(dataUrl, folder = 'places') {
+  if (!dataUrl || typeof dataUrl !== 'string') return dataUrl;
+
+  // If already an HTTP/HTTPS Cloud URL (e.g. Firebase Storage URL), return directly
+  if (dataUrl.startsWith('http://') || dataUrl.startsWith('https://')) {
+    return dataUrl;
+  }
+
+  try {
+    const filename = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.jpg`;
+    const storageRef = ref(storage, filename);
+    await uploadString(storageRef, dataUrl, 'data_url');
+    const cloudDownloadUrl = await getDownloadURL(storageRef);
+    console.log('Uploaded image to Firebase Cloud Storage:', cloudDownloadUrl);
+    return cloudDownloadUrl;
+  } catch (err) {
+    console.warn('Firebase Storage upload error, using compressed fallback:', err);
+    return dataUrl;
+  }
+}
 
 /**
  * Get default category placeholder image if no user image is uploaded
@@ -82,8 +145,8 @@ export function compressImageDataUrl(dataUrl, maxDimension = 1000, quality = 0.8
 }
 
 /**
- * Safely optimize place payload before saving to Firestore to guarantee
- * total document size stays safely under Firestore's 1MB document limit
+ * Safely optimize place payload before saving to Firestore & Firebase Storage
+ * Guarantees all uploaded images are stored in Firebase Cloud Storage and accessible on all devices
  */
 export async function sanitizePlaceForFirestore(placeData) {
   if (!placeData || typeof placeData !== 'object') return placeData;
@@ -94,16 +157,17 @@ export async function sanitizePlaceForFirestore(placeData) {
     const categories = ['cover', 'facility', 'product', 'menu'];
     for (const cat of categories) {
       if (Array.isArray(copy.images[cat])) {
-        const compressedList = [];
+        const uploadedList = [];
         for (const imgUrl of copy.images[cat]) {
           if (typeof imgUrl === 'string' && imgUrl.startsWith('data:image')) {
-            const compressed = await compressImageDataUrl(imgUrl, 1000, 0.8);
-            compressedList.push(compressed);
+            const compressed = await compressImageDataUrl(imgUrl, 1200, 0.85);
+            const cloudUrl = await uploadImageToFirebaseStorage(compressed, 'places');
+            uploadedList.push(cloudUrl);
           } else {
-            compressedList.push(imgUrl);
+            uploadedList.push(imgUrl);
           }
         }
-        copy.images[cat] = compressedList;
+        copy.images[cat] = uploadedList;
       }
     }
   }

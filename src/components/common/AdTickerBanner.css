@@ -67,7 +67,7 @@
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
-  animation: marqueeScroll 25s linear infinite;
+  animation: marqueeScroll 48s linear infinite;
   cursor: pointer;
 }
 

@@ -284,8 +284,25 @@ const INITIAL_SUBMISSIONS = [
   }
 ];
 
+const getInitialPlaces = () => {
+  let list = [...INITIAL_PLACES];
+  try {
+    const localSaved = localStorage.getItem('cebugo_custom_places');
+    if (localSaved) {
+      const customList = JSON.parse(localSaved);
+      const existingIds = new Set(list.map((p) => p.id));
+      customList.forEach((cItem) => {
+        if (!existingIds.has(cItem.id)) {
+          list.push(cItem);
+        }
+      });
+    }
+  } catch (e) {}
+  return deduplicateAndSortPlaces(list);
+};
+
 export const PlacesProvider = ({ children }) => {
-  const [places, setPlaces] = useState([]);
+  const [places, setPlaces] = useState(getInitialPlaces);
   const [marketplace, setMarketplace] = useState(INITIAL_MARKETPLACE);
   const [submissions, setSubmissions] = useState(INITIAL_SUBMISSIONS);
   const [reviews, setReviews] = useState([

@@ -15,7 +15,8 @@ import {
   RiListCheck2, 
   RiMap2Line,
   RiAddLine,
-  RiDragMove2Line
+  RiDragMove2Line,
+  RiStore2Line
 } from 'react-icons/ri';
 import './ListPage.css';
 
@@ -120,13 +121,12 @@ export default function ListPage() {
 
   return (
     <div className="page-content fade-in">
-      <section className="hero-banner">
-        <div className="hero-badge">
-          <RiMapPin2Fill /> 세부(Cebu) 현지 정보 허브
-        </div>
-        <h1 className="hero-title">믿을 수 있는 세부 업체 & 커뮤니티</h1>
-        <p className="hero-desc">실시간 리뷰, 혜택 정보 및 검증된 현지 중고거래</p>
-      </section>
+      <div className="daily-header">
+        <h1>
+          <RiStore2Line style={{ color: '#2563eb' }} /> 업체정보
+          <span className="daily-header-sub"> - 세부 현지의 분야별 업체 정보</span>
+        </h1>
+      </div>
 
       {/* Mode Switcher & Category Filter */}
       <div className="search-filter-box glass-card">
