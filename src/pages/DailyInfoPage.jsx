@@ -43,6 +43,16 @@ function formatNumberWithCommas(valStr) {
   return parts.join('.');
 }
 
+function cleanNumberInput(valStr) {
+  if (!valStr) return '';
+  const cleaned = valStr.toString().replace(/[^0-9.]/g, '');
+  const parts = cleaned.split('.');
+  if (parts.length > 2) {
+    return parts[0] + '.' + parts.slice(1).join('');
+  }
+  return cleaned;
+}
+
 function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.7) {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -274,7 +284,12 @@ export default function DailyInfoPage() {
     const clean = cleanNumberInput(valStr);
     setActiveCurrency('USD');
     setUsdVal(clean);
-    const num = parseFloat(clean) || 0;
+    if (!clean || isNaN(parseFloat(clean))) {
+      setPhpVal('');
+      setKrwVal('');
+      return;
+    }
+    const num = parseFloat(clean);
     setPhpVal((num * exchangeRates.usdToPhp).toFixed(2));
     setKrwVal(Math.round(num * exchangeRates.usdToKrw).toString());
   };
@@ -283,7 +298,12 @@ export default function DailyInfoPage() {
     const clean = cleanNumberInput(valStr);
     setActiveCurrency('PHP');
     setPhpVal(clean);
-    const num = parseFloat(clean) || 0;
+    if (!clean || isNaN(parseFloat(clean))) {
+      setUsdVal('');
+      setKrwVal('');
+      return;
+    }
+    const num = parseFloat(clean);
     setUsdVal((num / exchangeRates.usdToPhp).toFixed(4));
     setKrwVal(Math.round(num * exchangeRates.phpToKrw).toString());
   };
@@ -292,7 +312,12 @@ export default function DailyInfoPage() {
     const clean = cleanNumberInput(valStr);
     setActiveCurrency('KRW');
     setKrwVal(clean);
-    const num = parseFloat(clean) || 0;
+    if (!clean || isNaN(parseFloat(clean))) {
+      setUsdVal('');
+      setPhpVal('');
+      return;
+    }
+    const num = parseFloat(clean);
     setUsdVal((num / exchangeRates.usdToKrw).toFixed(4));
     setPhpVal((num / exchangeRates.phpToKrw).toFixed(2));
   };
@@ -2835,8 +2860,13 @@ export default function DailyInfoPage() {
                     type="text"
                     value={formatNumberWithCommas(usdVal)}
                     onChange={(e) => handleUsdChange(e.target.value)}
+                    onFocus={(e) => {
+                      setActiveCurrency('USD');
+                      e.target.select();
+                    }}
                     onClick={(e) => e.stopPropagation()}
                     className="currency-column-input"
+                    placeholder="0"
                   />
                   <span className="unit-label">USD</span>
                 </div>
@@ -2856,8 +2886,13 @@ export default function DailyInfoPage() {
                     type="text"
                     value={formatNumberWithCommas(phpVal)}
                     onChange={(e) => handlePhpChange(e.target.value)}
+                    onFocus={(e) => {
+                      setActiveCurrency('PHP');
+                      e.target.select();
+                    }}
                     onClick={(e) => e.stopPropagation()}
                     className="currency-column-input"
+                    placeholder="0"
                   />
                   <span className="unit-label">PHP</span>
                 </div>
@@ -2877,8 +2912,13 @@ export default function DailyInfoPage() {
                     type="text"
                     value={formatNumberWithCommas(krwVal)}
                     onChange={(e) => handleKrwChange(e.target.value)}
+                    onFocus={(e) => {
+                      setActiveCurrency('KRW');
+                      e.target.select();
+                    }}
                     onClick={(e) => e.stopPropagation()}
                     className="currency-column-input"
+                    placeholder="0"
                   />
                   <span className="unit-label">원</span>
                 </div>
