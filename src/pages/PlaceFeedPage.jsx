@@ -28,6 +28,7 @@ const DEFAULT_POSTS = [
     date: '2026-07-28',
     title: '당일 수급 신선 알리망오 크랩 입고 안내',
     content: '오늘 아침 현지 어시장에서 갓 수급한 A급 세부 알리망오 크랩 50kg이 입고되었습니다! 수량이 한정되어 있으니 카카오톡으로 사전 예약해 주세요.',
+    location: 'Lapu-Lapu',
     linkUrl: 'k_jumboseafood',
     images: ['https://images.unsplash.com/photo-1559339352-11d035aa65de?w=800&q=80'],
     order: 0,
@@ -40,6 +41,7 @@ const DEFAULT_POSTS = [
     date: '2026-07-27',
     title: '여름 시즌 한정 오가닉 코코넛 아로마 오일 스파 20% 할인 이벤트',
     content: '7월 한 달간 90분 스파 이용 시 시그니처 코코넛 페이셜 수면팩 무료 제공 및 전체 20% 할인 혜택을 드립니다.',
+    location: 'Lapu-Lapu',
     linkUrl: 'k_treeshade',
     images: ['https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=800&q=80'],
     order: 0,
@@ -81,12 +83,28 @@ export default function PlaceFeedPage() {
     return () => unsub();
   }, []);
 
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const getPostStatus = (p) => {
+    if (p.startDate && todayStr < p.startDate) {
+      return { active: false, status: 'scheduled', label: `게시 예정 (${p.startDate}~)` };
+    }
+    if (p.endDate && todayStr > p.endDate) {
+      return { active: false, status: 'expired', label: `게시 종료 (~${p.endDate})` };
+    }
+    if (p.startDate || p.endDate) {
+      const range = p.startDate && p.endDate ? `${p.startDate} ~ ${p.endDate}` : (p.startDate ? `${p.startDate}~` : `~${p.endDate}`);
+      return { active: true, status: 'active', label: `게시 중 (${range})` };
+    }
+    return { active: true, status: 'active', label: '게시 중' };
+  };
+
+  const canPost = userProfile?.isAdmin || (userProfile?.level && userProfile.level >= 5);
+
   const tabPosts = posts
     .filter((p) => p.category === activeTab)
+    .filter((p) => canPost || getPostStatus(p).active)
     .sort((a, b) => (a.order !== undefined ? a.order : 0) - (b.order !== undefined ? b.order : 0));
-
-  // Can user post: Admin or Level >= 5 (future extension ready)
-  const canPost = userProfile?.isAdmin || (userProfile?.level && userProfile.level >= 5);
 
   const handleOpenCreatePost = () => {
     setEditingPost(null);
@@ -113,15 +131,32 @@ export default function PlaceFeedPage() {
     const postToSave = {
       id: docId,
       ...formData,
+      order: editingPost && editingPost.order !== undefined ? editingPost.order : 0,
       updatedAt: new Date().toISOString()
     };
+
+    if (formData.category) {
+      setActiveTab(formData.category);
+    }
+
+    setPosts((prev) => {
+      const idx = prev.findIndex((p) => p.id === docId);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = { ...copy[idx], ...postToSave };
+        return copy;
+      }
+      return [postToSave, ...prev];
+    });
+
+    setIsFormModalOpen(false);
 
     try {
       await setDoc(doc(db, 'cebugo_ads', docId), postToSave, { merge: true });
     } catch (err) {
       console.error('Failed to save post to Firestore:', err);
+      alert('게시물 저장 중 오류가 발생했습니다: ' + (err.message || '다시 시도해주세요.'));
     }
-    setIsFormModalOpen(false);
   };
 
   const handleDeletePost = async (id) => {
@@ -235,6 +270,36 @@ export default function PlaceFeedPage() {
                       {post.category === 'ad' ? '📣 광고' : '🎉 이벤트'}
                     </span>
                     <span className="post-place-name">{post.authorName || post.placeName}</span>
+                    {post.location && (
+                      <span className="post-cat-badge" style={{ background: '#f0f9ff', color: '#0284c7', border: '1px solid #bae6fd', fontWeight: 600 }}>
+                        📍 {post.location}
+                      </span>
+                    )}
+                    {canPost && (() => {
+                      const statusInfo = getPostStatus(post);
+                      if (statusInfo.status === 'scheduled') {
+                        return (
+                          <span className="post-cat-badge" style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', fontWeight: 600 }}>
+                            ⏳ {statusInfo.label}
+                          </span>
+                        );
+                      }
+                      if (statusInfo.status === 'expired') {
+                        return (
+                          <span className="post-cat-badge" style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', fontWeight: 600 }}>
+                            🔴 {statusInfo.label}
+                          </span>
+                        );
+                      }
+                      if (post.startDate || post.endDate) {
+                        return (
+                          <span className="post-cat-badge" style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', fontWeight: 600 }}>
+                            🟢 {statusInfo.label}
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
                     {isTickerActive && (
                       <span className="post-cat-badge" style={{ background: '#fef08a', color: '#854d0e', border: '1px solid #fde047' }}>
                         📢 전광판 게시 중

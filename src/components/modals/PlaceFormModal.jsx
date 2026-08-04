@@ -125,8 +125,8 @@ export default function PlaceFormModal({ editingPlace, onClose, onSave }) {
   const selectableCategories = CATEGORIES.filter((c) => c.id !== 'all');
 
   return (
-    <div className="modal-overlay fade-in" onClick={onClose}>
-      <div className="modal-content glass-card place-form-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay fade-in">
+      <div className="modal-content glass-card place-form-modal">
         <div className="modal-header">
           <h2>{editingPlace ? '업체 정보 수정' : '신규 업체 등록'}</h2>
           <button className="modal-close-btn" onClick={onClose}>

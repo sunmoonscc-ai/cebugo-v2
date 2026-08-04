@@ -15,8 +15,15 @@ export default function AdTickerBanner() {
       (snapshot) => {
         if (!snapshot.empty) {
           const list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-          // Filter strictly admin-selected ticker items (isTicker === true)
-          const selected = list.filter((p) => p.isTicker === true || p.isTicker === 'true');
+          const todayStr = new Date().toISOString().split('T')[0];
+          // Filter strictly admin-selected ticker items (isTicker === true) and active date period
+          const selected = list.filter((p) => {
+            const isTicker = p.isTicker === true || p.isTicker === 'true';
+            if (!isTicker) return false;
+            if (p.startDate && todayStr < p.startDate) return false;
+            if (p.endDate && todayStr > p.endDate) return false;
+            return true;
+          });
           setTickerPosts(selected);
         } else {
           setTickerPosts([]);
