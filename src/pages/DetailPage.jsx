@@ -67,24 +67,25 @@ export default function DetailPage() {
   };
 
   const getActiveTabImages = () => {
-    if (!place.images) return [getDefaultImageForCategory(place)];
-    const tabImgs = place.images[activeTab] || [];
-    if (tabImgs.length > 0) return tabImgs;
-    
-    // Check if cover images exist
-    if (place.images.cover && place.images.cover.length > 0) return place.images.cover;
+    const defaultImg = getDefaultImageForCategory(place) || '/default_cafe.png';
+    if (!place || !place.images) return [defaultImg];
 
-    // Check if any other category images exist
-    const all = [
+    const currentTabImgs = (place.images[activeTab] || []).filter(Boolean);
+    if (currentTabImgs.length > 0) return currentTabImgs;
+
+    const coverImgs = (place.images.cover || []).filter(Boolean);
+    if (coverImgs.length > 0) return coverImgs;
+
+    const allImgs = [
       ...(place.images.cover || []),
       ...(place.images.facility || []),
       ...(place.images.product || []),
       ...(place.images.menu || [])
     ].filter(Boolean);
 
-    if (all.length > 0) return all;
+    if (allImgs.length > 0) return allImgs;
 
-    return [getDefaultImageForCategory(place)];
+    return [defaultImg];
   };
 
   const handleBack = (e) => {

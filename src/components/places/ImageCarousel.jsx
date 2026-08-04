@@ -7,35 +7,33 @@ export default function ImageCarousel({ images = [], maxWidth = '50%' }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isZoomOpen, setIsZoomOpen] = useState(false);
 
-  if (!images || images.length === 0) {
-    return (
-      <div className="carousel-placeholder">
-        <span>이미지 정보가 없습니다.</span>
-      </div>
-    );
-  }
+  const validImages = (images || []).filter(Boolean);
+  const displayImages = validImages.length > 0 ? validImages : ['/default_cafe.png'];
+  const safeIndex = currentIndex >= displayImages.length ? 0 : currentIndex;
 
   const prevSlide = (e) => {
     e?.stopPropagation();
-    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+    setCurrentIndex((prev) => (prev === 0 ? displayImages.length - 1 : prev - 1));
   };
 
   const nextSlide = (e) => {
     e?.stopPropagation();
-    setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+    setCurrentIndex((prev) => (prev === displayImages.length - 1 ? 0 : prev + 1));
   };
+
+  const currentImgUrl = displayImages[safeIndex] || '/default_cafe.png';
 
   return (
     <>
       <div className="carousel-container" style={{ maxWidth: maxWidth || '50%' }}>
         <div className="carousel-img-wrapper" onClick={() => setIsZoomOpen(true)} title="클릭하여 원본 크기로 확대보기">
           <img
-            src={getOptimizedImageUrl(images[currentIndex], 800)}
-            alt={`slide-${currentIndex}`}
+            src={getOptimizedImageUrl(currentImgUrl, 800)}
+            alt={`slide-${safeIndex}`}
             className="carousel-main-img fade-in"
             onError={(e) => {
-              if (e.target.src !== images[currentIndex]) {
-                e.target.src = images[currentIndex];
+              if (e.target.src !== currentImgUrl) {
+                e.target.src = currentImgUrl;
               }
             }}
           />
@@ -44,7 +42,7 @@ export default function ImageCarousel({ images = [], maxWidth = '50%' }) {
           </div>
         </div>
 
-        {images.length > 1 && (
+        {displayImages.length > 1 && (
           <>
             <button type="button" className="carousel-btn prev" onClick={prevSlide}>
               <RiArrowLeftSLine />
@@ -54,10 +52,10 @@ export default function ImageCarousel({ images = [], maxWidth = '50%' }) {
             </button>
 
             <div className="carousel-dots">
-              {images.map((_, idx) => (
+              {displayImages.map((_, idx) => (
                 <span
                   key={idx}
-                  className={`dot ${idx === currentIndex ? 'active' : ''}`}
+                  className={`dot ${idx === safeIndex ? 'active' : ''}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     setCurrentIndex(idx);
@@ -79,13 +77,16 @@ export default function ImageCarousel({ images = [], maxWidth = '50%' }) {
 
             <div className="zoom-img-container">
               <img
-                src={images[currentIndex]}
-                alt={`zoom-${currentIndex}`}
+                src={currentImgUrl}
+                alt={`zoom-${safeIndex}`}
                 className="zoom-main-img"
+                onError={(e) => {
+                  e.target.src = '/default_cafe.png';
+                }}
               />
             </div>
 
-            {images.length > 1 && (
+            {displayImages.length > 1 && (
               <>
                 <button type="button" className="zoom-btn prev" onClick={prevSlide}>
                   <RiArrowLeftSLine />
@@ -94,7 +95,7 @@ export default function ImageCarousel({ images = [], maxWidth = '50%' }) {
                   <RiArrowRightSLine />
                 </button>
                 <div className="zoom-counter">
-                  {currentIndex + 1} / {images.length}
+                  {safeIndex + 1} / {displayImages.length}
                 </div>
               </>
             )}

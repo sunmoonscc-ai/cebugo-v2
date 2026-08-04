@@ -1,5 +1,7 @@
 import defaultCafeImg from '../assets/default_cafe.png';
 
+const FALLBACK_DEFAULT_IMAGE = defaultCafeImg || '/default_cafe.png';
+
 /**
  * Get default category placeholder image if no user image is uploaded
  */
@@ -13,30 +15,11 @@ export function getDefaultImageForCategory(categoryOrPlace) {
     catStr = String(categoryOrPlace || '').toLowerCase();
   }
 
-  const combined = `${catStr} ${nameStr}`;
-
-  if (
-    combined.includes('cafe') ||
-    combined.includes('마실거리') ||
-    combined.includes('먹을거리') ||
-    combined.includes('restaurant') ||
-    combined.includes('카페') ||
-    combined.includes('커피') ||
-    combined.includes('coffee') ||
-    combined.includes('바') ||
-    combined.includes('bar') ||
-    combined.includes('베이커리') ||
-    combined.includes('bakery') ||
-    combined.includes('음식')
-  ) {
-    return defaultCafeImg || '/default_cafe.png';
-  }
-
-  return defaultCafeImg || '/default_cafe.png';
+  return FALLBACK_DEFAULT_IMAGE;
 }
 
 export function getOptimizedImageUrl(url, width = 600, quality = 80) {
-  if (!url) return defaultCafeImg || '/default_cafe.png';
+  if (!url || typeof url !== 'string') return FALLBACK_DEFAULT_IMAGE;
   
   if (
     url.startsWith('data:') ||
@@ -44,7 +27,8 @@ export function getOptimizedImageUrl(url, width = 600, quality = 80) {
     url.includes('firebasestorage.googleapis.com') ||
     url.includes('firebase') ||
     url.includes('unsplash.com') ||
-    url.includes('weserv.nl')
+    url.includes('weserv.nl') ||
+    url.includes('default_cafe')
   ) {
     return url;
   }
@@ -53,7 +37,7 @@ export function getOptimizedImageUrl(url, width = 600, quality = 80) {
     const cleanUrl = url.replace(/^https?:\/\//, '');
     return `https://images.weserv.nl/?url=${encodeURIComponent(cleanUrl)}&w=${width}&q=${quality}&output=webp`;
   } catch (e) {
-    return url;
+    return url || FALLBACK_DEFAULT_IMAGE;
   }
 }
 
