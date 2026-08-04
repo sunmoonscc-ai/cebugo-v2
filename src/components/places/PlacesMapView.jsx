@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { RiNavigationFill, RiStarFill } from 'react-icons/ri';
 import { Link, useNavigate } from 'react-router-dom';
@@ -63,32 +63,65 @@ const createCustomCircleMarker = (place) => {
   });
 };
 
-// Component to dynamically recenter map view
-function RecenterMap({ center }) {
-  const map = useMap();
-  useEffect(() => {
-    if (center) {
-      map.setView(center, 13);
+const FIXED_USER_LOCATION = [10.324581378196822, 124.01394151354162];
+
+const getSavedMapCenter = () => {
+  try {
+    const saved = sessionStorage.getItem('cebugo_map_center');
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return FIXED_USER_LOCATION;
+};
+
+const getSavedMapZoom = () => {
+  try {
+    const saved = sessionStorage.getItem('cebugo_map_zoom');
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return 13;
+};
+
+// Component to dynamically track and save map center & zoom
+function MapStateTracker() {
+  const map = useMapEvents({
+    moveend: () => {
+      const c = map.getCenter();
+      const z = map.getZoom();
+      sessionStorage.setItem('cebugo_map_center', JSON.stringify([c.lat, c.lng]));
+      sessionStorage.setItem('cebugo_map_zoom', JSON.stringify(z));
+    },
+    zoomend: () => {
+      const c = map.getCenter();
+      const z = map.getZoom();
+      sessionStorage.setItem('cebugo_map_center', JSON.stringify([c.lat, c.lng]));
+      sessionStorage.setItem('cebugo_map_zoom', JSON.stringify(z));
     }
-  }, [center, map]);
+  });
   return null;
 }
 
-const FIXED_USER_LOCATION = [10.324581378196822, 124.01394151354162];
+// Component to dynamically recenter map view
+function RecenterMap({ center, zoom }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center && zoom) {
+      map.setView(center, zoom);
+    }
+  }, [center, zoom, map]);
+  return null;
+}
 
 export default function PlacesMapView({ places }) {
   const navigate = useNavigate();
-  const [mapCenter, setMapCenter] = useState(FIXED_USER_LOCATION);
-  const [userLocation, setUserLocation] = useState(FIXED_USER_LOCATION);
-  const [locating, setLocating] = useState(false);
-
-  useEffect(() => {
-    handleFindLocation();
-  }, []);
+  const [mapCenter, setMapCenter] = useState(getSavedMapCenter);
+  const [mapZoom, setMapZoom] = useState(getSavedMapZoom);
+  const userLocation = FIXED_USER_LOCATION;
 
   const handleFindLocation = () => {
-    setUserLocation(FIXED_USER_LOCATION);
     setMapCenter(FIXED_USER_LOCATION);
+    setMapZoom(13);
+    sessionStorage.setItem('cebugo_map_center', JSON.stringify(FIXED_USER_LOCATION));
+    sessionStorage.setItem('cebugo_map_zoom', JSON.stringify(13));
   };
 
   return (
@@ -107,16 +140,17 @@ export default function PlacesMapView({ places }) {
         }}
       >
         <RiNavigationFill style={{ color: '#0284c7' }} />
-        {locating ? '위치 찾는 중...' : '내 위치로 중심 이동'}
+        내 위치로 중심 이동
       </button>
 
       <MapContainer 
         center={mapCenter} 
-        zoom={13} 
+        zoom={mapZoom} 
         scrollWheelZoom={true} 
         style={{ width: '100%', height: '100%' }}
       >
-        <RecenterMap center={mapCenter} />
+        <RecenterMap center={mapCenter} zoom={mapZoom} />
+        <MapStateTracker />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

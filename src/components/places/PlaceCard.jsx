@@ -139,7 +139,7 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
         </p>
 
         {(() => {
-          const text = place.explaination || '';
+          const text = (place.explaination || '').replace(/\r?\n+/g, ' ').trim();
           const MAX_LENGTH = 70;
           const isLong = text.length > MAX_LENGTH;
 
