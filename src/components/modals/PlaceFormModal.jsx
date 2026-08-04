@@ -183,30 +183,67 @@ export default function PlaceFormModal({ editingPlace, defaultCategory = 'restau
     });
   };
 
-  const handleImageFileUpload = (e, imgType) => {
+const compressImageFile = (file) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1600;
+        const MAX_HEIGHT = 1600;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+          if (width > height) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          } else {
+            width = Math.round((width * MAX_HEIGHT) / height);
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+        resolve(dataUrl);
+      };
+      img.onerror = () => resolve(event.target.result);
+      img.src = event.target.result;
+    };
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+};
+
+  const handleImageFileUpload = async (e, imgType) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
 
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData((prev) => {
-          const currentTypeImgs = prev.images[imgType] || [];
-          if (currentTypeImgs.length >= 20) {
-            alert('각 분류당 최대 20개까지 첨부 가능합니다.');
-            return prev;
+    for (const file of files) {
+      const compressedDataUrl = await compressImageFile(file);
+      if (!compressedDataUrl) continue;
+
+      setFormData((prev) => {
+        const currentTypeImgs = prev.images[imgType] || [];
+        if (currentTypeImgs.length >= 20) {
+          alert('각 분류당 최대 20개까지 첨부 가능합니다.');
+          return prev;
+        }
+        return {
+          ...prev,
+          images: {
+            ...prev.images,
+            [imgType]: [...currentTypeImgs, compressedDataUrl]
           }
-          return {
-            ...prev,
-            images: {
-              ...prev.images,
-              [imgType]: [...currentTypeImgs, reader.result]
-            }
-          };
-        });
-      };
-      reader.readAsDataURL(file);
-    });
+        };
+      });
+    }
   };
 
   const handleRemoveImage = (imgType, index) => {

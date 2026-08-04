@@ -1,16 +1,130 @@
+import defaultCafeImg from '../assets/default_cafe.png';
+
 /**
- * Image helper utility with weserv.nl proxy support and mock image generator
+ * Get default category placeholder image if no user image is uploaded
  */
+export function getDefaultImageForCategory(categoryOrPlace) {
+  let catStr = '';
+  let nameStr = '';
+  if (typeof categoryOrPlace === 'object' && categoryOrPlace !== null) {
+    catStr = `${categoryOrPlace.category || ''} ${categoryOrPlace.categoryName || ''}`.toLowerCase();
+    nameStr = (categoryOrPlace.name || '').toLowerCase();
+  } else {
+    catStr = String(categoryOrPlace || '').toLowerCase();
+  }
+
+  const combined = `${catStr} ${nameStr}`;
+
+  if (
+    combined.includes('cafe') ||
+    combined.includes('마실거리') ||
+    combined.includes('먹을거리') ||
+    combined.includes('restaurant') ||
+    combined.includes('카페') ||
+    combined.includes('커피') ||
+    combined.includes('coffee') ||
+    combined.includes('바') ||
+    combined.includes('bar') ||
+    combined.includes('베이커리') ||
+    combined.includes('bakery') ||
+    combined.includes('음식')
+  ) {
+    return defaultCafeImg || '/default_cafe.png';
+  }
+
+  return defaultCafeImg || '/default_cafe.png';
+}
 
 export function getOptimizedImageUrl(url, width = 600, quality = 80) {
-  if (!url) return 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&q=80';
+  if (!url) return defaultCafeImg || '/default_cafe.png';
   
-  if (url.startsWith('data:') || url.includes('unsplash.com')) {
+  if (
+    url.startsWith('data:') ||
+    url.startsWith('blob:') ||
+    url.includes('firebasestorage.googleapis.com') ||
+    url.includes('firebase') ||
+    url.includes('unsplash.com') ||
+    url.includes('weserv.nl')
+  ) {
     return url;
   }
 
-  const cleanUrl = url.replace(/^https?:\/\//, '');
-  return `https://images.weserv.nl/?url=${encodeURIComponent(cleanUrl)}&w=${width}&q=${quality}&output=webp`;
+  try {
+    const cleanUrl = url.replace(/^https?:\/\//, '');
+    return `https://images.weserv.nl/?url=${encodeURIComponent(cleanUrl)}&w=${width}&q=${quality}&output=webp`;
+  } catch (e) {
+    return url;
+  }
+}
+
+/**
+ * Compress an image file or base64 string to a lightweight, optimized data URL
+ * Ensures total image payload size is safe for database storage
+ */
+export function compressImageDataUrl(dataUrl, maxDimension = 1000, quality = 0.8) {
+  return new Promise((resolve) => {
+    if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image')) {
+      resolve(dataUrl);
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const compressed = canvas.toDataURL('image/jpeg', quality);
+      resolve(compressed);
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+/**
+ * Safely optimize place payload before saving to Firestore to guarantee
+ * total document size stays safely under Firestore's 1MB document limit
+ */
+export async function sanitizePlaceForFirestore(placeData) {
+  if (!placeData || typeof placeData !== 'object') return placeData;
+
+  const copy = JSON.parse(JSON.stringify(placeData));
+
+  if (copy.images && typeof copy.images === 'object') {
+    const categories = ['cover', 'facility', 'product', 'menu'];
+    for (const cat of categories) {
+      if (Array.isArray(copy.images[cat])) {
+        const compressedList = [];
+        for (const imgUrl of copy.images[cat]) {
+          if (typeof imgUrl === 'string' && imgUrl.startsWith('data:image')) {
+            const compressed = await compressImageDataUrl(imgUrl, 1000, 0.8);
+            compressedList.push(compressed);
+          } else {
+            compressedList.push(imgUrl);
+          }
+        }
+        copy.images[cat] = compressedList;
+      }
+    }
+  }
+
+  return copy;
 }
 
 // Cumulative point threshold table for Lv.1 ~ Lv.20

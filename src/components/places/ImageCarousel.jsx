@@ -33,6 +33,11 @@ export default function ImageCarousel({ images = [], maxWidth = '50%' }) {
             src={getOptimizedImageUrl(images[currentIndex], 800)}
             alt={`slide-${currentIndex}`}
             className="carousel-main-img fade-in"
+            onError={(e) => {
+              if (e.target.src !== images[currentIndex]) {
+                e.target.src = images[currentIndex];
+              }
+            }}
           />
           <div className="zoom-hint-overlay">
             <RiZoomInLine /> <span>확대보기</span>

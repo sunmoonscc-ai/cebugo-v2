@@ -27,8 +27,7 @@ export default function DetailPage() {
 
   const fromView = location.state?.fromView || 'list';
 
-  const place = places.find((p) => p.id === id) || places[0];
-  const placeReviews = reviews.filter((r) => r.placeId === place.id);
+  const place = places.find((p) => String(p.id) === String(id)) || places.find((p) => (p.name || '').toLowerCase().includes((id || '').toLowerCase())) || places[0];
 
   const [activeTab, setActiveTab] = useState('cover'); // cover, facility, product, menu
   const [showSuggestModal, setShowSuggestModal] = useState(false);
@@ -36,6 +35,19 @@ export default function DetailPage() {
   // Review Form state
   const [rating, setRating] = useState(5);
   const [reviewContent, setReviewContent] = useState('');
+
+  if (!place) {
+    return (
+      <div className="page-content fade-in" style={{ padding: '40px 20px', textAlign: 'center' }}>
+        <h2 style={{ fontSize: '1.2rem', marginBottom: '12px' }}>업체 정보를 읽어오는 중이거나 찾을 수 없습니다.</h2>
+        <a href="/" onClick={(e) => { e.preventDefault(); navigate('/', { state: { fromView } }); }} className="btn btn-primary" style={{ marginTop: '12px', display: 'inline-block' }}>
+          ← 목록으로 돌아가기
+        </a>
+      </div>
+    );
+  }
+
+  const placeReviews = reviews.filter((r) => r.placeId === place.id);
 
   const carrier = classifyPhoneCarrier(place.phone);
   const snsInfo = parseSnsEntry(place.sns);
@@ -55,8 +67,24 @@ export default function DetailPage() {
   };
 
   const getActiveTabImages = () => {
-    if (!place.images) return [];
-    return place.images[activeTab] || place.images.cover || [];
+    if (!place.images) return [getDefaultImageForCategory(place)];
+    const tabImgs = place.images[activeTab] || [];
+    if (tabImgs.length > 0) return tabImgs;
+    
+    // Check if cover images exist
+    if (place.images.cover && place.images.cover.length > 0) return place.images.cover;
+
+    // Check if any other category images exist
+    const all = [
+      ...(place.images.cover || []),
+      ...(place.images.facility || []),
+      ...(place.images.product || []),
+      ...(place.images.menu || [])
+    ].filter(Boolean);
+
+    if (all.length > 0) return all;
+
+    return [getDefaultImageForCategory(place)];
   };
 
   const handleBack = (e) => {

@@ -2,10 +2,66 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../firebase/config';
 import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { CATEGORY_MAP } from '../constants/categories';
+import { sanitizePlaceForFirestore } from '../utils/imageHelper';
 
 const PlacesContext = createContext();
 
 export const usePlaces = () => useContext(PlacesContext);
+
+function countImages(place) {
+  if (!place || !place.images) return 0;
+  return (
+    (place.images.cover?.length || 0) +
+    (place.images.facility?.length || 0) +
+    (place.images.product?.length || 0) +
+    (place.images.menu?.length || 0)
+  );
+}
+
+function hashCode(str) {
+  let hash = 0;
+  for (let i = 0; i < (str || '').length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+export function deduplicateAndSortPlaces(list) {
+  if (!Array.isArray(list)) return [];
+
+  const mapByName = new Map();
+
+  for (const rawItem of list) {
+    if (!rawItem || !rawItem.name) continue;
+    
+    // Guarantee every place has a non-undefined valid ID
+    const validId = rawItem.id || `p_${hashCode(rawItem.name)}`;
+    const item = { ...rawItem, id: validId };
+
+    const nameKey = item.name.trim().toLowerCase().replace(/\s+/g, '');
+
+    if (!mapByName.has(nameKey)) {
+      mapByName.set(nameKey, item);
+    } else {
+      const existing = mapByName.get(nameKey);
+      const existingImgCount = countImages(existing);
+      const newImgCount = countImages(item);
+
+      if (newImgCount > existingImgCount) {
+        mapByName.set(nameKey, { ...existing, ...item, id: existing.id || item.id });
+      } else if (newImgCount === existingImgCount) {
+        const timeExisting = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
+        const timeNew = new Date(item.updatedAt || item.createdAt || 0).getTime();
+        if (timeNew >= timeExisting) {
+          mapByName.set(nameKey, { ...existing, ...item, id: existing.id || item.id });
+        }
+      }
+    }
+  }
+
+  return sortPlaces(Array.from(mapByName.values()));
+}
 
 // Sorting helper: Custom order overrides default, otherwise Fallback to Alphabetical Sort (가나다순)
 export function sortPlaces(list) {
@@ -152,6 +208,28 @@ const INITIAL_PLACES = [
     images: {
       cover: ['https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&q=80']
     }
+  },
+  {
+    id: 'place_7',
+    name: '33oz Cafe (33온스 카페)',
+    category: 'cafe',
+    categoryName: '마실거리',
+    addr: 'LG Garden Walk Mactan, Mactan New Town, Lapu-Lapu City, Cebu',
+    lat: 10.3025,
+    lng: 124.0040,
+    open: '09:00 AM - 10:00 PM',
+    breakTime: '없음',
+    phone: '09170003303',
+    sns: 'i_33oz.bakery.cebu',
+    explaination: '안녕하세요 ♡♡♡\n막탄 뉴타운 LG가든워크 몰에 위치한\n33oz Cafe (33온스 카페)입니다! ☕✨',
+    rating: 5.0,
+    reviewsCount: 1,
+    images: {
+      cover: ['https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&q=80'],
+      facility: ['https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=800&q=80'],
+      product: ['https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80'],
+      menu: ['https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&q=80']
+    }
   }
 ];
 
@@ -222,34 +300,64 @@ export const PlacesProvider = ({ children }) => {
     }
   ]);
 
-  // Firestore real-time places synchronization
+  // Firestore real-time places synchronization with LocalStorage dual persistence
   useEffect(() => {
     const unsub = onSnapshot(
       collection(db, 'places'),
       (snapshot) => {
+        let list = [];
         if (!snapshot.empty) {
-          const list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-          setPlaces(sortPlaces(list));
+          list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
         } else {
-          INITIAL_PLACES.forEach(async (p, idx) => {
-            await setDoc(doc(db, 'places', p.id), { ...p, order: idx });
+          list = INITIAL_PLACES.map((p, idx) => ({ ...p, order: idx }));
+          list.forEach(async (p) => {
+            try { await setDoc(doc(db, 'places', p.id), p); } catch(e){}
           });
-          setPlaces(sortPlaces(INITIAL_PLACES.map((p, idx) => ({ ...p, order: idx }))));
         }
+
+        // Merge with local storage custom places backup so no locally created place is ever lost
+        try {
+          const localSaved = localStorage.getItem('cebugo_custom_places');
+          if (localSaved) {
+            const customList = JSON.parse(localSaved);
+            const existingIds = new Set(list.map((p) => p.id));
+            customList.forEach((cItem) => {
+              if (!existingIds.has(cItem.id)) {
+                list.push(cItem);
+                setDoc(doc(db, 'places', cItem.id), cItem).catch(() => {});
+              }
+            });
+          }
+        } catch (e) {}
+
+        setPlaces(deduplicateAndSortPlaces(list));
       },
       (err) => {
         console.error('Firestore places sync error:', err);
-        setPlaces(sortPlaces(INITIAL_PLACES));
+        let list = [...INITIAL_PLACES];
+        try {
+          const localSaved = localStorage.getItem('cebugo_custom_places');
+          if (localSaved) {
+            const customList = JSON.parse(localSaved);
+            const existingIds = new Set(list.map((p) => p.id));
+            customList.forEach((cItem) => {
+              if (!existingIds.has(cItem.id)) {
+                list.push(cItem);
+              }
+            });
+          }
+        } catch (e) {}
+        setPlaces(deduplicateAndSortPlaces(list));
       }
     );
     return () => unsub();
   }, []);
 
   const addPlace = async (placeData) => {
-    const docId = `p_${Date.now()}`;
+    const docId = placeData.id || `p_${Date.now()}`;
     const categoryName = CATEGORY_MAP[placeData.category] || '기타';
 
-    const placeToSave = {
+    let placeToSave = {
       id: docId,
       rating: 5.0,
       reviewsCount: 0,
@@ -258,36 +366,88 @@ export const PlacesProvider = ({ children }) => {
       categoryName
     };
 
+    // Auto-compress & sanitize images so total document size stays under Firestore's 1MB limit
+    placeToSave = await sanitizePlaceForFirestore(placeToSave);
+
+    // 1. Dual Backup to LocalStorage first (fail-safe)
+    try {
+      const localSaved = localStorage.getItem('cebugo_custom_places');
+      const customList = localSaved ? JSON.parse(localSaved) : [];
+      const updatedCustom = [placeToSave, ...customList.filter((p) => p.id !== docId)];
+      localStorage.setItem('cebugo_custom_places', JSON.stringify(updatedCustom));
+    } catch (e) {
+      console.warn('LocalStorage backup warning:', e);
+    }
+
+    // 2. React state update with deduplication
+    setPlaces((prev) => deduplicateAndSortPlaces([placeToSave, ...prev.filter((p) => p.id !== docId)]));
+
+    // 3. Save to Firestore
     try {
       await setDoc(doc(db, 'places', docId), placeToSave);
+      console.log('Successfully saved place to Firestore:', docId);
     } catch (err) {
       console.error('Failed to save place to Firestore:', err);
-      setPlaces((prev) => sortPlaces([...prev, placeToSave]));
     }
   };
 
   const updatePlace = async (id, placeData) => {
+    const targetId = id || placeData.id || `p_${Date.now()}`;
     const categoryName = CATEGORY_MAP[placeData.category] || placeData.categoryName || '기타';
-    const placeToSave = {
+    let placeToSave = {
       ...placeData,
+      id: targetId,
       categoryName,
       updatedAt: new Date().toISOString()
     };
 
+    // Auto-compress & sanitize images so total document size stays under Firestore's 1MB limit
+    placeToSave = await sanitizePlaceForFirestore(placeToSave);
+
+    // 1. Dual Backup to LocalStorage
     try {
-      await setDoc(doc(db, 'places', id), placeToSave, { merge: true });
+      const localSaved = localStorage.getItem('cebugo_custom_places');
+      const customList = localSaved ? JSON.parse(localSaved) : [];
+      const updatedCustom = [...customList.filter((p) => p.id !== targetId), placeToSave];
+      localStorage.setItem('cebugo_custom_places', JSON.stringify(updatedCustom));
+    } catch (e) {
+      console.warn('LocalStorage backup warning:', e);
+    }
+
+    // 2. Update React State with deduplication
+    setPlaces((prev) => {
+      const filtered = prev.filter((p) => p.id !== targetId);
+      return deduplicateAndSortPlaces([placeToSave, ...filtered]);
+    });
+
+    // 3. Update Firestore
+    try {
+      await setDoc(doc(db, 'places', targetId), placeToSave, { merge: true });
+      console.log('Successfully updated place in Firestore:', targetId);
     } catch (err) {
       console.error('Failed to update place in Firestore:', err);
-      setPlaces((prev) => sortPlaces(prev.map((p) => (p.id === id ? { ...p, ...placeToSave } : p))));
     }
   };
 
   const deletePlace = async (id) => {
+    // 1. Remove from LocalStorage Backup
+    try {
+      const localSaved = localStorage.getItem('cebugo_custom_places');
+      if (localSaved) {
+        const customList = JSON.parse(localSaved);
+        const updatedCustom = customList.filter((p) => p.id !== id);
+        localStorage.setItem('cebugo_custom_places', JSON.stringify(updatedCustom));
+      }
+    } catch (e) {}
+
+    // 2. Remove from React State
+    setPlaces((prev) => prev.filter((p) => p.id !== id));
+
+    // 3. Remove from Firestore
     try {
       await deleteDoc(doc(db, 'places', id));
     } catch (err) {
       console.error('Failed to delete place from Firestore:', err);
-      setPlaces((prev) => prev.filter((p) => p.id !== id));
     }
   };
 

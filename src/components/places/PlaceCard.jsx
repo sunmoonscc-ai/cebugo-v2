@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CarrierBadge } from '../common/Badge';
 import { classifyPhoneCarrier, parseSnsEntry, getSnsLinkUrl } from '../../utils/phoneSnsClassifier';
-import { getOptimizedImageUrl } from '../../utils/imageHelper';
+import { getOptimizedImageUrl, getDefaultImageForCategory } from '../../utils/imageHelper';
 import { useAuth } from '../../context/AuthContext';
 import FullScreenImageModal from '../modals/FullScreenImageModal';
 import { 
@@ -33,7 +33,7 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
 
   const imagesToDisplay = allImages.length > 0
     ? allImages
-    : ['https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&q=80'];
+    : [getDefaultImageForCategory(place)];
 
   const count = imagesToDisplay.length;
   let layoutClass = 'multi';
@@ -51,6 +51,11 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
               alt={`${place.name} - ${imgIdx + 1}`}
               className="card-item-img"
               onClick={() => setZoomImgIndex(imgIdx)}
+              onError={(e) => {
+                if (e.target.src !== imgSrc) {
+                  e.target.src = imgSrc;
+                }
+              }}
             />
           ))}
         </div>
