@@ -16,7 +16,9 @@ import {
   RiMap2Line,
   RiAddLine,
   RiDragMove2Line,
-  RiStore2Line
+  RiStore2Line,
+  RiHeartFill,
+  RiHeartLine
 } from 'react-icons/ri';
 import './ListPage.css';
 
@@ -64,7 +66,11 @@ export default function ListPage() {
   }, [selectedCategory]);
 
   const filteredPlaces = places.filter((place) => {
-    const matchesCat = selectedCategory === 'all' || place.category === selectedCategory;
+    const userFavs = userProfile?.favorites || [];
+    const matchesCat = selectedCategory === 'favorite'
+      ? userFavs.includes(place.id)
+      : (selectedCategory === 'all' || place.category === selectedCategory);
+
     const matchesSearch =
       (place.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (place.addr || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -158,6 +164,19 @@ export default function ListPage() {
         </div>
 
         <div className="category-scroll" ref={categoryScrollRef}>
+          <button
+            ref={(el) => (pillRefs.current['favorite'] = el)}
+            className={`cat-pill cat-pill-fav ${selectedCategory === 'favorite' ? 'active' : ''}`}
+            onClick={() => setSelectedCategory('favorite')}
+          >
+            {selectedCategory === 'favorite' ? (
+              <RiHeartFill className="heart-icon" style={{ color: '#ffffff' }} />
+            ) : (
+              <RiHeartLine className="heart-icon" style={{ color: '#ef4444' }} />
+            )}
+            <span>즐겨찾기</span>
+          </button>
+
           {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
@@ -214,8 +233,20 @@ export default function ListPage() {
           </div>
 
           {sortedPlaces.length === 0 ? (
-            <div className="empty-state glass-card">
-              <p>검색 조건에 일치하는 업체가 없습니다.</p>
+            <div className="empty-state glass-card" style={{ padding: '36px 16px', textAlign: 'center' }}>
+              {selectedCategory === 'favorite' ? (
+                <>
+                  <RiHeartLine style={{ fontSize: '2.6rem', color: '#ef4444', marginBottom: '8px' }} />
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1e293b', marginBottom: '4px' }}>
+                    즐겨찾기한 업체가 없습니다.
+                  </h3>
+                  <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                    관심 있는 업체의 하트(♥) 아이콘을 눌러 나만의 즐겨찾기를 만들어보세요!
+                  </p>
+                </>
+              ) : (
+                <p>검색 조건에 일치하는 업체가 없습니다.</p>
+              )}
             </div>
           ) : (
             sortedPlaces.map((place, index) => (

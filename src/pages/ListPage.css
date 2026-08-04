@@ -137,6 +137,32 @@
   border-color: var(--primary);
 }
 
+.cat-pill-fav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff0f2;
+  color: #e11d48;
+  border-color: #fecdd3;
+  font-weight: 700;
+}
+
+.cat-pill-fav:hover {
+  background: #ffe4e6;
+  border-color: #fda4af;
+}
+
+.cat-pill-fav.active {
+  background: linear-gradient(135deg, #f43f5e, #e11d48) !important;
+  color: #ffffff !important;
+  border-color: #be123c !important;
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.3);
+}
+
+.cat-pill-fav.active .heart-icon {
+  color: #ffffff !important;
+}
+
 .list-meta-header {
   display: flex;
   align-items: center;

@@ -118,9 +118,10 @@ export default function ImageCarousel({ images = [], maxWidth = '50%' }) {
                   e.target.src = '/default_cafe.png';
                 }}
               />
-              <div className="zoom-date-badge">
-                {extractDateFromImageUrl(currentImgUrl)}
-              </div>
+            </div>
+
+            <div className="zoom-date-badge">
+              {extractDateFromImageUrl(currentImgUrl)}
             </div>
 
             {displayImages.length > 1 && (
