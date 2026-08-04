@@ -8,9 +8,10 @@
   backdrop-filter: blur(6px);
   z-index: 200;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 16px;
+  padding: 30px 16px 20px 16px;
+  overflow-y: auto;
 }
 
 .modal-card {

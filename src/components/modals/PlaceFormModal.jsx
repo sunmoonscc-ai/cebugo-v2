@@ -1,23 +1,92 @@
 import React, { useState, useEffect } from 'react';
 import { CATEGORIES } from '../../constants/categories';
-import { RiCloseLine, RiCheckLine, RiImageAddLine, RiMapPinLine } from 'react-icons/ri';
+import { RiCloseLine, RiCheckLine, RiImageAddLine, RiMapPinLine, RiAddLine, RiDeleteBinLine } from 'react-icons/ri';
 import './PlaceFormModal.css';
 
-const LOCATION_PRESETS = [
-  { label: '막탄 마리바고', lat: 10.2858, lng: 123.9922 },
-  { label: '막탄 제이파크 부근', lat: 10.2831, lng: 123.9911 },
-  { label: '세부시티 아얄라', lat: 10.3173, lng: 123.9048 },
-  { label: '세부시티 IT파크', lat: 10.3298, lng: 123.9060 },
-  { label: '막탄 공항 부근', lat: 10.3120, lng: 123.9790 }
-];
+const MAGELLAN_BAY_LAT = 10.324571024254213;
+const MAGELLAN_BAY_LNG = 124.01382455914299;
 
-export default function PlaceFormModal({ editingPlace, onClose, onSave }) {
+function parseCoordinates(inputStr, defaultLat = MAGELLAN_BAY_LAT, defaultLng = MAGELLAN_BAY_LNG) {
+  if (!inputStr || typeof inputStr !== 'string') {
+    return { lat: defaultLat, lng: defaultLng };
+  }
+  const str = inputStr.trim();
+  if (!str) return { lat: defaultLat, lng: defaultLng };
+
+  const atMatch = str.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (atMatch) {
+    return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
+  }
+
+  const dMatch = str.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+  if (dMatch) {
+    return { lat: parseFloat(dMatch[1]), lng: parseFloat(dMatch[2]) };
+  }
+
+  const numbers = str.match(/-?\d+(?:\.\d+)?/g);
+  if (numbers && numbers.length >= 2) {
+    const lat = parseFloat(numbers[0]);
+    const lng = parseFloat(numbers[1]);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      return { lat, lng };
+    }
+  }
+
+  return { lat: defaultLat, lng: defaultLng };
+}
+
+function parseInitialPhones(editingPlace) {
+  if (editingPlace?.phones && Array.isArray(editingPlace.phones) && editingPlace.phones.length > 0) {
+    return editingPlace.phones.map((item) => {
+      if (typeof item === 'object' && item !== null) {
+        return { number: item.number || '', type: item.type || 'none' };
+      }
+      return { number: String(item), type: 'none' };
+    });
+  }
+  if (editingPlace?.phone) {
+    return [{ number: editingPlace.phone, type: editingPlace.phoneType || 'none' }];
+  }
+  return [{ number: '', type: 'none' }];
+}
+
+function parseInitialSnsList(editingPlace) {
+  if (editingPlace?.snsList && Array.isArray(editingPlace.snsList) && editingPlace.snsList.length > 0) {
+    return editingPlace.snsList.map((item) => {
+      if (typeof item === 'object' && item !== null) {
+        return { platform: item.platform && item.platform !== 'custom' ? item.platform : 'k_', handle: item.handle || '' };
+      }
+      const str = String(item);
+      const prefixes = ['k_', 'l_', 'w_', 'f_', 'i_', 't_'];
+      for (const p of prefixes) {
+        if (str.startsWith(p)) {
+          return { platform: p, handle: str.replace(p, '') };
+        }
+      }
+      return { platform: 'k_', handle: str };
+    });
+  }
+
+  const str = editingPlace?.sns || '';
+  if (!str) return [{ platform: 'k_', handle: '' }];
+  const prefixes = ['k_', 'l_', 'w_', 'f_', 'i_', 't_'];
+  for (const p of prefixes) {
+    if (str.startsWith(p)) {
+      return [{ platform: p, handle: str.replace(p, '') }];
+    }
+  }
+  return [{ platform: 'k_', handle: str }];
+}
+
+export default function PlaceFormModal({ editingPlace, defaultCategory = 'restaurant', onClose, onSave }) {
+  const initialCategory = defaultCategory && defaultCategory !== 'all' ? defaultCategory : 'restaurant';
+
   const [formData, setFormData] = useState({
     name: '',
-    category: 'restaurant',
+    category: initialCategory,
     addr: '',
-    lat: 10.2858,
-    lng: 123.9922,
+    lat: MAGELLAN_BAY_LAT,
+    lng: MAGELLAN_BAY_LNG,
     open: '',
     breakTime: '',
     phone: '',
@@ -31,16 +100,21 @@ export default function PlaceFormModal({ editingPlace, onClose, onSave }) {
     }
   });
 
+  const [coordInput, setCoordInput] = useState('');
+  const [phoneList, setPhoneList] = useState([{ number: '', type: 'none' }]);
+  const [snsList, setSnsList] = useState([{ platform: 'k_', handle: '' }]);
   const [activeImageTab, setActiveImageTab] = useState('cover'); // cover, facility, product, menu
 
   useEffect(() => {
     if (editingPlace) {
+      const lat = editingPlace.lat || MAGELLAN_BAY_LAT;
+      const lng = editingPlace.lng || MAGELLAN_BAY_LNG;
       setFormData({
         name: editingPlace.name || '',
-        category: editingPlace.category || 'restaurant',
+        category: editingPlace.category || initialCategory,
         addr: editingPlace.addr || '',
-        lat: editingPlace.lat || 10.2858,
-        lng: editingPlace.lng || 123.9922,
+        lat: lat,
+        lng: lng,
         open: editingPlace.open || '',
         breakTime: editingPlace.breakTime || '',
         phone: editingPlace.phone || '',
@@ -53,15 +127,60 @@ export default function PlaceFormModal({ editingPlace, onClose, onSave }) {
           menu: editingPlace.images?.menu || []
         }
       });
+      setCoordInput(`${lat}, ${lng}`);
+      setPhoneList(parseInitialPhones(editingPlace));
+      setSnsList(parseInitialSnsList(editingPlace));
+    } else {
+      setCoordInput('');
+      setFormData((prev) => ({
+        ...prev,
+        category: initialCategory,
+        lat: MAGELLAN_BAY_LAT,
+        lng: MAGELLAN_BAY_LNG
+      }));
     }
-  }, [editingPlace]);
+  }, [editingPlace, defaultCategory]);
 
-  const handleApplyPreset = (preset) => {
+  const handleCoordInputChange = (val) => {
+    setCoordInput(val);
+    const parsed = parseCoordinates(val, formData.lat, formData.lng);
     setFormData((prev) => ({
       ...prev,
-      lat: preset.lat,
-      lng: preset.lng
+      lat: parsed.lat,
+      lng: parsed.lng
     }));
+  };
+
+  const handleAddPhone = () => {
+    setPhoneList((prev) => [...prev, { number: '', type: 'none' }]);
+  };
+
+  const handleRemovePhone = (idx) => {
+    setPhoneList((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handlePhoneChange = (idx, field, val) => {
+    setPhoneList((prev) => {
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], [field]: val };
+      return copy;
+    });
+  };
+
+  const handleAddSns = () => {
+    setSnsList((prev) => [...prev, { platform: 'k_', handle: '' }]);
+  };
+
+  const handleRemoveSns = (idx) => {
+    setSnsList((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleSnsChange = (idx, field, val) => {
+    setSnsList((prev) => {
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], [field]: val };
+      return copy;
+    });
   };
 
   const handleImageFileUpload = (e, imgType) => {
@@ -115,10 +234,34 @@ export default function PlaceFormModal({ editingPlace, onClose, onSave }) {
       return;
     }
 
+    const finalCoords = parseCoordinates(coordInput, MAGELLAN_BAY_LAT, MAGELLAN_BAY_LNG);
+
+    const validPhones = phoneList
+      .map((p) => ({ number: p.number.trim(), type: p.type }))
+      .filter((p) => p.number.length > 0);
+
+    const validSnsList = snsList
+      .map((s) => ({ platform: s.platform, handle: s.handle.trim() }))
+      .filter((s) => s.handle.length > 0);
+
+    const primaryPhone = validPhones[0]?.number || '';
+    const primaryPhoneType = validPhones[0]?.type || 'none';
+
+    let primarySns = '';
+    if (validSnsList[0]) {
+      const firstSns = validSnsList[0];
+      primarySns = `${firstSns.platform}${firstSns.handle}`;
+    }
+
     onSave({
       ...formData,
-      lat: Number(formData.lat) || 10.2858,
-      lng: Number(formData.lng) || 123.9922
+      lat: finalCoords.lat,
+      lng: finalCoords.lng,
+      phone: primaryPhone,
+      phoneType: primaryPhoneType,
+      phones: validPhones,
+      sns: primarySns,
+      snsList: validSnsList
     });
   };
 
@@ -180,45 +323,18 @@ export default function PlaceFormModal({ editingPlace, onClose, onSave }) {
             </div>
 
             <div className="form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <label className="form-label" style={{ marginBottom: 0 }}>지도 좌표 (위도 lat, 경도 lng)</label>
-                <span className="field-hint"><RiMapPinLine /> 빠른 좌표 선택</span>
-              </div>
-
-              <div className="location-presets-row">
-                {LOCATION_PRESETS.map((p, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className="preset-btn"
-                    onClick={() => handleApplyPreset(p)}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="form-group-row" style={{ marginTop: '8px' }}>
-                <div className="form-group flex-1">
-                  <span className="sub-label">위도 (Lat)</span>
-                  <input
-                    type="number"
-                    step="any"
-                    value={formData.lat}
-                    onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
-                    className="form-input"
-                  />
-                </div>
-                <div className="form-group flex-1">
-                  <span className="sub-label">경도 (Lng)</span>
-                  <input
-                    type="number"
-                    step="any"
-                    value={formData.lng}
-                    onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
-                    className="form-input"
-                  />
-                </div>
+              <label className="form-label">지도 좌표 (위도 lat, 경도 lng)</label>
+              <div>
+                <input
+                  type="text"
+                  placeholder="예: 10.3173, 123.9048 또는 구글 지도 위치 좌표/링크"
+                  value={coordInput}
+                  onChange={(e) => handleCoordInputChange(e.target.value)}
+                  className="form-input"
+                />
+                <span className="field-hint" style={{ marginTop: '4px', display: 'block', fontSize: '0.78rem', color: '#64748b' }}>
+                  ※ 구글 지도의 '이 위치 공유' 좌표 (예: 10.3173, 123.9048) 또는 URL을 그대로 붙여넣으세요.
+                </span>
               </div>
             </div>
 
@@ -247,29 +363,105 @@ export default function PlaceFormModal({ editingPlace, onClose, onSave }) {
               </div>
             </div>
 
-            {/* 연락처 및 카톡/SNS */}
-            <div className="form-group-row">
-              <div className="form-group flex-1">
-                <label className="form-label">전화번호 (현지번호)</label>
-                <input
-                  type="text"
-                  placeholder="예: 09171234567"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="form-input"
-                />
+            {/* 전화번호 목록 (직원 구분 선택 + 추가 기능) */}
+            <div className="form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label className="form-label" style={{ marginBottom: 0 }}>전화번호 (현지/한국 번호)</label>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleAddPhone}
+                  style={{ fontSize: '0.78rem', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '3px' }}
+                >
+                  <RiAddLine /> 전화번호 추가
+                </button>
               </div>
 
-              <div className="form-group flex-1">
-                <label className="form-label">카톡 / SNS 아이디</label>
-                <input
-                  type="text"
-                  placeholder="예: k_jumboseafood (k_=카톡, l_=라인)"
-                  value={formData.sns}
-                  onChange={(e) => setFormData({ ...formData, sns: e.target.value })}
-                  className="form-input"
-                />
+              {phoneList.map((ph, idx) => (
+                <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                  <select
+                    value={ph.type}
+                    onChange={(e) => handlePhoneChange(idx, 'type', e.target.value)}
+                    className="form-select"
+                    style={{ width: '110px', flexShrink: 0 }}
+                  >
+                    <option value="none">선택 안함</option>
+                    <option value="korean">한국인</option>
+                    <option value="filipino">필리핀인</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="예: 09171234567"
+                    value={ph.number}
+                    onChange={(e) => handlePhoneChange(idx, 'number', e.target.value)}
+                    className="form-input"
+                    style={{ flex: 1 }}
+                  />
+                  {phoneList.length > 1 && (
+                    <button
+                      type="button"
+                      className="btn-icon-action delete"
+                      onClick={() => handleRemovePhone(idx)}
+                      title="전화번호 삭제"
+                      style={{ flexShrink: 0 }}
+                    >
+                      <RiDeleteBinLine />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* 카톡 / SNS 아이디 (플랫폼 선택 + 추가 기능) */}
+            <div className="form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label className="form-label" style={{ marginBottom: 0 }}>카톡 / SNS 아이디</label>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleAddSns}
+                  style={{ fontSize: '0.78rem', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '3px' }}
+                >
+                  <RiAddLine /> SNS 추가
+                </button>
               </div>
+
+              {snsList.map((snsItem, idx) => (
+                <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                  <select
+                    value={snsItem.platform}
+                    onChange={(e) => handleSnsChange(idx, 'platform', e.target.value)}
+                    className="form-select"
+                    style={{ width: '130px', flexShrink: 0 }}
+                  >
+                    <option value="k_">카카오톡</option>
+                    <option value="l_">라인</option>
+                    <option value="w_">위챗</option>
+                    <option value="f_">페이스북</option>
+                    <option value="i_">인스타그램</option>
+                    <option value="t_">텔레그램</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="아이디만 입력 (예: jumboseafood)"
+                    value={snsItem.handle}
+                    onChange={(e) => handleSnsChange(idx, 'handle', e.target.value)}
+                    className="form-input"
+                    style={{ flex: 1 }}
+                  />
+                  {snsList.length > 1 && (
+                    <button
+                      type="button"
+                      className="btn-icon-action delete"
+                      onClick={() => handleRemoveSns(idx)}
+                      title="SNS 삭제"
+                      style={{ flexShrink: 0 }}
+                    >
+                      <RiDeleteBinLine />
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
 
             {/* 상세 소개글 */}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { getLevelTitle } from '../../utils/imageHelper';
-import { RiShieldUserFill, RiPhoneFindLine, RiSmartphoneLine, RiKakaoTalkFill } from 'react-icons/ri';
+import { RiShieldUserFill, RiPhoneFill, RiSmartphoneLine, RiKakaoTalkFill } from 'react-icons/ri';
 import './Badge.css';
 
 export function LevelBadge({ level = 1, isGuest = false }) {
@@ -30,16 +30,48 @@ export function LevelBadge({ level = 1, isGuest = false }) {
   );
 }
 
-export function CarrierBadge({ carrier }) {
-  if (!carrier) return null;
-  const carrierLower = carrier.toLowerCase();
-  
-  return (
-    <span className={`badge badge-carrier-${carrierLower}`}>
-      <RiPhoneFindLine />
-      {carrier}
+export function CarrierBadge({ carrier, phone, type }) {
+  if (!carrier && !phone) return null;
+  const carrierLower = (carrier || 'smart').toLowerCase();
+  const phoneText = phone ? phone.trim() : '';
+
+  let typeTag = '';
+  if (type === 'korean' || type === '한국인') {
+    typeTag = '[한국인] ';
+  } else if (type === 'filipino' || type === '필리핀인') {
+    typeTag = '[필리핀인] ';
+  }
+
+  let displayText = '';
+  if (carrier && phoneText) {
+    displayText = `${typeTag}${carrier} ${phoneText}`;
+  } else if (phoneText) {
+    displayText = `${typeTag}${phoneText}`;
+  } else if (carrier) {
+    displayText = `${typeTag}${carrier}`;
+  }
+
+  const badgeContent = (
+    <span className={`badge badge-carrier-${carrierLower}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+      <RiPhoneFill style={{ fontSize: '0.85rem' }} />
+      <span>{displayText}</span>
     </span>
   );
+
+  if (phoneText) {
+    return (
+      <a 
+        href={`tel:${phoneText.replace(/[^0-9+]/g, '')}`}
+        onClick={(e) => e.stopPropagation()}
+        style={{ textDecoration: 'none', color: 'inherit' }}
+        title={`전화 걸기: ${phoneText}`}
+      >
+        {badgeContent}
+      </a>
+    );
+  }
+
+  return badgeContent;
 }
 
 export function PhoneVerifiedBadge({ isVerified }) {

@@ -392,9 +392,10 @@
   backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 20px;
+  padding: 30px 16px 20px 16px;
+  overflow-y: auto;
 }
 
 .notice-modal,

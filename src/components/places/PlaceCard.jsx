@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CarrierBadge } from '../common/Badge';
-import { classifyPhoneCarrier, parseSnsEntry } from '../../utils/phoneSnsClassifier';
+import { classifyPhoneCarrier, parseSnsEntry, getSnsLinkUrl } from '../../utils/phoneSnsClassifier';
 import { getOptimizedImageUrl } from '../../utils/imageHelper';
 import { useAuth } from '../../context/AuthContext';
+import FullScreenImageModal from '../modals/FullScreenImageModal';
 import { 
   RiStarFill, 
   RiMapPinLine, 
@@ -19,16 +20,41 @@ import './PlaceCard.css';
 
 export default function PlaceCard({ place, index, totalCount, onMove, onEdit, onDelete }) {
   const { userProfile, toggleFavorite } = useAuth();
-  const carrier = classifyPhoneCarrier(place.phone);
-  const snsInfo = parseSnsEntry(place.sns);
+  const [zoomImgIndex, setZoomImgIndex] = useState(null);
   const isFavorite = userProfile?.favorites?.includes(place.id);
 
-  const coverImg = place.images?.cover?.[0] || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&q=80';
+  // Gather all images from cover, facility, product, menu
+  const allImages = [
+    ...(place.images?.cover || []),
+    ...(place.images?.facility || []),
+    ...(place.images?.product || []),
+    ...(place.images?.menu || [])
+  ].filter(Boolean);
+
+  const imagesToDisplay = allImages.length > 0
+    ? allImages
+    : ['https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&q=80'];
+
+  const count = imagesToDisplay.length;
+  let layoutClass = 'multi';
+  if (count === 1) layoutClass = 'single';
+  else if (count === 2) layoutClass = 'dual';
 
   return (
     <div className="glass-card place-card fade-in">
       <div className="card-image-wrap">
-        <img src={getOptimizedImageUrl(coverImg, 500)} alt={place.name} className="card-cover-img" />
+        <div className={`card-image-scroll-container ${layoutClass}`}>
+          {imagesToDisplay.map((imgSrc, imgIdx) => (
+            <img
+              key={imgIdx}
+              src={getOptimizedImageUrl(imgSrc, 500)}
+              alt={`${place.name} - ${imgIdx + 1}`}
+              className="card-item-img"
+              onClick={() => setZoomImgIndex(imgIdx)}
+            />
+          ))}
+        </div>
+
         <span className="category-chip">{place.categoryName}</span>
         
         <button 
@@ -114,15 +140,75 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
 
         <p className="place-desc">{place.explaination}</p>
 
-        <div className="card-footer-tags">
-          <CarrierBadge carrier={carrier} />
-          {snsInfo && (
-            <span className="sns-tag" style={{ backgroundColor: `${snsInfo.color}20`, color: '#1e293b' }}>
-              {snsInfo.name}: {snsInfo.handle}
-            </span>
-          )}
+        <div className="card-footer-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          {(() => {
+            const phonesList = place.phones && Array.isArray(place.phones) && place.phones.length > 0
+              ? place.phones
+              : (place.phone ? [{ number: place.phone, type: place.phoneType || 'none' }] : []);
+
+            return phonesList.map((ph, pIdx) => {
+              const num = typeof ph === 'object' ? ph.number : ph;
+              const pType = typeof ph === 'object' ? ph.type : 'none';
+              const c = classifyPhoneCarrier(num);
+              return <CarrierBadge key={pIdx} carrier={c} phone={num} type={pType} />;
+            });
+          })()}
+
+          {(() => {
+            const snsArray = place.snsList && Array.isArray(place.snsList) && place.snsList.length > 0
+              ? place.snsList
+              : (place.sns ? [place.sns] : []);
+
+            return snsArray.map((snsItem, sIdx) => {
+              const rawStr = typeof snsItem === 'object'
+                ? (snsItem.platform === 'custom' ? snsItem.handle : `${snsItem.platform}${snsItem.handle}`)
+                : snsItem;
+              const snsInfo = parseSnsEntry(rawStr);
+              if (!snsInfo) {
+                if (!rawStr) return null;
+                return (
+                  <span key={sIdx} className="sns-tag" style={{ backgroundColor: '#f1f5f9', color: '#1e293b' }}>
+                    {rawStr}
+                  </span>
+                );
+              }
+              const linkUrl = getSnsLinkUrl(snsInfo);
+              const tagElement = (
+                <span className="sns-tag" style={{ backgroundColor: `${snsInfo.color}20`, color: '#1e293b', cursor: linkUrl ? 'pointer' : 'default' }}>
+                  {snsInfo.name}: {snsInfo.handle}
+                </span>
+              );
+
+              if (linkUrl) {
+                return (
+                  <a
+                    key={sIdx}
+                    href={linkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ textDecoration: 'none' }}
+                    title={`${snsInfo.name} ${snsInfo.handle} 페이지 이동`}
+                  >
+                    {tagElement}
+                  </a>
+                );
+              }
+
+              return <React.Fragment key={sIdx}>{tagElement}</React.Fragment>;
+            });
+          })()}
         </div>
       </div>
+
+      {/* True Full-Screen Viewport Zoom Modal using Portal */}
+      {zoomImgIndex !== null && (
+        <FullScreenImageModal
+          images={imagesToDisplay}
+          initialIndex={zoomImgIndex}
+          onClose={() => setZoomImgIndex(null)}
+        />
+      )}
     </div>
   );
 }

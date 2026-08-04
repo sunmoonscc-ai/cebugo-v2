@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import ImageCarousel from '../components/places/ImageCarousel';
 import SuggestEditModal from '../components/modals/SuggestEditModal';
 import { LevelBadge, CarrierBadge } from '../components/common/Badge';
-import { classifyPhoneCarrier, parseSnsEntry } from '../utils/phoneSnsClassifier';
+import { classifyPhoneCarrier, parseSnsEntry, getSnsLinkUrl } from '../utils/phoneSnsClassifier';
 import { 
   RiStarFill, 
   RiMapPinLine, 
@@ -102,22 +102,75 @@ export default function DetailPage() {
             <RiPhoneLine className="info-icon" />
             <div>
               <strong>연락처 / 통신사</strong>
-              <p className="phone-line">
-                <a href={`tel:${place.phone}`}>{place.phone}</a>
-                <CarrierBadge carrier={carrier} />
-              </p>
+              <div className="phone-line" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+                {(() => {
+                  const phonesList = place.phones && Array.isArray(place.phones) && place.phones.length > 0
+                    ? place.phones
+                    : (place.phone ? [{ number: place.phone, type: place.phoneType || 'none' }] : []);
+
+                  return phonesList.map((ph, pIdx) => {
+                    const num = typeof ph === 'object' ? ph.number : ph;
+                    const pType = typeof ph === 'object' ? ph.type : 'none';
+                    const c = classifyPhoneCarrier(num);
+                    return <CarrierBadge key={pIdx} carrier={c} phone={num} type={pType} />;
+                  });
+                })()}
+              </div>
             </div>
           </div>
 
-          {snsInfo && (
-            <div className="info-row">
-              <RiCheckDoubleLine className="info-icon" />
-              <div>
-                <strong>SNS / 카카오톡</strong>
-                <p>{snsInfo.name}: <strong>{snsInfo.handle}</strong></p>
+          <div className="info-row">
+            <RiCheckDoubleLine className="info-icon" />
+            <div>
+              <strong>SNS / 카카오톡</strong>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+                {(() => {
+                  const snsArray = place.snsList && Array.isArray(place.snsList) && place.snsList.length > 0
+                    ? place.snsList
+                    : (place.sns ? [place.sns] : []);
+
+                  return snsArray.map((snsItem, sIdx) => {
+                    const rawStr = typeof snsItem === 'object'
+                      ? (snsItem.platform === 'custom' ? snsItem.handle : `${snsItem.platform}${snsItem.handle}`)
+                      : snsItem;
+                    const parsed = parseSnsEntry(rawStr);
+                    if (!parsed) {
+                      if (!rawStr) return null;
+                      return (
+                        <span key={sIdx} className="sns-tag" style={{ backgroundColor: '#f1f5f9', color: '#1e293b' }}>
+                          {rawStr}
+                        </span>
+                      );
+                    }
+                    const linkUrl = getSnsLinkUrl(parsed);
+                    const tagElement = (
+                      <span className="sns-tag" style={{ backgroundColor: `${parsed.color}20`, color: '#1e293b', cursor: linkUrl ? 'pointer' : 'default' }}>
+                        {parsed.name}: {parsed.handle}
+                      </span>
+                    );
+
+                    if (linkUrl) {
+                      return (
+                        <a
+                          key={sIdx}
+                          href={linkUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ textDecoration: 'none' }}
+                          title={`${parsed.name} ${parsed.handle} 페이지 이동`}
+                        >
+                          {tagElement}
+                        </a>
+                      );
+                    }
+
+                    return <React.Fragment key={sIdx}>{tagElement}</React.Fragment>;
+                  });
+                })()}
               </div>
             </div>
-          )}
+          </div>
 
           <div className="desc-box">
             <h4>업체 소개</h4>

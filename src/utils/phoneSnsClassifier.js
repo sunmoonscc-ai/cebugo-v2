@@ -67,3 +67,45 @@ export function parseSnsEntry(snsRawStr, prefixList = DEFAULT_SNS_PREFIXES) {
     color: '#FEE500'
   };
 }
+
+/**
+ * Returns a clickable external URL for non-Kakao SNS platforms (Facebook, Instagram, Line, Telegram)
+ */
+export function getSnsLinkUrl(snsInfo) {
+  if (!snsInfo || !snsInfo.handle) return null;
+  const handle = snsInfo.handle.trim();
+  if (!handle) return null;
+
+  if (handle.startsWith('http://') || handle.startsWith('https://')) {
+    return handle;
+  }
+
+  const key = (snsInfo.key || snsInfo.prefix || '').toLowerCase();
+  const name = (snsInfo.name || '').toLowerCase();
+
+  // KakaoTalk & WeChat: Policy prohibits open web URL deep linking without channel ID
+  if (key === 'kakao' || key === 'k_' || name.includes('카카오톡') || key === 'wechat' || key === 'w_' || name.includes('위챗')) {
+    return null;
+  }
+
+  if (key === 'facebook' || key === 'f_' || name.includes('페이스북')) {
+    if (handle.includes(' ')) {
+      return `https://www.facebook.com/search/top?q=${encodeURIComponent(handle)}`;
+    }
+    return `https://www.facebook.com/${handle}`;
+  }
+
+  if (key === 'instagram' || key === 'i_' || name.includes('인스타그램')) {
+    return `https://www.instagram.com/${handle.replace('@', '')}`;
+  }
+
+  if (key === 'line' || key === 'l_' || name.includes('라인')) {
+    return `https://line.me/ti/p/~${handle}`;
+  }
+
+  if (key === 'telegram' || key === 't_' || name.includes('텔레그램')) {
+    return `https://t.me/${handle.replace('@', '')}`;
+  }
+
+  return null;
+}

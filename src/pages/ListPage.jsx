@@ -44,6 +44,29 @@ export default function ListPage() {
   const [editingPlace, setEditingPlace] = useState(null);
   const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
 
+  // Auto-scroll selected category pill to center of scroll container
+  const categoryScrollRef = React.useRef(null);
+  const pillRefs = React.useRef({});
+
+  useEffect(() => {
+    if (!selectedCategory) return;
+    const container = categoryScrollRef.current;
+    const pill = pillRefs.current[selectedCategory];
+
+    if (container && pill) {
+      const containerWidth = container.clientWidth;
+      const pillLeft = pill.offsetLeft;
+      const pillWidth = pill.clientWidth;
+
+      const targetScrollLeft = pillLeft - (containerWidth / 2) + (pillWidth / 2);
+
+      container.scrollTo({
+        left: Math.max(0, targetScrollLeft),
+        behavior: 'smooth'
+      });
+    }
+  }, [selectedCategory]);
+
   const filteredPlaces = places.filter((place) => {
     const matchesCat = selectedCategory === 'all' || place.category === selectedCategory;
     const matchesSearch =
@@ -139,10 +162,11 @@ export default function ListPage() {
           />
         </div>
 
-        <div className="category-scroll">
+        <div className="category-scroll" ref={categoryScrollRef}>
           {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
+              ref={(el) => (pillRefs.current[cat.id] = el)}
               className={`cat-pill ${selectedCategory === cat.id ? 'active' : ''}`}
               onClick={() => setSelectedCategory(cat.id)}
             >
@@ -217,6 +241,7 @@ export default function ListPage() {
       {/* Admin Place Create / Edit Modal */}
       {isFormModalOpen && (
         <PlaceFormModal
+          defaultCategory={selectedCategory}
           editingPlace={editingPlace}
           onClose={() => setIsFormModalOpen(false)}
           onSave={handleSavePlace}
