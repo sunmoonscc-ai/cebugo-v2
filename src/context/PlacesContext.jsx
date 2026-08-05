@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../firebase/config';
-import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
 import { CATEGORY_MAP } from '../constants/categories';
 import { sanitizePlaceForFirestore } from '../utils/imageHelper';
 
@@ -545,7 +545,7 @@ export const PlacesProvider = ({ children }) => {
     }
   };
 
-  const approveSubmission = async (subId) => {
+  const approveSubmission = async (subId, rewardPoints = 20) => {
     const subToApprove = submissions.find(s => s.id === subId);
     if (!subToApprove) return;
 
@@ -573,6 +573,34 @@ export const PlacesProvider = ({ children }) => {
       await setDoc(doc(db, 'cebugo_submissions', subId), { status: 'approved' }, { merge: true });
     } catch (err) {
       console.error('Failed to approve submission in Firestore:', err);
+    }
+
+    // 4. Award points to the user
+    if (rewardPoints > 0 && subToApprove.uid && subToApprove.uid !== 'guest') {
+      try {
+        const userRef = doc(db, 'users', subToApprove.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          const currentPoints = userData.points || 0;
+          const pointLedger = userData.pointLedger || [];
+          
+          const newLedgerItem = {
+            id: `reward_${Date.now()}`,
+            title: `제보 승인 보상 (${subToApprove.placeName} - ${subToApprove.field})`,
+            points: Number(rewardPoints),
+            date: new Date().toISOString().split('T')[0],
+            type: 'plus'
+          };
+          
+          await setDoc(userRef, {
+            points: currentPoints + Number(rewardPoints),
+            pointLedger: [newLedgerItem, ...pointLedger]
+          }, { merge: true });
+        }
+      } catch (err) {
+        console.error('Failed to award points to user:', err);
+      }
     }
   };
 

@@ -21,6 +21,7 @@ export default function AdminSubmissionsPage() {
   const [adminTab, setAdminTab] = useState('notice'); // 'notice' (공지/속도) or 'submission' (제보)
   const [noticeSpeedMultiplier, setNoticeSpeedMultiplier] = useState(1);
   const [adSpeedMultiplier, setAdSpeedMultiplier] = useState(1);
+  const [expandedSubmissionId, setExpandedSubmissionId] = useState(null);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'cebugo_config', 'ticker_speed'), (docSnap) => {
@@ -107,6 +108,19 @@ export default function AdminSubmissionsPage() {
     images.forEach((url, idx) => {
       downloadImage(url, `${placeName}_제보사진_${idx + 1}.jpg`);
     });
+  };
+
+  const handleApprove = (subId) => {
+    const points = window.prompt('해당 제보자에게 지급할 포인트를 입력하세요.', '20');
+    if (points === null) return; // User cancelled
+    
+    const parsed = parseInt(points, 10);
+    if (isNaN(parsed) || parsed < 0) {
+      alert('유효한 숫자를 입력해주세요.');
+      return;
+    }
+    
+    approveSubmission(subId, parsed);
   };
 
   return (
@@ -263,7 +277,7 @@ export default function AdminSubmissionsPage() {
 
               <button
                 className="btn btn-primary approve-btn"
-                onClick={() => approveSubmission(sub.id)}
+                onClick={() => handleApprove(sub.id)}
               >
                 <RiCheckLine /> 승인 (완료 처리)
               </button>
@@ -279,14 +293,51 @@ export default function AdminSubmissionsPage() {
 
       <div className="processed-list">
         {processedSubmissions.map((sub) => (
-          <div key={sub.id} className="glass-card processed-card">
-            <div>
-              <strong>[{sub.placeName}] {sub.field}</strong>
-              <p className="proc-val">반영값: {sub.newValue}</p>
+          <div key={sub.id} className="glass-card processed-card" onClick={() => setExpandedSubmissionId(prev => prev === sub.id ? null : sub.id)} style={{ cursor: 'pointer' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <strong>[{sub.placeName}] {sub.field}</strong>
+                <p className="proc-val">반영값: {sub.newValue}</p>
+              </div>
+              <span className={`sub-status ${sub.status}`}>
+                {sub.status === 'approved' ? '승인완료' : '거절됨'}
+              </span>
             </div>
-            <span className={`sub-status ${sub.status}`}>
-              {sub.status === 'approved' ? '승인완료' : '거절됨'}
-            </span>
+            
+            {expandedSubmissionId === sub.id && (
+              <div className="diff-body" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', cursor: 'default' }} onClick={(e) => e.stopPropagation()}>
+                <span className="field-badge">요청 항목: {sub.field}</span>
+                <div className="diff-grid">
+                  <div className="diff-box old-box">
+                    <span className="box-label">기존 데이터 (Current)</span>
+                    <p>{sub.oldValue}</p>
+                  </div>
+                  <div className="diff-arrow">→</div>
+                  <div className="diff-box new-box">
+                    <span className="box-label">제안된 새로운 데이터 (Proposal)</span>
+                    <p>{sub.newValue}</p>
+                  </div>
+                </div>
+
+                {sub.images && sub.images.length > 0 && (
+                  <div className="diff-images" style={{ marginTop: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span className="box-label" style={{ margin: 0 }}>첨부된 사진 ({sub.images.length}장)</span>
+                      <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={() => downloadAllImages(sub.images, sub.placeName)}>
+                        <RiDownload2Line /> 전체 저장
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                      {sub.images.map((imgUrl, idx) => (
+                        <div key={idx} style={{ width: '100px', height: '100px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden' }}>
+                          <ZoomableImage src={imgUrl} images={sub.images} initialIndex={idx} alt={`첨부사진 ${idx}`} width={400} style={{ width: '100%', height: '100%' }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>

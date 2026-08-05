@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { CATEGORIES } from '../../constants/categories';
 import { RiCloseLine, RiCheckLine, RiImageAddLine, RiMapPinLine, RiAddLine, RiDeleteBinLine } from 'react-icons/ri';
 import { uploadImageToFirebaseStorage } from '../../utils/imageHelper';
@@ -333,7 +334,7 @@ const compressImageFile = (file) => {
 
   const selectableCategories = CATEGORIES.filter((c) => c.id !== 'all');
 
-  return (
+  return ReactDOM.createPortal(
     <div className="modal-overlay fade-in">
       <div className="modal-content glass-card place-form-modal">
         <div className="modal-header">
@@ -627,6 +628,7 @@ const compressImageFile = (file) => {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
