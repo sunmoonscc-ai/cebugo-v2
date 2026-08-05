@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
 import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
@@ -55,6 +55,9 @@ export default function PlaceFeedPage() {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(location.state?.category || 'ad'); // 'ad' (광고) or 'event' (이벤트)
   const [posts, setPosts] = useState([]);
+  const [advertisers, setAdvertisers] = useState([]);
+  const [selectedAdvertiserId, setSelectedAdvertiserId] = useState(null);
+  const [expandedEndedPosts, setExpandedEndedPosts] = useState({});
 
   useEffect(() => {
     if (location.state?.category) {
@@ -89,7 +92,16 @@ export default function PlaceFeedPage() {
         setPosts(DEFAULT_POSTS);
       }
     );
-    return () => unsub();
+    
+    const unsubAdv = onSnapshot(collection(db, 'cebugo_advertisers'), (snapshot) => {
+      const advs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+      setAdvertisers(advs);
+    });
+
+    return () => {
+      unsub();
+      unsubAdv();
+    };
   }, []);
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -112,7 +124,8 @@ export default function PlaceFeedPage() {
 
   const rawTabPosts = posts
     .filter((p) => p.category === activeTab)
-    .filter((p) => canPost || getPostStatus(p).active)
+    .filter((p) => canPost || getPostStatus(p).status !== 'scheduled')
+    .filter((p) => !selectedAdvertiserId || p.advertiserId === selectedAdvertiserId)
     .sort((a, b) => (a.order !== undefined ? a.order : 0) - (b.order !== undefined ? b.order : 0));
 
   const targetPostId = location.state?.postId;
@@ -227,6 +240,44 @@ export default function PlaceFeedPage() {
         </h1>
       </div>
 
+      {/* Advertisers Story Style Filter */}
+      {advertisers.length > 0 && (
+        <div className="advertisers-story-container glass-card" style={{ marginBottom: '16px', padding: '16px', display: 'flex', gap: '16px', overflowX: 'auto', alignItems: 'flex-start' }}>
+          <div 
+            className="advertiser-story-item"
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', opacity: selectedAdvertiserId === null ? 1 : 0.5 }}
+            onClick={() => setSelectedAdvertiserId(null)}
+          >
+            <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: selectedAdvertiserId === null ? 'var(--primary)' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '6px' }}>
+              All
+            </div>
+            <span style={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: selectedAdvertiserId === null ? 'bold' : 'normal' }}>전체 보기</span>
+          </div>
+          
+          {advertisers.map(adv => (
+            <div 
+              key={adv.id} 
+              className="advertiser-story-item"
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', opacity: selectedAdvertiserId === adv.id ? 1 : 0.6, transition: 'opacity 0.2s' }}
+              onClick={() => setSelectedAdvertiserId(adv.id)}
+            >
+              <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#f8fafc', padding: '2px', border: selectedAdvertiserId === adv.id ? '2px solid var(--primary)' : '2px solid transparent', marginBottom: '6px', overflow: 'hidden' }}>
+                {adv.logoUrl ? (
+                  <img src={adv.logoUrl} alt={adv.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', background: '#cbd5e1', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '1.2rem' }}>
+                    {adv.name.substring(0, 1)}
+                  </div>
+                )}
+              </div>
+              <span style={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap', maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: selectedAdvertiserId === adv.id ? 'bold' : 'normal' }}>
+                {adv.name}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* 2 Sub-Tabs Bar: 광고 vs 이벤트 */}
       <div className="feed-nav-tabs glass-card">
         <button
@@ -284,15 +335,44 @@ export default function PlaceFeedPage() {
               if (post.cover) return Array.isArray(post.cover) ? post.cover.filter(Boolean) : [post.cover];
               return [];
             })();
-            const isTickerActive = post.isTicker === true || post.isTicker === 'true';
+            const statusInfo = getPostStatus(post);
+            const isExpired = statusInfo.status === 'expired';
+            const isTickerActive = (post.isTicker === true || post.isTicker === 'true') && !isExpired;
+            const isExpanded = !!expandedEndedPosts[post.id];
+            const shouldCollapse = isExpired && !isExpanded;
+
+            const toggleExpand = () => {
+              if (isExpired) {
+                setExpandedEndedPosts(prev => ({ ...prev, [post.id]: !prev[post.id] }));
+              }
+            };
+
             return (
-              <div key={post.id} className="glass-card post-card fade-in">
-                <div className="post-header-row">
+              <div 
+                key={post.id} 
+                className="glass-card post-card fade-in"
+                style={{ opacity: isExpired && !isExpanded ? 0.5 : 1, transition: 'opacity 0.3s' }}
+              >
+                <div 
+                  className="post-header-row"
+                  style={{ cursor: isExpired ? 'pointer' : 'default' }}
+                  onClick={isExpired ? toggleExpand : undefined}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span className={`post-cat-badge ${post.category}`}>
                       {post.category === 'ad' ? '📣 광고' : '🎉 이벤트'}
                     </span>
-                    <span className="post-place-name">{post.authorName || post.placeName}</span>
+                    {post.advertiserId && advertisers.find(a => a.id === post.advertiserId) ? (() => {
+                      const adv = advertisers.find(a => a.id === post.advertiserId);
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }} onClick={() => setSelectedAdvertiserId(adv.id)}>
+                          {adv.logoUrl && <img src={adv.logoUrl} alt={adv.name} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', opacity: isExpired && !isExpanded ? 0.5 : 1 }} />}
+                          <span className="post-place-name" style={{ fontWeight: 'bold', color: isExpired && !isExpanded ? 'rgba(30, 41, 59, 0.45)' : undefined }}>{adv.name}</span>
+                        </div>
+                      );
+                    })() : (
+                      <span className="post-place-name" style={{ color: isExpired && !isExpanded ? 'rgba(30, 41, 59, 0.45)' : undefined }}>{post.authorName || post.placeName}</span>
+                    )}
                     {post.location && (
                       <span className="post-cat-badge" style={{ background: '#f0f9ff', color: '#0284c7', border: '1px solid #bae6fd', fontWeight: 600 }}>
                         📍 {post.location}
@@ -337,14 +417,22 @@ export default function PlaceFeedPage() {
                         <button
                           type="button"
                           className={`btn-icon-action move ${isTickerActive ? 'active' : ''}`}
-                          onClick={() => handleToggleTicker(post)}
-                          title={isTickerActive ? '하단 전광판 게시 해제' : '하단 전광판에 게시하기'}
-                          style={{
-                            background: isTickerActive ? '#dcfce7' : '#f1f5f9',
-                            color: isTickerActive ? '#15803d' : '#64748b',
-                            borderColor: isTickerActive ? '#86efac' : '#cbd5e1',
-                            fontWeight: 700
+                          onClick={() => {
+                            if (isExpired) {
+                              alert('종료된 이벤트는 전광판에 게시할 수 없습니다.');
+                              return;
+                            }
+                            handleToggleTicker(post);
                           }}
+                          title={isExpired ? '종료된 이벤트는 전광판에 게시할 수 없습니다' : (isTickerActive ? '하단 전광판 게시 해제' : '하단 전광판에 게시하기')}
+                          style={{
+                            background: isExpired ? '#f1f5f9' : (isTickerActive ? '#dcfce7' : '#f1f5f9'),
+                            color: isExpired ? '#94a3b8' : (isTickerActive ? '#15803d' : '#64748b'),
+                            borderColor: isExpired ? '#e2e8f0' : (isTickerActive ? '#86efac' : '#cbd5e1'),
+                            fontWeight: 700,
+                            cursor: isExpired ? 'not-allowed' : 'pointer'
+                          }}
+                          disabled={isExpired}
                         >
                           <RiVolumeUpLine /> {isTickerActive ? '전광판 게시중' : '전광판 게시'}
                         </button>
@@ -387,29 +475,46 @@ export default function PlaceFeedPage() {
                   </div>
                 </div>
 
-                <h3 className="post-title">{post.title}</h3>
-                <p className="post-content">{post.content}</p>
+                <h3 
+                  className="post-title"
+                  style={{ 
+                    cursor: isExpired ? 'pointer' : 'default',
+                    color: isExpired && !isExpanded ? 'rgba(15, 23, 42, 0.45)' : undefined
+                  }}
+                  onClick={isExpired ? toggleExpand : undefined}
+                >
+                  {post.title}
+                  {isExpired && (
+                    <span style={{ fontSize: '0.85rem', color: '#64748b', marginLeft: '8px', fontWeight: 'normal' }}>
+                      {isExpanded ? '▲ 접기' : '▼ 펼쳐보기'}
+                    </span>
+                  )}
+                </h3>
 
-                {/* Optional Attached Link */}
-                {post.linkUrl && (
+                {!shouldCollapse && (
+                  <>
+                    <p className="post-content">{post.content}</p>
+
+                {/* Linked Place Badge */}
+                {post.placeId && (
                   <div style={{ marginBottom: '12px' }}>
-                    <a
-                      href={post.linkUrl.startsWith('http') ? post.linkUrl : `tel:${post.linkUrl}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <Link
+                      to={`/place/${post.placeId}`}
                       className="contact-link-badge website"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
                     >
-                      <RiExternalLinkLine /> {post.linkUrl}
-                    </a>
+                      <RiExternalLinkLine /> 해당 업체 상세보기
+                    </Link>
                   </div>
                 )}
 
                 {/* Attached Images Carousel */}
                 {imagesList.length > 0 && (
-                  <div className="notice-card-images" style={{ margin: '12px 0' }}>
-                    <ImageCarousel images={imagesList} />
-                  </div>
+                    <div className="notice-card-images" style={{ margin: '12px 0' }}>
+                      <ImageCarousel images={imagesList} />
+                    </div>
+                  )}
+                  </>
                 )}
               </div>
             );

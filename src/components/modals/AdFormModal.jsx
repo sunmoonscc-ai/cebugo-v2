@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { RiCloseLine, RiCheckLine, RiImageAddLine } from 'react-icons/ri';
 import { usePlaces } from '../../context/PlacesContext';
+import { db } from '../../firebase/config';
+import { collection, onSnapshot } from 'firebase/firestore';
 import ZoomableImage from '../common/ZoomableImage';
 
 const LOCATION_OPTIONS = ['전체', 'Cebu', 'Cordova', 'Lapu-Lapu', 'Mandaue', '기타'];
@@ -64,7 +67,9 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
   const [formData, setFormData] = useState({
     category: initialCategory || 'ad',
     title: '',
+    advertiserId: '',
     authorName: '',
+    placeId: '',
     date: new Date().toISOString().split('T')[0],
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
@@ -73,6 +78,15 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
     images: [],
     isTicker: true
   });
+
+  const [advertisers, setAdvertisers] = useState([]);
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'cebugo_advertisers'), (snapshot) => {
+      const advs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+      setAdvertisers(advs);
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     if (editingPost) {
@@ -91,7 +105,9 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
       setFormData({
         category: editingPost.category || 'ad',
         title: editingPost.title || '',
+        advertiserId: editingPost.advertiserId || '',
         authorName: editingPost.authorName || editingPost.placeName || '',
+        placeId: editingPost.placeId || '',
         date: editingPost.date || new Date().toISOString().split('T')[0],
         startDate: editingPost.startDate || '',
         endDate: editingPost.endDate || '',
@@ -103,29 +119,25 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
     }
   }, [editingPost, initialCategory, places]);
 
-  const handleAuthorNameChange = (e) => {
-    const val = e.target.value;
-    let autoLoc = null;
-
-    if (val.trim() && places && places.length > 0) {
-      const searchKey = val.trim().toLowerCase();
-      const matched = places.find((p) => {
-        if (!p.name) return false;
-        const pName = p.name.toLowerCase();
-        return pName.includes(searchKey) || searchKey.includes(pName);
-      });
-
-      if (matched) {
-        const rawLoc = matched.location || matched.addr || matched.region;
-        const parsed = parseLocationOption(rawLoc);
-        if (parsed) autoLoc = parsed;
-      }
+  const handleAdvertiserChange = (e) => {
+    const advId = e.target.value;
+    if (advId === 'manual') {
+      setFormData(prev => ({
+        ...prev,
+        advertiserId: 'manual',
+        authorName: '',
+        placeId: ''
+      }));
+      return;
     }
 
-    setFormData((prev) => ({
+    const selectedAdv = advertisers.find(a => a.id === advId);
+    
+    setFormData(prev => ({
       ...prev,
-      authorName: val,
-      ...(autoLoc ? { location: autoLoc } : {})
+      advertiserId: advId,
+      authorName: selectedAdv ? selectedAdv.name : '',
+      placeId: selectedAdv ? (selectedAdv.placeId || '') : ''
     }));
   };
 
@@ -137,6 +149,7 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
     onSave({
       category: currentFormData.category || 'ad',
       title: currentFormData.title.trim(),
+      advertiserId: currentFormData.advertiserId || '',
       authorName: currentFormData.authorName.trim(),
       date: currentFormData.date || new Date().toISOString().split('T')[0],
       startDate: currentFormData.startDate || '',
@@ -203,8 +216,12 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
       alert('제목을 입력해 주세요.');
       return;
     }
-    if (!formData.authorName.trim()) {
-      alert('작성 업체명/출처를 입력해 주세요.');
+    if (!formData.advertiserId) {
+      alert('광고주(업체)를 선택해 주세요.');
+      return;
+    }
+    if (formData.advertiserId === 'manual' && !formData.authorName.trim()) {
+      alert('직접 입력할 업체명을 입력해 주세요.');
       return;
     }
     if (!formData.content.trim()) {
@@ -221,7 +238,7 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
     doFinalSave(formData);
   };
 
-  return (
+  return createPortal(
     <div className="modal-overlay fade-in">
       <div className="modal-content glass-card notice-modal" style={{ maxWidth: '600px', width: '92%' }}>
         <div className="modal-header">
@@ -304,15 +321,19 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
 
             <div className="form-group-row" style={{ display: 'flex', gap: '10px' }}>
               <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">작성 업체명 / 출처 *</label>
-                <input
-                  type="text"
-                  placeholder="예: 점보씨푸드 막탄 / 세부고 파트너"
-                  value={formData.authorName}
-                  onChange={handleAuthorNameChange}
-                  className="form-input"
+                <label className="form-label">광고주(업체) 선택 *</label>
+                <select
+                  value={formData.advertiserId || ''}
+                  onChange={handleAdvertiserChange}
+                  className="form-select"
                   required
-                />
+                >
+                  <option value="">광고주 선택</option>
+                  <option value="manual">미등록 업체 (직접 입력)</option>
+                  {advertisers.map(adv => (
+                    <option key={adv.id} value={adv.id}>{adv.name}</option>
+                  ))}
+                </select>
               </div>
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">위치 (지역)</label>
@@ -330,7 +351,23 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
               </div>
             </div>
 
-            <div className="form-group">
+            {formData.advertiserId === 'manual' && (
+              <div className="form-group-row" style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="form-label">업체명 직접 입력 *</label>
+                  <input
+                    type="text"
+                    placeholder="업체명을 입력해주세요"
+                    value={formData.authorName || ''}
+                    onChange={(e) => setFormData({ ...formData, authorName: e.target.value })}
+                    className="form-input"
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="form-group" style={{ marginTop: '12px' }}>
               <label className="form-label">본문 내용 *</label>
               <textarea
                 rows="5"
@@ -396,6 +433,7 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

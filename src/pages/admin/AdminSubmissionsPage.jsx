@@ -11,10 +11,13 @@ import {
   RiFileCheckLine,
   RiHistoryLine,
   RiDownload2Line,
-  RiUser3Line
+  RiUser3Line,
+  RiStore2Line,
+  RiAddLine
 } from 'react-icons/ri';
 import ZoomableImage from '../../components/common/ZoomableImage';
 import AdminUserEditModal from '../../components/modals/AdminUserEditModal';
+import AdvertiserFormModal from '../../components/modals/AdvertiserFormModal';
 import './AdminSubmissionsPage.css';
 
 export default function AdminSubmissionsPage() {
@@ -26,6 +29,10 @@ export default function AdminSubmissionsPage() {
   const [expandedSubmissionId, setExpandedSubmissionId] = useState(null);
   const [users, setUsers] = useState([]);
   const [editingUser, setEditingUser] = useState(null);
+  
+  const [advertisers, setAdvertisers] = useState([]);
+  const [editingAdvertiser, setEditingAdvertiser] = useState(null);
+  const [isAdvertiserModalOpen, setIsAdvertiserModalOpen] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'cebugo_config', 'ticker_speed'), (docSnap) => {
@@ -48,6 +55,14 @@ export default function AdminSubmissionsPage() {
     return () => unsubUsers();
   }, []);
 
+  useEffect(() => {
+    const unsubAdv = onSnapshot(collection(db, 'cebugo_advertisers'), (snapshot) => {
+      const advList = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+      setAdvertisers(advList);
+    });
+    return () => unsubAdv();
+  }, []);
+
   const handleUpdateSpeed = async (noticeMult, adMult) => {
     setNoticeSpeedMultiplier(noticeMult);
     setAdSpeedMultiplier(adMult);
@@ -63,6 +78,31 @@ export default function AdminSubmissionsPage() {
       );
     } catch (e) {
       console.error('Failed to update ticker speed in Firestore:', e);
+    }
+  };
+
+  const handleSaveAdvertiser = async (formData) => {
+    try {
+      const advId = editingAdvertiser ? editingAdvertiser.id : `adv_${Date.now()}`;
+      await setDoc(doc(db, 'cebugo_advertisers', advId), {
+        ...formData,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      setIsAdvertiserModalOpen(false);
+      setEditingAdvertiser(null);
+    } catch (e) {
+      console.error('Failed to save advertiser:', e);
+      alert('광고주 저장 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleDeleteAdvertiser = async (id, e) => {
+    e.stopPropagation();
+    if (!window.confirm('정말 이 광고주를 삭제하시겠습니까? (연결된 게시물이 있으면 표시되지 않을 수 있습니다)')) return;
+    try {
+      await deleteDoc(doc(db, 'cebugo_advertisers', id));
+    } catch (err) {
+      console.error('Failed to delete advertiser:', err);
     }
   };
 
@@ -171,6 +211,15 @@ export default function AdminSubmissionsPage() {
         >
           <RiUser3Line className="tab-icon" />
           <span>사용자 ({users.length})</span>
+        </button>
+
+        <button 
+          type="button"
+          className={`news-tab-btn ${adminTab === 'advertisers' ? 'active' : ''}`}
+          onClick={() => setAdminTab('advertisers')}
+        >
+          <RiStore2Line className="tab-icon" />
+          <span>광고주 ({advertisers.length})</span>
         </button>
       </div>
 
@@ -404,11 +453,71 @@ export default function AdminSubmissionsPage() {
     </div>
   )}
 
+  {/* TAB 4: 광고주 목록 */}
+  {adminTab === 'advertisers' && (
+    <div className="tab-content-section fade-in">
+      <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2>고정 광고주 <span>({advertisers.length})</span></h2>
+        <button 
+          className="btn btn-primary" 
+          onClick={() => { setEditingAdvertiser(null); setIsAdvertiserModalOpen(true); }}
+        >
+          <RiAddLine /> 신규 광고주 등록
+        </button>
+      </div>
+      
+      {advertisers.length === 0 ? (
+        <div className="glass-card empty-state"><p>등록된 광고주가 없습니다.</p></div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+          {advertisers.map(adv => (
+            <div 
+              key={adv.id} 
+              className="glass-card hover-lift" 
+              style={{ padding: '16px', display: 'flex', gap: '16px', alignItems: 'center', cursor: 'pointer' }}
+              onClick={() => { setEditingAdvertiser(adv); setIsAdvertiserModalOpen(true); }}
+            >
+              <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#f1f5f9', flexShrink: 0, overflow: 'hidden' }}>
+                {adv.logoUrl ? (
+                  <img src={adv.logoUrl} alt={adv.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <RiStore2Line style={{ fontSize: '30px', margin: '15px', color: '#94a3b8' }} />
+                )}
+              </div>
+              <div style={{ flex: 1, overflow: 'hidden' }}>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {adv.name}
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {adv.description || '소개글 없음'}
+                </p>
+                {adv.linkUrl && (
+                  <a href={adv.linkUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem', color: '#3b82f6', textDecoration: 'none', display: 'inline-block', marginTop: '4px' }} onClick={e => e.stopPropagation()}>
+                    링크 열기
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )}
+
   {/* 사용자 수정 모달 */}
   {editingUser && (
     <AdminUserEditModal 
       user={editingUser} 
       onClose={() => setEditingUser(null)} 
+    />
+  )}
+
+  {/* 광고주 폼 모달 */}
+  {isAdvertiserModalOpen && (
+    <AdvertiserFormModal 
+      editingAdvertiser={editingAdvertiser}
+      onClose={() => { setIsAdvertiserModalOpen(false); setEditingAdvertiser(null); }}
+      onSave={handleSaveAdvertiser}
     />
   )}
 
