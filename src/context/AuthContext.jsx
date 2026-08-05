@@ -86,7 +86,7 @@ export const AuthProvider = ({ children }) => {
           phoneCarrier: dbData?.phoneCarrier || 'Globe',
           kakaoVerified: dbData?.kakaoVerified ?? true,
           kakaoId: dbData?.kakaoId || 'k_cebutraveler',
-          favorites: dbData?.favorites || ['place_1', 'place_3']
+          favorites: dbData?.favorites || []
         };
 
         setUserProfile(profileObj);
@@ -150,15 +150,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const toggleFavorite = (placeId) => {
+  const toggleFavorite = async (placeId) => {
+    if (!currentUser) return;
+    
+    let updatedFavorites = [];
     setUserProfile((prev) => {
       if (!prev) return null;
       const exists = prev.favorites.includes(placeId);
-      const updated = exists
+      updatedFavorites = exists
         ? prev.favorites.filter((id) => id !== placeId)
         : [...prev.favorites, placeId];
-      return { ...prev, favorites: updated };
+      return { ...prev, favorites: updatedFavorites };
     });
+
+    try {
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      await setDoc(userDocRef, { favorites: updatedFavorites }, { merge: true });
+    } catch (e) {
+      console.error('Failed to update favorites in Firestore:', e);
+    }
   };
 
   return (

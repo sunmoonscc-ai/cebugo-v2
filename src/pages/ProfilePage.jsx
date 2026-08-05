@@ -26,6 +26,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('favorites'); // favorites, submissions, points
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [expandedSubId, setExpandedSubId] = useState(null);
 
   const [feedbackCategory, setFeedbackCategory] = useState('일반 건의 / 서비스 의견');
   const [feedbackContent, setFeedbackContent] = useState('');
@@ -182,11 +183,16 @@ export default function ProfilePage() {
             </div>
           ) : (
             userSubmissions.map((sub) => (
-              <div key={sub.id} className="glass-card sub-item-card">
-                <div className="sub-item-header">
+              <div 
+                key={sub.id} 
+                className="glass-card sub-item-card"
+                onClick={() => setExpandedSubId(prev => prev === sub.id ? null : sub.id)} 
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="sub-item-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <strong>{sub.placeName}</strong>
                   <span className={`sub-status ${sub.status}`}>
-                    {sub.status === 'pending' ? '승인대기' : '승인완료'}
+                    {sub.status === 'pending' ? '승인대기' : sub.status === 'rejected' ? '거절됨' : '승인완료'}
                   </span>
                 </div>
                 <p className="sub-item-body">
@@ -197,6 +203,41 @@ export default function ProfilePage() {
                   )}
                 </p>
                 <span className="sub-item-date">{sub.createdAt}</span>
+
+                {expandedSubId === sub.id && (
+                  <div className="diff-body" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', cursor: 'default' }} onClick={(e) => e.stopPropagation()}>
+                    <span className="field-badge" style={{ display: 'inline-block', padding: '4px 8px', borderRadius: '4px', backgroundColor: '#eff6ff', color: '#2563eb', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '8px' }}>요청 항목: {sub.field}</span>
+                    
+                    {sub.field !== '의견/제보' && (
+                      <div className="diff-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '8px', alignItems: 'center' }}>
+                        <div className="diff-box old-box" style={{ padding: '10px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                          <span className="box-label" style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', marginBottom: '4px' }}>기존 데이터 (Current)</span>
+                          <p style={{ margin: 0, fontSize: '0.9rem' }}>{sub.oldValue}</p>
+                        </div>
+                        <div className="diff-arrow" style={{ color: '#94a3b8' }}>→</div>
+                        <div className="diff-box new-box" style={{ padding: '10px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                          <span className="box-label" style={{ display: 'block', fontSize: '0.75rem', color: '#166534', marginBottom: '4px' }}>제안된 새로운 데이터 (Proposal)</span>
+                          <p style={{ margin: 0, fontSize: '0.9rem' }}>{sub.newValue}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {sub.images && sub.images.length > 0 && (
+                      <div className="diff-images" style={{ marginTop: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span className="box-label" style={{ margin: 0, fontSize: '0.8rem', fontWeight: 'bold', color: '#475569' }}>첨부된 사진 ({sub.images.length}장)</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                          {sub.images.map((imgUrl, idx) => (
+                            <div key={idx} style={{ width: '100px', height: '100px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden' }}>
+                              <ZoomableImage src={imgUrl} images={sub.images} initialIndex={idx} alt={`첨부사진 ${idx}`} width={400} style={{ width: '100%', height: '100%' }} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))
           )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePlaces } from '../../context/PlacesContext';
 import { db } from '../../firebase/config';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, collection } from 'firebase/firestore';
 import { 
   RiCheckLine, 
   RiCloseLine, 
@@ -10,9 +10,11 @@ import {
   RiNotification3Line,
   RiFileCheckLine,
   RiHistoryLine,
-  RiDownload2Line
+  RiDownload2Line,
+  RiUser3Line
 } from 'react-icons/ri';
 import ZoomableImage from '../../components/common/ZoomableImage';
+import AdminUserEditModal from '../../components/modals/AdminUserEditModal';
 import './AdminSubmissionsPage.css';
 
 export default function AdminSubmissionsPage() {
@@ -22,6 +24,8 @@ export default function AdminSubmissionsPage() {
   const [noticeSpeedMultiplier, setNoticeSpeedMultiplier] = useState(1);
   const [adSpeedMultiplier, setAdSpeedMultiplier] = useState(1);
   const [expandedSubmissionId, setExpandedSubmissionId] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [editingUser, setEditingUser] = useState(null);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'cebugo_config', 'ticker_speed'), (docSnap) => {
@@ -32,6 +36,16 @@ export default function AdminSubmissionsPage() {
       }
     });
     return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const userList = snapshot.docs
+        .map(d => ({ ...d.data(), uid: d.id }))
+        .filter(u => !u.isAdmin); // Exclude admins
+      setUsers(userList);
+    });
+    return () => unsubUsers();
   }, []);
 
   const handleUpdateSpeed = async (noticeMult, adMult) => {
@@ -148,6 +162,15 @@ export default function AdminSubmissionsPage() {
         >
           <RiFileCheckLine className="tab-icon" />
           <span>제보 승인함 ({pendingSubmissions.length})</span>
+        </button>
+
+        <button 
+          type="button"
+          className={`news-tab-btn ${adminTab === 'users' ? 'active' : ''}`}
+          onClick={() => setAdminTab('users')}
+        >
+          <RiUser3Line className="tab-icon" />
+          <span>사용자 ({users.length})</span>
         </button>
       </div>
 
@@ -343,6 +366,52 @@ export default function AdminSubmissionsPage() {
       </div>
     </div>
   )}
+  {/* TAB 3: 사용자 목록 */}
+  {adminTab === 'users' && (
+    <div className="tab-content-section fade-in">
+      <div className="section-title">
+        <h2>일반 사용자 목록 <span>({users.length})</span></h2>
+      </div>
+      
+      {users.length === 0 ? (
+        <div className="glass-card empty-state"><p>조회된 사용자가 없습니다.</p></div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {users.map(u => (
+            <div 
+              key={u.uid} 
+              className="glass-card hover-lift" 
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '16px' }} 
+              onClick={() => setEditingUser(u)}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#1e293b' }}>
+                  {u.displayName || '이름 없음'} <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'normal' }}>(Lv.{u.level || 1})</span>
+                </h3>
+                <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '6px', display: 'flex', gap: '10px' }}>
+                  <span><strong style={{color: '#2563eb'}}>P</strong> {u.points || 0}</span>
+                  <span>|</span>
+                  <span>📞 {u.phoneNumber || '미입력'}</span>
+                  <span>|</span>
+                  <span>💬 {u.kakaoId || '미입력'}</span>
+                </div>
+              </div>
+              <button className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>수정</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )}
+
+  {/* 사용자 수정 모달 */}
+  {editingUser && (
+    <AdminUserEditModal 
+      user={editingUser} 
+      onClose={() => setEditingUser(null)} 
+    />
+  )}
+
 </div>
   );
 }

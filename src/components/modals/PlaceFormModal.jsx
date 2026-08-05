@@ -9,7 +9,7 @@ import './PlaceFormModal.css';
 const MAGELLAN_BAY_LAT = 10.324571024254213;
 const MAGELLAN_BAY_LNG = 124.01382455914299;
 
-function parseCoordinates(inputStr, defaultLat = MAGELLAN_BAY_LAT, defaultLng = MAGELLAN_BAY_LNG) {
+function parseCoordinates(inputStr, defaultLat = '', defaultLng = '') {
   if (!inputStr || typeof inputStr !== 'string') {
     return { lat: defaultLat, lng: defaultLng };
   }
@@ -88,8 +88,8 @@ export default function PlaceFormModal({ editingPlace, defaultCategory = 'restau
     name: '',
     category: initialCategory,
     addr: '',
-    lat: MAGELLAN_BAY_LAT,
-    lng: MAGELLAN_BAY_LNG,
+    lat: '',
+    lng: '',
     open: '',
     breakTime: '',
     phone: '',
@@ -110,8 +110,8 @@ export default function PlaceFormModal({ editingPlace, defaultCategory = 'restau
 
   useEffect(() => {
     if (editingPlace) {
-      const lat = editingPlace.lat || MAGELLAN_BAY_LAT;
-      const lng = editingPlace.lng || MAGELLAN_BAY_LNG;
+      const lat = editingPlace.lat || '';
+      const lng = editingPlace.lng || '';
       setFormData({
         name: editingPlace.name || '',
         category: editingPlace.category || initialCategory,
@@ -138,8 +138,8 @@ export default function PlaceFormModal({ editingPlace, defaultCategory = 'restau
       setFormData((prev) => ({
         ...prev,
         category: initialCategory,
-        lat: MAGELLAN_BAY_LAT,
-        lng: MAGELLAN_BAY_LNG
+        lat: '',
+        lng: ''
       }));
     }
   }, [editingPlace, defaultCategory]);
@@ -228,7 +228,7 @@ const compressImageFile = (file) => {
   const [uploadProgressCount, setUploadProgressCount] = useState(0);
 
   const doFinalSave = (currentFormData = formData) => {
-    const finalCoords = parseCoordinates(coordInput, MAGELLAN_BAY_LAT, MAGELLAN_BAY_LNG);
+    const finalCoords = parseCoordinates(coordInput, '', '');
 
     const validPhones = phoneList
       .map((p) => ({ number: p.number.trim(), type: p.type }))
@@ -315,10 +315,7 @@ const compressImageFile = (file) => {
       alert('업체명을 입력해 주세요.');
       return;
     }
-    if (!formData.addr.trim()) {
-      alert('업체 주소를 입력해 주세요.');
-      return;
-    }
+
     if (!formData.explaination.trim()) {
       alert('업체 소개글을 입력해 주세요.');
       return;
@@ -378,14 +375,13 @@ const compressImageFile = (file) => {
 
             {/* 주소 및 좌표 */}
             <div className="form-group">
-              <label className="form-label">주소 / 위치 *</label>
+              <label className="form-label">주소 / 위치</label>
               <input
                 type="text"
                 placeholder="예: Maribago, Lapu-Lapu City, Cebu"
                 value={formData.addr}
                 onChange={(e) => setFormData({ ...formData, addr: e.target.value })}
                 className="form-input"
-                required
               />
             </div>
 
