@@ -7,13 +7,11 @@ import { PlacesProvider } from './context/PlacesContext';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <PlacesProvider>
-          <App />
-        </PlacesProvider>
-      </AuthProvider>
-    </BrowserRouter>
-  </React.StrictMode>
+  <BrowserRouter>
+    <AuthProvider>
+      <PlacesProvider>
+        <App />
+      </PlacesProvider>
+    </AuthProvider>
+  </BrowserRouter>
 );

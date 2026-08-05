@@ -109,6 +109,7 @@
   cursor: pointer;
   backdrop-filter: blur(8px);
   transition: all 0.2s ease;
+  z-index: 10;
 }
 
 .favorite-btn.active {

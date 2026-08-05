@@ -73,6 +73,7 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
         <span className="category-chip">{place.categoryName}</span>
         
         <button 
+          type="button"
           className={`favorite-btn ${isFavorite ? 'active' : ''}`}
           onClick={(e) => {
             e.preventDefault();

@@ -18,7 +18,9 @@ import {
   RiNavigationFill,
   RiEditLine,
   RiDeleteBinLine,
-  RiFileCopyLine
+  RiFileCopyLine,
+  RiHeartFill,
+  RiHeartLine
 } from 'react-icons/ri';
 import { getDefaultImageForCategory, formatBreakAndOffTime } from '../utils/imageHelper';
 import './DetailPage.css';
@@ -28,7 +30,7 @@ export default function DetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { places, reviews, addReview, updatePlace, deletePlace } = usePlaces();
-  const { userProfile } = useAuth();
+  const { userProfile, toggleFavorite } = useAuth();
 
   const fromView = location.state?.fromView || 'list';
 
@@ -116,7 +118,30 @@ export default function DetailPage() {
       <div className="glass-card detail-header-card">
         <div className="detail-title-wrap">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '6px' }}>
-            <span className="category-chip" style={{ margin: 0 }}>{place.categoryName}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="category-chip" style={{ margin: 0 }}>{place.categoryName}</span>
+              <button 
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleFavorite(place.id);
+                }}
+                title="즐겨찾기"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: userProfile?.favorites?.includes(place.id) ? '#ef4444' : '#94a3b8',
+                  fontSize: '1.4rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '2px',
+                  transition: 'color 0.2s'
+                }}
+              >
+                {userProfile?.favorites?.includes(place.id) ? <RiHeartFill /> : <RiHeartLine />}
+              </button>
+            </div>
             {userProfile?.isAdmin && (
               <div className="admin-actions" style={{ display: 'flex', gap: '6px' }}>
                 <button
