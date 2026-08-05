@@ -81,13 +81,12 @@ export default function DetailPage() {
 
   const getActiveTabImages = () => {
     const defaultImg = getDefaultImageForCategory(place) || '/default_cafe.png';
-    if (!place || !place.images) return [defaultImg];
+    if (!place || !place.images) return activeTab === 'cover' ? [defaultImg] : [];
 
     const currentTabImgs = (place.images[activeTab] || []).filter(Boolean);
     if (currentTabImgs.length > 0) return currentTabImgs;
 
-    const coverImgs = (place.images.cover || []).filter(Boolean);
-    if (coverImgs.length > 0) return coverImgs;
+    if (activeTab !== 'cover') return [];
 
     const allImgs = [
       ...(place.images.cover || []),
@@ -187,7 +186,17 @@ export default function DetailPage() {
           <button className={activeTab === 'menu' ? 'active' : ''} onClick={() => setActiveTab('menu')}>메뉴판</button>
         </div>
 
-        <ImageCarousel images={getActiveTabImages()} />
+        {(() => {
+          const activeImages = getActiveTabImages();
+          if (activeImages.length > 0) {
+            return <ImageCarousel images={activeImages} />;
+          }
+          return (
+            <div style={{ textAlign: 'center', padding: '60px 20px', background: 'rgba(255, 255, 255, 0.4)', borderRadius: '12px', color: '#94a3b8', margin: '0 16px', fontSize: '0.95rem' }}>
+              해당 항목에 등록된 사진이 없습니다.
+            </div>
+          );
+        })()}
 
         <div className="detail-info-section">
           <div className="info-row">
@@ -364,7 +373,7 @@ export default function DetailPage() {
               setShowSuggestModal(true);
             }}
           >
-            <RiEditBoxLine /> 정보 수정 제안하기 (+15p)
+            <RiEditBoxLine /> 사진 제공 및 정보수정 제안
           </button>
         </div>
       </div>

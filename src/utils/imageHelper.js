@@ -177,26 +177,26 @@ export async function sanitizePlaceForFirestore(placeData) {
 
 // Cumulative point threshold table for Lv.1 ~ Lv.20
 export const LEVEL_TABLE = [
-  { level: 1, reqPt: 0, totalPt: 0 },
-  { level: 2, reqPt: 100, totalPt: 100 },
-  { level: 3, reqPt: 300, totalPt: 400 },
-  { level: 4, reqPt: 500, totalPt: 900 },
-  { level: 5, reqPt: 700, totalPt: 1600 },
-  { level: 6, reqPt: 900, totalPt: 2500 },
-  { level: 7, reqPt: 1100, totalPt: 3600 },
-  { level: 8, reqPt: 1300, totalPt: 4900 },
-  { level: 9, reqPt: 1500, totalPt: 6400 },
-  { level: 10, reqPt: 1700, totalPt: 8100 },
-  { level: 11, reqPt: 1900, totalPt: 10000 },
-  { level: 12, reqPt: 2100, totalPt: 12100 },
-  { level: 13, reqPt: 2300, totalPt: 14400 },
-  { level: 14, reqPt: 2500, totalPt: 16900 },
-  { level: 15, reqPt: 2700, totalPt: 19600 },
-  { level: 16, reqPt: 2900, totalPt: 22500 },
-  { level: 17, reqPt: 3100, totalPt: 25600 },
-  { level: 18, reqPt: 3300, totalPt: 28900 },
-  { level: 19, reqPt: 3500, totalPt: 32400 },
-  { level: 20, reqPt: 3700, totalPt: 36100 }
+  { level: 1, reqPt: 100, totalPt: 100 },
+  { level: 2, reqPt: 200, totalPt: 300 },
+  { level: 3, reqPt: 400, totalPt: 700 },
+  { level: 4, reqPt: 600, totalPt: 1300 },
+  { level: 5, reqPt: 900, totalPt: 2200 },
+  { level: 6, reqPt: 1200, totalPt: 3400 },
+  { level: 7, reqPt: 1600, totalPt: 5000 },
+  { level: 8, reqPt: 2000, totalPt: 7000 },
+  { level: 9, reqPt: 2500, totalPt: 9500 },
+  { level: 10, reqPt: 3000, totalPt: 12500 },
+  { level: 11, reqPt: 3500, totalPt: 16000 },
+  { level: 12, reqPt: 4000, totalPt: 20000 },
+  { level: 13, reqPt: 4500, totalPt: 24500 },
+  { level: 14, reqPt: 5000, totalPt: 29500 },
+  { level: 15, reqPt: 5500, totalPt: 35000 },
+  { level: 16, reqPt: 6000, totalPt: 41000 },
+  { level: 17, reqPt: 7000, totalPt: 48000 },
+  { level: 18, reqPt: 8000, totalPt: 56000 },
+  { level: 19, reqPt: 8500, totalPt: 64500 },
+  { level: 20, reqPt: 9500, totalPt: 74000 }
 ];
 
 export function calculateLevelFromPoints(points = 0) {

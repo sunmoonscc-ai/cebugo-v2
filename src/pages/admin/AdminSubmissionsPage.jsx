@@ -9,8 +9,10 @@ import {
   RiSpeedUpLine,
   RiNotification3Line,
   RiFileCheckLine,
-  RiHistoryLine
+  RiHistoryLine,
+  RiDownload2Line
 } from 'react-icons/ri';
+import ZoomableImage from '../../components/common/ZoomableImage';
 import './AdminSubmissionsPage.css';
 
 export default function AdminSubmissionsPage() {
@@ -50,7 +52,62 @@ export default function AdminSubmissionsPage() {
   };
 
   const pendingSubmissions = submissions.filter((s) => s.status === 'pending');
-  const processedSubmissions = submissions.filter((s) => s.status !== 'pending');
+  const processedSubmissions = submissions.filter((s) => s.status !== 'pending').sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const downloadImage = async (url, filename) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename || 'download.jpg';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      console.error('Download failed', e);
+      window.open(url, '_blank');
+    }
+  };
+
+  const downloadAllImages = async (images, placeName) => {
+    // If browser supports File System Access API (Chrome/Edge)
+    if (window.showDirectoryPicker) {
+      try {
+        const dirHandle = await window.showDirectoryPicker({
+          mode: 'readwrite',
+          id: 'cebugo-downloads', // Remembers the last used directory if possible
+        });
+        for (let idx = 0; idx < images.length; idx++) {
+          const url = images[idx];
+          const response = await fetch(url);
+          const blob = await response.blob();
+          
+          const filename = `${placeName}_제보사진_${idx + 1}.jpg`;
+          const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+        }
+        alert('선택하신 폴더에 모든 사진이 성공적으로 저장되었습니다. 🎉');
+        return;
+      } catch (err) {
+        // If user aborted (closed the picker), just return
+        if (err.name === 'AbortError') {
+          return;
+        }
+        console.error('Directory picker failed:', err);
+        // Fallback to normal download if API fails for some reason
+      }
+    }
+
+    // Fallback traditional method (downloads one by one to default folder)
+    images.forEach((url, idx) => {
+      downloadImage(url, `${placeName}_제보사진_${idx + 1}.jpg`);
+    });
+  };
 
   return (
     <div className="page-content fade-in">
@@ -155,7 +212,7 @@ export default function AdminSubmissionsPage() {
             <div className="diff-header">
               <div>
                 <strong className="place-tag">[{sub.placeName}]</strong>
-                <span className="user-tag">제보자: {sub.userName}</span>
+                <span className="user-tag">제보자: {sub.userName} {sub.userLevel ? `(Lv.${sub.userLevel})` : ''}</span>
               </div>
               <span className="diff-date">{sub.createdAt}</span>
             </div>
@@ -176,6 +233,24 @@ export default function AdminSubmissionsPage() {
                   <p>{sub.newValue}</p>
                 </div>
               </div>
+
+              {sub.images && sub.images.length > 0 && (
+                <div className="diff-images" style={{ marginTop: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span className="box-label" style={{ margin: 0 }}>첨부된 사진 ({sub.images.length}장)</span>
+                    <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={() => downloadAllImages(sub.images, sub.placeName)}>
+                      <RiDownload2Line /> 전체 저장
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                    {sub.images.map((imgUrl, idx) => (
+                      <div key={idx} style={{ width: '100px', height: '100px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden' }}>
+                        <ZoomableImage src={imgUrl} images={sub.images} initialIndex={idx} alt={`첨부사진 ${idx}`} width={400} style={{ width: '100%', height: '100%' }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="diff-actions">
@@ -190,7 +265,7 @@ export default function AdminSubmissionsPage() {
                 className="btn btn-primary approve-btn"
                 onClick={() => approveSubmission(sub.id)}
               >
-                <RiCheckLine /> 승인 및 포인트 지급 (+50p)
+                <RiCheckLine /> 승인 (완료 처리)
               </button>
             </div>
           </div>

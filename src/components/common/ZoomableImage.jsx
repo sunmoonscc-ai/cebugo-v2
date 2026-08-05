@@ -21,6 +21,10 @@ export default function ZoomableImage({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [imgSrc, setImgSrc] = useState(src || fallback);
 
+  React.useEffect(() => {
+    setImgSrc(src || fallback);
+  }, [src, fallback]);
+
   // Normalize image list for full screen modal navigation
   const safeImagesArray = Array.isArray(images)
     ? images.filter(Boolean)

@@ -225,7 +225,6 @@ const compressImageFile = (file) => {
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgressCount, setUploadProgressCount] = useState(0);
-  const isPendingSubmitRef = React.useRef(false);
 
   const doFinalSave = (currentFormData = formData) => {
     const finalCoords = parseCoordinates(coordInput, MAGELLAN_BAY_LAT, MAGELLAN_BAY_LNG);
@@ -288,18 +287,6 @@ const compressImageFile = (file) => {
             [imgType]: [...currentTypeImgs, cloudUrl]
           };
           const updated = { ...prev, images: nextImages };
-          
-          // If pending submit requested by user, auto save updated state
-          if (isPendingSubmitRef.current) {
-            setTimeout(() => {
-              if (isPendingSubmitRef.current) {
-                isPendingSubmitRef.current = false;
-                alert('✅ 사진 업로드가 완료되어 백그라운드 저장이 완료되었습니다!');
-                doFinalSave(updated);
-              }
-            }, 300);
-          }
-
           return updated;
         });
         setUploadProgressCount((prev) => Math.max(0, prev - 1));
@@ -337,8 +324,7 @@ const compressImageFile = (file) => {
     }
 
     if (isUploading || uploadProgressCount > 0) {
-      isPendingSubmitRef.current = true;
-      alert(`📷 사진을 백그라운드로 업로드 중입니다 (${uploadProgressCount > 0 ? uploadProgressCount + '개 남아있음' : '처리 중'}).\n업로드가 완료되면 자동으로 저장 및 반영됩니다!`);
+      alert('📷 사진이 아직 업로드 중입니다. 잠시만 기다려 주세요.');
       return;
     }
 
@@ -520,6 +506,7 @@ const compressImageFile = (file) => {
                     <option value="f_">페이스북</option>
                     <option value="i_">인스타그램</option>
                     <option value="t_">텔레그램</option>
+                    <option value="h_">홈페이지</option>
                   </select>
                   <input
                     type="text"
@@ -608,7 +595,7 @@ const compressImageFile = (file) => {
                 )}
 
                 {(formData.images[activeImageTab] || []).map((imgUrl, idx) => (
-                  <div key={idx} className="uploaded-img-preview">
+                  <div key={`${activeImageTab}-${idx}`} className="uploaded-img-preview">
                     <ZoomableImage
                       src={imgUrl}
                       images={formData.images[activeImageTab]}
@@ -634,8 +621,8 @@ const compressImageFile = (file) => {
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               취소
             </button>
-            <button type="submit" className="btn btn-primary">
-              <RiCheckLine /> {editingPlace ? '수정 완료' : '등록 하기'}
+            <button type="submit" className="btn btn-primary" disabled={isUploading || uploadProgressCount > 0}>
+              <RiCheckLine /> {isUploading || uploadProgressCount > 0 ? `사진 업로드 중... (${uploadProgressCount})` : (editingPlace ? '수정 완료' : '등록 하기')}
             </button>
           </div>
         </form>

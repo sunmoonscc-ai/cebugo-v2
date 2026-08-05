@@ -394,6 +394,31 @@ export const PlacesProvider = ({ children }) => {
     return () => unsub();
   }, []);
 
+  // Sync Submissions from Firestore
+  useEffect(() => {
+    const unsubSubs = onSnapshot(
+      collection(db, 'cebugo_submissions'),
+      (snapshot) => {
+        let list = [];
+        if (!snapshot.empty) {
+          list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+          list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        } else {
+          // Fallback to initial submissions if empty
+          list = [...INITIAL_SUBMISSIONS];
+          list.forEach(async (sub) => {
+            try { await setDoc(doc(db, 'cebugo_submissions', sub.id), sub); } catch(e){}
+          });
+        }
+        setSubmissions(list);
+      },
+      (err) => {
+        console.error('Firestore submissions sync error:', err);
+      }
+    );
+    return () => unsubSubs();
+  }, []);
+
   const addPlace = async (placeData) => {
     const docId = placeData.id || `p_${Date.now()}`;
     const categoryName = CATEGORY_MAP[placeData.category] || '기타';
@@ -520,29 +545,49 @@ export const PlacesProvider = ({ children }) => {
     }
   };
 
-  const approveSubmission = (subId) => {
+  const approveSubmission = async (subId) => {
+    const subToApprove = submissions.find(s => s.id === subId);
+    if (!subToApprove) return;
+
+    // 1. Update local React state for submissions
     setSubmissions((prev) =>
-      prev.map((sub) => {
-        if (sub.id === subId) {
-          setPlaces((pList) =>
-            pList.map((p) => {
-              if (p.id === sub.placeId && sub.field === '영업시간') {
-                return { ...p, open: sub.newValue };
-              }
-              return p;
-            })
-          );
-          return { ...sub, status: 'approved' };
-        }
-        return sub;
-      })
+      prev.map((sub) => (sub.id === subId ? { ...sub, status: 'approved' } : sub))
     );
+
+    // 2. Automatically update local places state and Firestore if field is 영업시간
+    if (subToApprove.field === '영업시간') {
+      setPlaces((pList) => {
+        const targetPlace = pList.find(p => p.id === subToApprove.placeId);
+        if (targetPlace) {
+          const updatedPlace = { ...targetPlace, open: subToApprove.newValue };
+          // Fire-and-forget Firestore update for the place
+          setDoc(doc(db, 'places', subToApprove.placeId), updatedPlace, { merge: true }).catch(err => console.error(err));
+          return pList.map((p) => (p.id === subToApprove.placeId ? updatedPlace : p));
+        }
+        return pList;
+      });
+    }
+
+    // 3. Update Submission in Firestore
+    try {
+      await setDoc(doc(db, 'cebugo_submissions', subId), { status: 'approved' }, { merge: true });
+    } catch (err) {
+      console.error('Failed to approve submission in Firestore:', err);
+    }
   };
 
-  const rejectSubmission = (subId) => {
+  const rejectSubmission = async (subId) => {
+    // 1. Update local React state
     setSubmissions((prev) =>
       prev.map((sub) => (sub.id === subId ? { ...sub, status: 'rejected' } : sub))
     );
+
+    // 2. Update Submission in Firestore
+    try {
+      await setDoc(doc(db, 'cebugo_submissions', subId), { status: 'rejected' }, { merge: true });
+    } catch (err) {
+      console.error('Failed to reject submission in Firestore:', err);
+    }
   };
 
   const addMarketplaceListing = (listing) => {

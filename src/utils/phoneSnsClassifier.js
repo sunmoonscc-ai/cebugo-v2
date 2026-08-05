@@ -17,7 +17,8 @@ export const DEFAULT_SNS_PREFIXES = [
   { prefix: 'w_', name: '위챗', key: 'wechat', icon: 'RiWechatFill', color: '#07C160' },
   { prefix: 'f_', name: '페이스북', key: 'facebook', icon: 'RiFacebookCircleFill', color: '#1877F2' },
   { prefix: 'i_', name: '인스타그램', key: 'instagram', icon: 'RiInstagramLine', color: '#E4405F' },
-  { prefix: 't_', name: '텔레그램', key: 'telegram', icon: 'RiTelegramFill', color: '#24A1DE' }
+  { prefix: 't_', name: '텔레그램', key: 'telegram', icon: 'RiTelegramFill', color: '#24A1DE' },
+  { prefix: 'h_', name: '홈페이지', key: 'homepage', icon: 'RiGlobalLine', color: '#475569' }
 ];
 
 /**
@@ -129,6 +130,10 @@ export function getSnsLinkUrl(snsInfo) {
 
   if (key === 'telegram' || key === 't_' || name.includes('텔레그램')) {
     return `https://t.me/${handle.replace('@', '')}`;
+  }
+
+  if (key === 'homepage' || key === 'h_' || name.includes('홈페이지')) {
+    return handle.startsWith('http') ? handle : `http://${handle}`;
   }
 
   return null;

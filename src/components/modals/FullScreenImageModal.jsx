@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { RiArrowLeftSLine, RiArrowRightSLine, RiCloseLine, RiZoomInLine, RiZoomOutLine, RiRefreshLine } from 'react-icons/ri';
+import { RiArrowLeftSLine, RiArrowRightSLine, RiCloseLine, RiZoomInLine, RiZoomOutLine, RiRefreshLine, RiDownload2Line } from 'react-icons/ri';
 import { extractDateFromImageUrl } from '../../utils/imageHelper';
 import './FullScreenImageModal.css';
 
@@ -107,6 +107,51 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
     e?.stopPropagation();
     setScale(1);
     setPosition({ x: 0, y: 0 });
+  };
+
+  const handleDownload = async (e) => {
+    e?.stopPropagation();
+    const url = validImages[currentIndex];
+    const defaultFilename = `cebugohub_image_${Date.now()}.jpg`;
+    
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      
+      // If browser supports File System Access API (Chrome/Edge)
+      if (window.showSaveFilePicker) {
+        try {
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: defaultFilename,
+            types: [{
+              description: 'JPEG Image',
+              accept: { 'image/jpeg': ['.jpg', '.jpeg'] },
+            }],
+          });
+          const writable = await fileHandle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          return;
+        } catch (err) {
+          // If user aborted, do nothing
+          if (err.name === 'AbortError') return;
+          console.error('File picker failed:', err);
+        }
+      }
+
+      // Fallback
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = defaultFilename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Download failed', err);
+      window.open(url, '_blank');
+    }
   };
 
   const handleDoubleClick = (e) => {
@@ -266,6 +311,9 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
               <RiRefreshLine />
             </button>
           )}
+          <button type="button" onClick={handleDownload} title="현재 사진 저장하기" className="download-btn" style={{ marginLeft: '8px' }}>
+            <RiDownload2Line />
+          </button>
         </div>
 
         <button type="button" className="fullscreen-close-btn" onClick={onClose} title="닫기 (ESC)">

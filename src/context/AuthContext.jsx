@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }) => {
 
         const dbData = userSnap && userSnap.exists() ? userSnap.data() : null;
 
-        let currentPoints = dbData?.points ?? 450;
+        let currentPoints = dbData?.points ?? 100;
         let lastCheckInDate = dbData?.lastCheckInDate || '';
         let consecutiveDays = dbData?.consecutiveDays || 0;
         let pointLedger = dbData?.pointLedger || [];
