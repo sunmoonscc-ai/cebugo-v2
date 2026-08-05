@@ -78,6 +78,14 @@ export function getDefaultImageForCategory(categoryOrPlace) {
     catStr = String(categoryOrPlace || '').toLowerCase();
   }
 
+  if (catStr.includes('education') || catStr.includes('교육')) {
+    return '/default_education.png';
+  }
+  
+  if (catStr.includes('food') || catStr.includes('먹을거리') || catStr.includes('식당') || catStr.includes('음식')) {
+    return '/default_food.png';
+  }
+
   return FALLBACK_DEFAULT_IMAGE;
 }
 
