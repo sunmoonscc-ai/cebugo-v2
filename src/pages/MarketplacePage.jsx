@@ -11,6 +11,7 @@ import {
   RiLock2Line,
   RiFlag2Line
 } from 'react-icons/ri';
+import ZoomableImage from '../components/common/ZoomableImage';
 import './MarketplacePage.css';
 
 export default function MarketplacePage() {
@@ -195,7 +196,12 @@ export default function MarketplacePage() {
             const snsInfo = parseSnsEntry(item.sns);
             return (
               <div key={item.id} className="glass-card listing-card fade-in">
-                <img src={item.images[0]} alt={item.title} className="listing-img" />
+                <ZoomableImage
+                  src={item.images && item.images.length > 0 ? item.images[0] : '/default_cafe.png'}
+                  images={item.images || []}
+                  alt={item.title}
+                  className="listing-img"
+                />
                 <div className="listing-body">
                   <div className="listing-top">
                     <span className="listing-price">{item.price}</span>

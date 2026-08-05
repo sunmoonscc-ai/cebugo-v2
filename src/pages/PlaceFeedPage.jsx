@@ -274,7 +274,16 @@ export default function PlaceFeedPage() {
           </div>
         ) : (
           tabPosts.map((post, index) => {
-            const imagesList = post.images && post.images.length > 0 ? post.images : (post.image ? [post.image] : []);
+            const imagesList = (() => {
+              if (Array.isArray(post.images) && post.images.length > 0) return post.images.filter(Boolean);
+              if (typeof post.images === 'string' && post.images.trim()) return [post.images.trim()];
+              if (post.image) return Array.isArray(post.image) ? post.image.filter(Boolean) : [post.image];
+              if (post.imgUrl) return Array.isArray(post.imgUrl) ? post.imgUrl.filter(Boolean) : [post.imgUrl];
+              if (post.imageUrl) return Array.isArray(post.imageUrl) ? post.imageUrl.filter(Boolean) : [post.imageUrl];
+              if (post.photo) return Array.isArray(post.photo) ? post.photo.filter(Boolean) : [post.photo];
+              if (post.cover) return Array.isArray(post.cover) ? post.cover.filter(Boolean) : [post.cover];
+              return [];
+            })();
             const isTickerActive = post.isTicker === true || post.isTicker === 'true';
             return (
               <div key={post.id} className="glass-card post-card fade-in">

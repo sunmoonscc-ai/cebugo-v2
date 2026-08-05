@@ -56,6 +56,11 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
               src={getOptimizedImageUrl(imgSrc, 500)}
               alt={`${place.name} - ${imgIdx + 1}`}
               className="card-item-img"
+              onClick={(e) => {
+                e.stopPropagation();
+                setZoomImgIndex(imgIdx);
+              }}
+              title="클릭하여 전체 화면으로 확대보기"
               onError={(e) => {
                 if (e.target.src !== imgSrc) {
                   e.target.src = imgSrc;

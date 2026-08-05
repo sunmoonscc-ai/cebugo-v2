@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import ImageCarousel from '../components/places/ImageCarousel';
+import ZoomableImage from '../components/common/ZoomableImage';
 import { fetchGoogleNews } from '../services/googleNewsService';
 import { fetchExchangeRates } from '../services/exchangeRateService';
 import { db } from '../firebase/config';
@@ -1626,7 +1627,13 @@ export default function DailyInfoPage() {
 
                       {noticeFormData.images.map((imgUrl, idx) => (
                         <div key={idx} className="uploaded-img-preview">
-                          <img src={imgUrl} alt={`preview-${idx}`} />
+                          <ZoomableImage
+                            src={imgUrl}
+                            images={noticeFormData.images}
+                            initialIndex={idx}
+                            alt={`preview-${idx}`}
+                            showZoomHint={false}
+                          />
                           <button
                             type="button"
                             className="remove-img-btn"
@@ -2385,7 +2392,13 @@ export default function DailyInfoPage() {
 
                       {infoFormData.images.map((imgUrl, idx) => (
                         <div key={idx} className="uploaded-img-preview">
-                          <img src={imgUrl} alt={`preview-${idx}`} />
+                          <ZoomableImage
+                            src={imgUrl}
+                            images={infoFormData.images}
+                            initialIndex={idx}
+                            alt={`preview-${idx}`}
+                            showZoomHint={false}
+                          />
                           <button
                             type="button"
                             className="remove-img-btn"
@@ -2761,7 +2774,13 @@ export default function DailyInfoPage() {
 
                       {newsFormData.images.map((imgUrl, idx) => (
                         <div key={idx} className="uploaded-img-preview">
-                          <img src={imgUrl} alt={`preview-${idx}`} />
+                          <ZoomableImage
+                            src={imgUrl}
+                            images={newsFormData.images}
+                            initialIndex={idx}
+                            alt={`preview-${idx}`}
+                            showZoomHint={false}
+                          />
                           <button
                             type="button"
                             className="remove-img-btn"

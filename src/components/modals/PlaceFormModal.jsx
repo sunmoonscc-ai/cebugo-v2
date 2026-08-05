@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CATEGORIES } from '../../constants/categories';
 import { RiCloseLine, RiCheckLine, RiImageAddLine, RiMapPinLine, RiAddLine, RiDeleteBinLine } from 'react-icons/ri';
 import { uploadImageToFirebaseStorage } from '../../utils/imageHelper';
+import ZoomableImage from '../common/ZoomableImage';
 import './PlaceFormModal.css';
 
 const MAGELLAN_BAY_LAT = 10.324571024254213;
@@ -608,7 +609,13 @@ const compressImageFile = (file) => {
 
                 {(formData.images[activeImageTab] || []).map((imgUrl, idx) => (
                   <div key={idx} className="uploaded-img-preview">
-                    <img src={imgUrl} alt={`preview-${idx}`} />
+                    <ZoomableImage
+                      src={imgUrl}
+                      images={formData.images[activeImageTab]}
+                      initialIndex={idx}
+                      alt={`preview-${idx}`}
+                      showZoomHint={false}
+                    />
                     <button
                       type="button"
                       className="remove-img-btn"

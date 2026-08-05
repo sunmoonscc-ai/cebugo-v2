@@ -19,36 +19,74 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
     setDragOffsetX(0);
   }, [currentIndex]);
 
+  // Disable body scroll while fullscreen modal is active & listen for ESC key
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   // Intercept smartphone / browser back button so back gesture closes modal first
   useEffect(() => {
-    window.history.pushState({ modalOpen: 'fullscreen_image' }, '');
-
-    const handlePopState = () => {
-      onClose();
+    const handlePopState = (e) => {
+      e.preventDefault();
+      if (onCloseRef.current) {
+        onCloseRef.current();
+      }
     };
+
+    // Only push state if we are not already in modal state
+    if (window.history.state !== 'fullscreen_modal_open') {
+      try {
+        window.history.pushState('fullscreen_modal_open', '');
+      } catch (e) {
+        // Ignore if restricted
+      }
+    }
 
     window.addEventListener('popstate', handlePopState);
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      if (window.history.state?.modalOpen === 'fullscreen_image') {
+      if (window.history.state === 'fullscreen_modal_open') {
         window.history.back();
       }
     };
-  }, [onClose]);
+  }, []);
 
-  if (!images || images.length === 0) return null;
+  const validImages = Array.isArray(images)
+    ? images.filter(Boolean)
+    : (typeof images === 'string' && images.trim() ? [images.trim()] : []);
+
+  if (!validImages || validImages.length === 0) return null;
 
   const handlePrev = (e) => {
     e?.stopPropagation();
     setDragOffsetX(0);
-    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+    setCurrentIndex((prev) => (prev === 0 ? validImages.length - 1 : prev - 1));
   };
 
   const handleNext = (e) => {
     e?.stopPropagation();
     setDragOffsetX(0);
-    setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+    setCurrentIndex((prev) => (prev === validImages.length - 1 ? 0 : prev + 1));
   };
 
   const handleZoomIn = (e) => {
@@ -213,8 +251,8 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
     <div className="fullscreen-image-modal-overlay" onClick={onClose}>
       {/* Top Header Control Toolbar */}
       <div className="fullscreen-modal-controls" onClick={(e) => e.stopPropagation()}>
-        <span className="fullscreen-counter">{currentIndex + 1} / {images.length}</span>
-        
+        <span className="fullscreen-counter">{currentIndex + 1} / {validImages.length}</span>
+
         <div className="fullscreen-zoom-btns">
           <button type="button" onClick={handleZoomOut} title="축소" disabled={scale <= 1}>
             <RiZoomOutLine />
@@ -236,7 +274,7 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
       </div>
 
       {/* Main Image Stage Slider Track */}
-      <div 
+      <div
         className="fullscreen-image-stage"
         onClick={(e) => e.stopPropagation()}
         onDoubleClick={handleDoubleClick}
@@ -250,19 +288,24 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
         onTouchEnd={handleTouchEnd}
         style={{ cursor: scale > 1 ? (isPanDragging ? 'grabbing' : 'grab') : 'default' }}
       >
-        <div 
+        <div
           className="fullscreen-slider-track"
           style={{
             transform: `translateX(calc(-${currentIndex * 100}% + ${dragOffsetX}px))`,
             transition: isDragging || isPanDragging ? 'none' : 'transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
         >
-          {images.map((imgUrl, idx) => (
+          {validImages.map((imgUrl, idx) => (
             <div key={idx} className="fullscreen-slide-item">
               <img
                 src={imgUrl}
                 alt={`full-${idx}`}
                 className="fullscreen-image"
+                onError={(e) => {
+                  if (e.target.src !== '/default_cafe.png') {
+                    e.target.src = '/default_cafe.png';
+                  }
+                }}
                 style={idx === currentIndex ? {
                   transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
                   transition: isPanDragging || isDragging ? 'none' : 'transform 0.2s ease-out'
@@ -275,7 +318,7 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
       </div>
 
       {/* Navigation Arrows */}
-      {images.length > 1 && (
+      {validImages.length > 1 && (
         <>
           <button type="button" className="fullscreen-nav-btn prev" onClick={handlePrev} title="이전 사진">
             <RiArrowLeftSLine />
@@ -288,7 +331,7 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
 
       {/* Bottom Center Date Overlay Badge */}
       <div className="fullscreen-date-badge">
-        {extractDateFromImageUrl(images[currentIndex])}
+        {extractDateFromImageUrl(validImages[currentIndex])}
       </div>
     </div>,
     document.body

@@ -1,0 +1,49 @@
+.zoomable-image-wrapper {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  cursor: pointer;
+  border-radius: inherit;
+  width: 100%;
+  height: 100%;
+}
+
+.zoomable-image-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.zoomable-image-wrapper:hover .zoomable-image-img {
+  transform: scale(1.03);
+  filter: brightness(0.92);
+}
+
+.zoomable-image-hint {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  opacity: 0.85;
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  z-index: 2;
+}
+
+.zoomable-image-wrapper:hover .zoomable-image-hint {
+  opacity: 1;
+  transform: scale(1.1);
+  background: rgba(37, 99, 235, 0.85);
+}

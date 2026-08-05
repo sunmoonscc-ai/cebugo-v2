@@ -17,6 +17,7 @@ import {
   RiCloseLine,
   RiSendPlaneFill
 } from 'react-icons/ri';
+import ZoomableImage from '../components/common/ZoomableImage';
 import './ProfilePage.css';
 
 export default function ProfilePage() {
@@ -76,7 +77,12 @@ export default function ProfilePage() {
       {/* Profile Summary Header */}
       <div className="glass-card profile-card">
         <div className="profile-header">
-          <img src={userProfile.photoURL} alt="profile" className="profile-avatar" />
+          <ZoomableImage
+            src={userProfile.photoURL || '/default_cafe.png'}
+            alt="profile"
+            className="profile-avatar"
+            showZoomHint={false}
+          />
           <div className="profile-details">
             <div className="badge-row">
               <LevelBadge level={userProfile.level} />

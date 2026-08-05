@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RiCloseLine, RiCheckLine, RiImageAddLine } from 'react-icons/ri';
 import { usePlaces } from '../../context/PlacesContext';
+import ZoomableImage from '../common/ZoomableImage';
 
 const LOCATION_OPTIONS = ['전체', 'Cebu', 'Cordova', 'Lapu-Lapu', 'Mandaue', '기타'];
 
@@ -364,7 +365,13 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
 
                 {formData.images.map((imgUrl, idx) => (
                   <div key={idx} className="uploaded-img-preview">
-                    <img src={imgUrl} alt={`preview-${idx}`} />
+                    <ZoomableImage
+                      src={imgUrl}
+                      images={formData.images}
+                      initialIndex={idx}
+                      alt={`preview-${idx}`}
+                      showZoomHint={false}
+                    />
                     <button
                       type="button"
                       className="remove-img-btn"

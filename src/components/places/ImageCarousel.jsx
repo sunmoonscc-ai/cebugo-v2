@@ -10,8 +10,10 @@ export default function ImageCarousel({ images = [], maxWidth = '100%' }) {
   const touchStartRef = useRef(0);
   const touchEndRef = useRef(0);
 
-  const validImages = (images || []).filter(Boolean);
-  const displayImages = validImages.length > 0 ? validImages : ['/default_cafe.png'];
+  const safeImagesArray = Array.isArray(images)
+    ? images.filter(Boolean)
+    : (typeof images === 'string' && images.trim() ? [images.trim()] : []);
+  const displayImages = safeImagesArray.length > 0 ? safeImagesArray : ['/default_cafe.png'];
   const safeIndex = currentIndex >= displayImages.length ? 0 : currentIndex;
 
   const prevSlide = (e) => {
@@ -55,14 +57,21 @@ export default function ImageCarousel({ images = [], maxWidth = '100%' }) {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <div className="carousel-img-wrapper" onClick={() => setIsZoomOpen(true)} title="클릭하여 화면 전체 크기로 확대보기">
+        <div 
+          className="carousel-img-wrapper" 
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsZoomOpen(true);
+          }} 
+          title="클릭하여 화면 전체 크기로 확대보기"
+        >
           <img
             src={getOptimizedImageUrl(currentImgUrl, 800)}
             alt={`slide-${safeIndex}`}
             className="carousel-main-img fade-in"
             onError={(e) => {
-              if (e.target.src !== currentImgUrl) {
-                e.target.src = currentImgUrl;
+              if (e.target.src !== '/default_cafe.png') {
+                e.target.src = '/default_cafe.png';
               }
             }}
           />
