@@ -17,22 +17,7 @@ export default function SuggestEditModal({ place, onClose }) {
   const [uploadProgressCount, setUploadProgressCount] = useState(0);
   const [submitted, setSubmitted] = useState(false);
 
-  useEffect(() => {
-    window.history.pushState({ modalOpen: 'suggest_edit' }, '');
 
-    const handlePopState = () => {
-      onClose();
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-      if (window.history.state?.modalOpen === 'suggest_edit') {
-        window.history.back();
-      }
-    };
-  }, [onClose]);
 
   const compressImageFile = (file) => {
     return new Promise((resolve) => {

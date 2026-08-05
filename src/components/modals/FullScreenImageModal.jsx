@@ -43,33 +43,7 @@ export default function FullScreenImageModal({ images = [], initialIndex = 0, on
     onCloseRef.current = onClose;
   }, [onClose]);
 
-  // Intercept smartphone / browser back button so back gesture closes modal first
-  useEffect(() => {
-    const handlePopState = (e) => {
-      e.preventDefault();
-      if (onCloseRef.current) {
-        onCloseRef.current();
-      }
-    };
 
-    // Only push state if we are not already in modal state
-    if (window.history.state !== 'fullscreen_modal_open') {
-      try {
-        window.history.pushState('fullscreen_modal_open', '');
-      } catch (e) {
-        // Ignore if restricted
-      }
-    }
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-      if (window.history.state === 'fullscreen_modal_open') {
-        window.history.back();
-      }
-    };
-  }, []);
 
   const validImages = Array.isArray(images)
     ? images.filter(Boolean)

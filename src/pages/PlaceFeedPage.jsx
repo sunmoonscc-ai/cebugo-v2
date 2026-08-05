@@ -57,6 +57,8 @@ export default function PlaceFeedPage() {
   const [posts, setPosts] = useState([]);
   const [advertisers, setAdvertisers] = useState([]);
   const [selectedAdvertiserId, setSelectedAdvertiserId] = useState(null);
+  const [filterMonth, setFilterMonth] = useState('all');
+  const [filterDate, setFilterDate] = useState('all');
   const [expandedEndedPosts, setExpandedEndedPosts] = useState({});
 
   useEffect(() => {
@@ -120,13 +122,89 @@ export default function PlaceFeedPage() {
     return { active: true, status: 'active', label: '게시 중' };
   };
 
+  const isPostActiveInMonth = (p, monthPrefix) => {
+    if (monthPrefix === 'all') return true;
+    const monthStart = `${monthPrefix}-01`;
+    const [year, month] = monthPrefix.split('-');
+    const lastDay = new Date(year, month, 0).getDate();
+    const monthEnd = `${monthPrefix}-${lastDay}`;
+    
+    // If it has no start/end date, assume its "date" is its only active date.
+    // If it has startDate but no endDate, it's active indefinitely.
+    // If it has endDate but no startDate, it was active from beginning to endDate.
+    const sDate = p.startDate || p.date || '0000-00-00';
+    const eDate = p.endDate || (p.startDate ? '9999-99-99' : (p.date || '9999-99-99'));
+    return sDate <= monthEnd && eDate >= monthStart;
+  };
+
+  const isPostActiveInDate = (p, targetDate) => {
+    if (targetDate === 'all') return true;
+    const sDate = p.startDate || p.date || '0000-00-00';
+    const eDate = p.endDate || (p.startDate ? '9999-99-99' : (p.date || '9999-99-99'));
+    return sDate <= targetDate && eDate >= targetDate;
+  };
+
   const canPost = userProfile?.isAdmin || (userProfile?.level && userProfile.level >= 5);
+
+  let minDate = todayStr;
+  let maxDate = todayStr;
+  posts.forEach(p => {
+    if (p.date && p.date < minDate) minDate = p.date;
+    if (p.startDate && p.startDate < minDate) minDate = p.startDate;
+    if (p.endDate && p.endDate > maxDate && p.endDate < '9999-99-99') maxDate = p.endDate;
+  });
+
+  const allMonths = [];
+  const startMonthDate = new Date(minDate.substring(0, 7) + '-01');
+  const endMonthDate = new Date(maxDate.substring(0, 7) + '-01');
+  let currentMonthDate = new Date(startMonthDate);
+  while (currentMonthDate <= endMonthDate) {
+    allMonths.push(currentMonthDate.toISOString().substring(0, 7));
+    currentMonthDate.setMonth(currentMonthDate.getMonth() + 1);
+  }
+  allMonths.reverse();
+
+  const availableMonths = allMonths.filter(m => 
+    posts.some(p => p.category === activeTab && (!selectedAdvertiserId || p.advertiserId === selectedAdvertiserId) && isPostActiveInMonth(p, m))
+  );
+  if (filterMonth !== 'all' && !availableMonths.includes(filterMonth)) {
+    availableMonths.unshift(filterMonth);
+  }
+
+  let availableDatesInMonth = [];
+  if (filterMonth !== 'all') {
+    const [year, month] = filterMonth.split('-');
+    const lastDay = new Date(year, month, 0).getDate();
+    for (let i = 1; i <= lastDay; i++) {
+      const dayStr = i.toString().padStart(2, '0');
+      const targetDate = `${filterMonth}-${dayStr}`;
+      const hasActivePost = posts.some(p => 
+        p.category === activeTab && (!selectedAdvertiserId || p.advertiserId === selectedAdvertiserId) && isPostActiveInDate(p, targetDate)
+      );
+      if (hasActivePost) {
+        availableDatesInMonth.push(targetDate);
+      }
+    }
+    availableDatesInMonth.reverse();
+    if (filterDate !== 'all' && !availableDatesInMonth.includes(filterDate)) {
+      availableDatesInMonth.unshift(filterDate);
+    }
+  }
 
   const rawTabPosts = posts
     .filter((p) => p.category === activeTab)
     .filter((p) => canPost || getPostStatus(p).status !== 'scheduled')
     .filter((p) => !selectedAdvertiserId || p.advertiserId === selectedAdvertiserId)
-    .sort((a, b) => (a.order !== undefined ? a.order : 0) - (b.order !== undefined ? b.order : 0));
+    .filter((p) => isPostActiveInMonth(p, filterMonth))
+    .filter((p) => isPostActiveInDate(p, filterDate))
+    .sort((a, b) => {
+      const orderA = a.order !== undefined ? a.order : 0;
+      const orderB = b.order !== undefined ? b.order : 0;
+      if (orderA !== orderB) return orderA - orderB;
+      const dateA = a.date || '0000-00-00';
+      const dateB = b.date || '0000-00-00';
+      return dateA > dateB ? -1 : (dateA < dateB ? 1 : 0);
+    });
 
   const targetPostId = location.state?.postId;
   const tabPosts = targetPostId
@@ -277,6 +355,51 @@ export default function PlaceFeedPage() {
           ))}
         </div>
       )}
+
+      {/* Date Filter Bar */}
+      <div className="glass-card" style={{ marginBottom: '16px', padding: '12px 16px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#475569' }}>게시일 필터:</span>
+        <select 
+          className="form-select" 
+          style={{ width: 'auto', minWidth: '120px', padding: '6px 12px', fontSize: '0.9rem' }}
+          value={filterMonth}
+          onChange={(e) => {
+            setFilterMonth(e.target.value);
+            setFilterDate('all');
+          }}
+        >
+          <option value="all">전체 월</option>
+          {availableMonths.map(m => (
+            <option key={m} value={m}>{m}</option>
+          ))}
+        </select>
+
+        {filterMonth !== 'all' && availableDatesInMonth.length > 0 && (
+          <select 
+            className="form-select" 
+            style={{ width: 'auto', minWidth: '120px', padding: '6px 12px', fontSize: '0.9rem' }}
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+          >
+            <option value="all">전체 일</option>
+            {availableDatesInMonth.map(d => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+        )}
+
+        <button 
+          className="btn-secondary" 
+          style={{ padding: '6px 12px', fontSize: '0.85rem', marginLeft: 'auto' }}
+          onClick={() => {
+            const today = new Date().toISOString().split('T')[0];
+            setFilterMonth(today.substring(0, 7));
+            setTimeout(() => setFilterDate(today), 0);
+          }}
+        >
+          오늘 유효한 게시글
+        </button>
+      </div>
 
       {/* 2 Sub-Tabs Bar: 광고 vs 이벤트 */}
       <div className="feed-nav-tabs glass-card">
