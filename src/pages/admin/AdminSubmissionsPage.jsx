@@ -30,6 +30,7 @@ export default function AdminSubmissionsPage() {
   const [expandedSubmissionId, setExpandedSubmissionId] = useState(null);
   const [users, setUsers] = useState([]);
   const [editingUser, setEditingUser] = useState(null);
+  const [userSort, setUserSort] = useState('nameAsc');
   
   const [advertisers, setAdvertisers] = useState([]);
   const [editingAdvertiser, setEditingAdvertiser] = useState(null);
@@ -175,6 +176,19 @@ export default function AdminSubmissionsPage() {
 
   const pendingSubmissions = submissions.filter((s) => s.status === 'pending');
   const processedSubmissions = submissions.filter((s) => s.status !== 'pending').sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const sortedUsers = users.filter(u => !u.deleted).sort((a, b) => {
+    if (userSort === 'nameAsc') {
+      const nameA = a.displayName || '이름 없음';
+      const nameB = b.displayName || '이름 없음';
+      return nameA.localeCompare(nameB);
+    } else if (userSort === 'levelAsc') {
+      return (a.level || 1) - (b.level || 1);
+    } else if (userSort === 'levelDesc') {
+      return (b.level || 1) - (a.level || 1);
+    }
+    return 0;
+  });
 
   const downloadImage = async (url, filename) => {
     try {
@@ -561,15 +575,25 @@ export default function AdminSubmissionsPage() {
   {/* TAB 3: 사용자 목록 */}
   {adminTab === 'users' && (
     <div className="tab-content-section fade-in">
-      <div className="section-title">
-        <h2>일반 사용자 목록 <span>({users.filter(u => !u.deleted).length})</span></h2>
+      <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2>일반 사용자 목록 <span>({sortedUsers.length})</span></h2>
+        <select 
+          className="form-select" 
+          style={{ width: 'auto', padding: '6px 12px', fontSize: '0.85rem' }}
+          value={userSort}
+          onChange={(e) => setUserSort(e.target.value)}
+        >
+          <option value="nameAsc">이름순 (가나다)</option>
+          <option value="levelDesc">레벨순 (높은순)</option>
+          <option value="levelAsc">레벨순 (낮은순)</option>
+        </select>
       </div>
       
-      {users.filter(u => !u.deleted).length === 0 ? (
+      {sortedUsers.length === 0 ? (
         <div className="glass-card empty-state"><p>조회된 사용자가 없습니다.</p></div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {users.filter(u => !u.deleted).map(u => (
+          {sortedUsers.map(u => (
             <div 
               key={u.uid} 
               className="glass-card hover-lift" 
@@ -584,6 +608,8 @@ export default function AdminSubmissionsPage() {
                   <span><strong style={{color: '#2563eb'}}>P</strong> {u.points || 0}</span>
                   <span>|</span>
                   <span>📞 {u.phoneNumber || '미입력'}</span>
+                  <span>|</span>
+                  <span>🇰🇷 {u.phoneKr || '미입력'}</span>
                   <span>|</span>
                   <span>💬 {u.kakaoId || '미입력'}</span>
                 </div>

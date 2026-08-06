@@ -218,7 +218,8 @@ export function calculateLevelFromPoints(points = 0) {
   return level;
 }
 
-export function getLevelTitle(level = 1) {
+export function getLevelTitle(level = 1, isGuest = false) {
+  if (isGuest) return '방문자 (손님)';
   if (level >= 20) return '세부 마스터 (Lv20)';
   if (level >= 17) return '전설의 여행가 (Lv17)';
   if (level >= 14) return '다이아몬드 가이드 (Lv14)';
@@ -227,7 +228,7 @@ export function getLevelTitle(level = 1) {
   if (level >= 4) return '마켓 멤버 (Lv4)';
   if (level >= 3) return '리더 멤버 (Lv3)';
   if (level >= 2) return '새싹 회원 (Lv2)';
-  return '방문자 (손님)';
+  return '신규 회원 (Lv1)';
 }
 
 export function getLevelProgress(points = 0) {

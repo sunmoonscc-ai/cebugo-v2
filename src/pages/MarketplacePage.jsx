@@ -54,6 +54,8 @@ export default function MarketplacePage() {
   const [agreeContact, setAgreeContact] = useState(true);
 
   const [inputKakaoId, setInputKakaoId] = useState('');
+  const [inputPhone, setInputPhone] = useState('');
+  const [inputPhoneKr, setInputPhoneKr] = useState('');
 
   const [rules, setRules] = useState({
     readLevel: 1, reqPhoneRead: false, reqKakaoRead: false,
@@ -189,10 +191,17 @@ export default function MarketplacePage() {
   };
 
   const filteredMarketplace = marketplace.filter(item => {
-    const matchCategory = filterCategory === 'all' || item.category === filterCategory;
+    if (filterCategory === 'favorites') {
+      const isFavorited = item.favoritesUsers?.includes(userProfile?.uid);
+      if (!isFavorited) return false;
+    } else {
+      const matchCategory = filterCategory === 'all' || item.category === filterCategory;
+      if (!matchCategory) return false;
+    }
+
     const matchSearch = item.title.toLowerCase().includes(searchKeyword.toLowerCase()) || 
                         item.description.toLowerCase().includes(searchKeyword.toLowerCase());
-    return matchCategory && matchSearch;
+    return matchSearch;
   });
 
   const handleReqKakaoVerif = async (e) => {
@@ -217,6 +226,46 @@ export default function MarketplacePage() {
     alert('카카오톡 ID 등록 및 관리자 인증 신청이 완료되었습니다.');
   };
 
+  const handleReqPhoneVerif = async (e) => {
+    e.preventDefault();
+    if (!inputPhone.trim()) return;
+    
+    await updateUserProfile({ phoneNumber: inputPhone });
+    
+    addSubmission({
+      type: 'verification',
+      field: 'phone',
+      oldValue: '미인증',
+      newValue: inputPhone,
+      uid: userProfile?.uid,
+      userName: userProfile?.displayName || '사용자',
+      placeId: 'verification',
+      placeName: '현지 휴대폰 인증 요청'
+    });
+    
+    alert('필리핀 현지폰 번호 등록 및 관리자 인증 신청이 완료되었습니다.');
+  };
+
+  const handleReqPhoneKrVerif = async (e) => {
+    e.preventDefault();
+    if (!inputPhoneKr.trim()) return;
+    
+    await updateUserProfile({ phoneKr: inputPhoneKr });
+    
+    addSubmission({
+      type: 'verification',
+      field: 'phoneKr',
+      oldValue: '미인증',
+      newValue: inputPhoneKr,
+      uid: userProfile?.uid,
+      userName: userProfile?.displayName || '사용자',
+      placeId: 'verification',
+      placeName: '한국 휴대폰 인증 요청'
+    });
+    
+    alert('한국 휴대폰 번호 등록 및 관리자 인증 신청이 완료되었습니다.');
+  };
+
   return (
     <div className="page-content fade-in">
       <div className="marketplace-header glass-card">
@@ -238,9 +287,37 @@ export default function MarketplacePage() {
 
             <div className="verification-request-actions">
               {!userProfile.phoneVerified && (
-                <button className="btn btn-secondary phone-auth-btn" onClick={() => setShowPhoneAuthModal(true)}>
-                  현지폰 인증 신청
-                </button>
+                <form onSubmit={handleReqPhoneVerif} className="kakao-verif-form">
+                  <input
+                    type="text"
+                    placeholder="현지폰 입력"
+                    value={inputPhone}
+                    onChange={(e) => setInputPhone(e.target.value)}
+                    className="form-input"
+                    style={{ width: '120px', padding: '4px 8px', fontSize: '0.8rem' }}
+                    required
+                  />
+                  <button type="submit" className="btn btn-secondary phone-auth-btn">
+                    현지폰 인증 신청
+                  </button>
+                </form>
+              )}
+              
+              {!userProfile.phoneKrVerified && (
+                <form onSubmit={handleReqPhoneKrVerif} className="kakao-verif-form">
+                  <input
+                    type="text"
+                    placeholder="한국폰 입력"
+                    value={inputPhoneKr}
+                    onChange={(e) => setInputPhoneKr(e.target.value)}
+                    className="form-input"
+                    style={{ width: '120px', padding: '4px 8px', fontSize: '0.8rem' }}
+                    required
+                  />
+                  <button type="submit" className="btn btn-secondary phone-auth-btn">
+                    한국폰 인증 신청
+                  </button>
+                </form>
               )}
 
               {!userProfile.kakaoVerified && (
@@ -382,6 +459,7 @@ export default function MarketplacePage() {
           </div>
           
           <div className="category-tabs glass-card" style={{ marginBottom: '20px', display: 'flex', overflowX: 'auto', gap: '8px', padding: '8px 16px', whiteSpace: 'nowrap' }}>
+            <button className={`btn ${filterCategory === 'favorites' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('favorites')}>관심상품</button>
             <button className={`btn ${filterCategory === 'all' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('all')}>전체</button>
             <button className={`btn ${filterCategory === 'furniture' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('furniture')}>가구</button>
             <button className={`btn ${filterCategory === 'etc' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('etc')}>기타</button>
@@ -498,7 +576,22 @@ export default function MarketplacePage() {
                             </button>
                           </div>
                         ) : (
-                          <button className="btn btn-secondary report-btn" onClick={(e) => { e.stopPropagation(); alert('신고가 접수되었습니다.'); }}>
+                          <button className="btn btn-secondary report-btn" onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (window.confirm('이 게시물을 신고하시겠습니까?')) {
+                              addSubmission({
+                                type: 'report',
+                                field: '게시물 신고',
+                                oldValue: item.title,
+                                newValue: '신고 접수',
+                                uid: userProfile?.uid || 'guest',
+                                userName: userProfile?.displayName || '방문자',
+                                placeId: item.id,
+                                placeName: '중고거래 게시물'
+                              });
+                              alert('신고가 접수되었습니다.'); 
+                            }
+                          }}>
                             <RiFlag2Line /> 신고
                           </button>
                         )}

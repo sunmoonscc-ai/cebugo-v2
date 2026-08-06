@@ -560,6 +560,7 @@ export const PlacesProvider = ({ children }) => {
     if (subToApprove.type === 'verification' && subToApprove.uid) {
       const updateData = {};
       if (subToApprove.field === 'phone') updateData.phoneVerified = true;
+      if (subToApprove.field === 'phoneKr') updateData.phoneKrVerified = true;
       if (subToApprove.field === 'kakao') updateData.kakaoVerified = true;
       
       if (Object.keys(updateData).length > 0) {
