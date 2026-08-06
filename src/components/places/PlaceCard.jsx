@@ -30,12 +30,14 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
   };
 
   // Gather all images from cover, facility, product, menu
-  const allImages = [
-    ...(place.images?.cover || []),
-    ...(place.images?.facility || []),
-    ...(place.images?.product || []),
-    ...(place.images?.menu || [])
-  ].filter(Boolean);
+  const allImages = Array.isArray(place.images) 
+    ? place.images.filter(Boolean)
+    : [
+        ...(place.images?.cover || []),
+        ...(place.images?.facility || []),
+        ...(place.images?.product || []),
+        ...(place.images?.menu || [])
+      ].filter(Boolean);
 
   const imagesToDisplay = allImages.length > 0
     ? allImages

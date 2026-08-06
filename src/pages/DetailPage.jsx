@@ -88,12 +88,14 @@ export default function DetailPage() {
 
     if (activeTab !== 'cover') return [];
 
-    const allImgs = [
-      ...(place.images.cover || []),
-      ...(place.images.facility || []),
-      ...(place.images.product || []),
-      ...(place.images.menu || [])
-    ].filter(Boolean);
+    const allImgs = Array.isArray(place.images)
+      ? place.images.filter(Boolean)
+      : [
+          ...(place.images.cover || []),
+          ...(place.images.facility || []),
+          ...(place.images.product || []),
+          ...(place.images.menu || [])
+        ].filter(Boolean);
 
     if (allImgs.length > 0) return allImgs;
 

@@ -391,7 +391,31 @@ export const PlacesProvider = ({ children }) => {
         setPlaces(sortPlaces([...INITIAL_PLACES]));
       }
     );
-    return () => unsub();
+
+    // Marketplace sync
+    const unsubMarketplace = onSnapshot(
+      collection(db, 'cebugo_marketplace'),
+      (snapshot) => {
+        let list = [];
+        if (!snapshot.empty) {
+          list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+          // Sort by updatedAt descending (bumping) then createdAt
+          list.sort((a, b) => {
+            const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+            const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+            return dateB - dateA;
+          });
+        }
+        // When empty, list remains an empty array []
+        setMarketplace(list);
+      },
+      (err) => console.error('Firestore marketplace sync error:', err)
+    );
+
+    return () => {
+      unsub();
+      unsubMarketplace();
+    };
   }, []);
 
   // Sync Submissions from Firestore
@@ -403,13 +427,8 @@ export const PlacesProvider = ({ children }) => {
         if (!snapshot.empty) {
           list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
           list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        } else {
-          // Fallback to initial submissions if empty
-          list = [...INITIAL_SUBMISSIONS];
-          list.forEach(async (sub) => {
-            try { await setDoc(doc(db, 'cebugo_submissions', sub.id), sub); } catch(e){}
-          });
         }
+        // When empty, list remains an empty array []
         setSubmissions(list);
       },
       (err) => {
@@ -568,6 +587,17 @@ export const PlacesProvider = ({ children }) => {
       });
     }
 
+    // 2-1. Update user verification status if this is a verification request
+    if (subToApprove.type === 'verification' && subToApprove.uid) {
+      const updateData = {};
+      if (subToApprove.field === 'phone') updateData.phoneVerified = true;
+      if (subToApprove.field === 'kakao') updateData.kakaoVerified = true;
+      
+      if (Object.keys(updateData).length > 0) {
+        setDoc(doc(db, 'users', subToApprove.uid), updateData, { merge: true }).catch(e => console.error(e));
+      }
+    }
+
     // 3. Update Submission in Firestore
     try {
       await setDoc(doc(db, 'cebugo_submissions', subId), { status: 'approved' }, { merge: true });
@@ -618,14 +648,73 @@ export const PlacesProvider = ({ children }) => {
     }
   };
 
-  const addMarketplaceListing = (listing) => {
+  const addMarketplaceListing = async (listing) => {
+    const docId = `listing_${Date.now()}`;
     const newListing = {
-      id: `listing_${Date.now()}`,
+      id: docId,
       status: 'available',
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      favoritesCount: 0,
+      favoritesUsers: [],
       ...listing
     };
     setMarketplace((prev) => [newListing, ...prev]);
+    try {
+      await setDoc(doc(db, 'cebugo_marketplace', docId), newListing);
+    } catch (e) {
+      console.error('Failed to save listing to Firestore:', e);
+    }
+  };
+
+  const updateMarketplaceListing = async (id, data) => {
+    try {
+      await setDoc(doc(db, 'cebugo_marketplace', id), { ...data, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (e) {
+      console.error('Failed to update listing in Firestore:', e);
+    }
+  };
+
+  const deleteMarketplaceListing = async (id) => {
+    try {
+      await deleteDoc(doc(db, 'cebugo_marketplace', id));
+    } catch (e) {
+      console.error('Failed to delete listing in Firestore:', e);
+    }
+  };
+
+  const updateMarketplaceStatus = async (id, status) => {
+    try {
+      await setDoc(doc(db, 'cebugo_marketplace', id), { status, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (e) {
+      console.error('Failed to update listing status:', e);
+    }
+  };
+
+  const bumpMarketplaceListing = async (id) => {
+    try {
+      await setDoc(doc(db, 'cebugo_marketplace', id), { updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (e) {
+      console.error('Failed to bump listing:', e);
+    }
+  };
+
+  const toggleMarketplaceFavorite = async (id, uid) => {
+    const listing = marketplace.find(m => m.id === id);
+    if (!listing) return;
+    const isFavorited = listing.favoritesUsers?.includes(uid);
+    const newFavoritesUsers = isFavorited 
+      ? (listing.favoritesUsers || []).filter(u => u !== uid)
+      : [...(listing.favoritesUsers || []), uid];
+    
+    try {
+      await setDoc(doc(db, 'cebugo_marketplace', id), { 
+        favoritesUsers: newFavoritesUsers,
+        favoritesCount: newFavoritesUsers.length
+      }, { merge: true });
+    } catch (e) {
+      console.error('Failed to toggle favorite:', e);
+    }
   };
 
   const addReview = (placeId, review) => {
@@ -665,6 +754,11 @@ export const PlacesProvider = ({ children }) => {
         approveSubmission,
         rejectSubmission,
         addMarketplaceListing,
+        updateMarketplaceListing,
+        deleteMarketplaceListing,
+        updateMarketplaceStatus,
+        bumpMarketplaceListing,
+        toggleMarketplaceFavorite,
         addReview
       }}
     >

@@ -21,12 +21,51 @@ import ZoomableImage from '../components/common/ZoomableImage';
 import './ProfilePage.css';
 
 export default function ProfilePage() {
-  const { currentUser, userProfile, loginWithGoogle, logout } = useAuth();
+  const { currentUser, userProfile, updateUserProfile, loginWithGoogle, logout } = useAuth();
   const { places, submissions, addSubmission } = usePlaces();
   const [activeTab, setActiveTab] = useState('favorites'); // favorites, submissions, points
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [expandedSubId, setExpandedSubId] = useState(null);
+
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editKakao, setEditKakao] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+
+  // Update states when userProfile loads
+  React.useEffect(() => {
+    if (userProfile) {
+      setEditName(userProfile.displayName || '');
+      setEditKakao(userProfile.kakaoId || '');
+      setEditPhone(userProfile.phoneNumber || '');
+    }
+  }, [userProfile]);
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    await updateUserProfile({ displayName: editName, kakaoId: editKakao, phoneNumber: editPhone });
+    setIsEditingProfile(false);
+    alert('프로필 정보가 저장되었습니다.');
+  };
+
+  const handleReqKakaoVerif = () => {
+    if (!userProfile.kakaoId) {
+      alert('먼저 개인정보 수정에서 카카오톡 ID를 저장해주세요.');
+      return;
+    }
+    addSubmission({
+      type: 'verification',
+      field: 'kakao',
+      oldValue: '미인증',
+      newValue: userProfile.kakaoId,
+      uid: userProfile.uid,
+      userName: userProfile.displayName || '사용자',
+      placeId: 'verification',
+      placeName: '카카오톡 인증 요청'
+    });
+    alert('카카오톡 인증 신청이 관리자에게 전송되었습니다.');
+  };
 
   const [feedbackCategory, setFeedbackCategory] = useState('일반 건의 / 서비스 의견');
   const [feedbackContent, setFeedbackContent] = useState('');
@@ -73,6 +112,16 @@ export default function ProfilePage() {
     );
   }
 
+  if (!userProfile) {
+    return (
+      <div className="page-content fade-in">
+        <div style={{ textAlign: 'center', marginTop: '50px', color: '#64748b' }}>
+          프로필 정보를 불러오는 중입니다...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="page-content fade-in">
       {/* Profile Summary Header */}
@@ -90,8 +139,24 @@ export default function ProfilePage() {
               <PhoneVerifiedBadge isVerified={userProfile.phoneVerified} />
               <KakaoVerifiedBadge isVerified={userProfile.kakaoVerified} />
             </div>
+            
+            <button className="btn btn-secondary" style={{ marginTop: '8px', fontSize: '0.8rem', padding: '4px 8px' }} onClick={() => setIsEditingProfile(!isEditingProfile)}>
+              {isEditingProfile ? '수정 취소' : '개인정보 수정'}
+            </button>
           </div>
         </div>
+
+        {isEditingProfile && (
+          <form onSubmit={handleSaveProfile} className="glass-card" style={{ padding: '16px', marginBottom: '16px', background: '#f8fafc' }}>
+            <label className="form-label">닉네임</label>
+            <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="form-input" required />
+            <label className="form-label" style={{ marginTop: '12px' }}>현지 휴대폰 번호</label>
+            <input type="text" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="form-input" placeholder="0917..." />
+            <label className="form-label" style={{ marginTop: '12px' }}>카카오톡 ID (중고거래용)</label>
+            <input type="text" value={editKakao} onChange={(e) => setEditKakao(e.target.value)} className="form-input" placeholder="카카오톡 ID 입력" />
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '16px' }}>저장하기</button>
+          </form>
+        )}
 
         {/* Level Progress Bar */}
         <div className="level-progress-box">
@@ -120,7 +185,24 @@ export default function ProfilePage() {
 
           {!userProfile.phoneVerified && (
             <button className="btn btn-secondary phone-auth-trigger" onClick={() => setShowPhoneModal(true)}>
-              인증하기
+              인증 신청
+            </button>
+          )}
+        </div>
+
+        {/* Kakao Verification Status */}
+        <div className="phone-status-card" style={{ marginTop: '12px' }}>
+          <div className="status-text">
+            <RiUser3Line className="status-icon" />
+            <div>
+              <strong>카카오톡 아이디 연동</strong>
+              <p>{userProfile.kakaoVerified ? userProfile.kakaoId : (userProfile.kakaoId ? `${userProfile.kakaoId} (미인증)` : '미인증 상태 (중고거래 제한)')}</p>
+            </div>
+          </div>
+
+          {!userProfile.kakaoVerified && (
+            <button className="btn btn-secondary phone-auth-trigger" onClick={handleReqKakaoVerif}>
+              인증 신청
             </button>
           )}
         </div>

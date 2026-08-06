@@ -11,6 +11,7 @@ export default function AdminUserEditModal({ user, onClose }) {
     points: user.points || 0,
     phoneNumber: user.phoneNumber || '',
     kakaoId: user.kakaoId || '',
+    pointReason: '',
   });
   
   const [isSaving, setIsSaving] = useState(false);
@@ -33,9 +34,10 @@ export default function AdminUserEditModal({ user, onClose }) {
 
       if (updateData.points !== user.points) {
         const pointDiff = updateData.points - user.points;
+        const reason = formData.pointReason.trim() || '관리자 직권 수정';
         const newLedgerItem = {
           id: `admin_adj_${Date.now()}`,
-          title: `관리자 직권 수정`,
+          title: reason,
           points: Math.abs(pointDiff),
           date: new Date().toISOString().split('T')[0],
           type: pointDiff > 0 ? 'plus' : 'minus'
@@ -44,11 +46,11 @@ export default function AdminUserEditModal({ user, onClose }) {
       }
 
       await setDoc(doc(db, 'users', user.uid), updateData, { merge: true });
-      alert('사용자 정보가 성공적으로 수정되었습니다.');
+      alert(`성공적으로 수정되었습니다!\n\n- 대상 사용자 UID: ${user.uid}\n- 수정된 포인트: ${updateData.points}p\n\n(참고: 내 프로필과 대상 사용자가 다를 경우 내 프로필 화면에는 반영되지 않습니다.)`);
       onClose();
     } catch (err) {
       console.error('Failed to update user:', err);
-      alert('사용자 정보 수정에 실패했습니다.');
+      alert(`수정에 실패했습니다: ${err.message}`);
     } finally {
       setIsSaving(false);
     }
@@ -95,6 +97,17 @@ export default function AdminUserEditModal({ user, onClose }) {
                 required
               />
             </div>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>포인트 조정 사유 (선택, 포인트 수정시에만 기록됨)</label>
+            <input 
+              type="text" 
+              className="form-input"
+              value={formData.pointReason}
+              onChange={(e) => setFormData({...formData, pointReason: e.target.value})}
+              placeholder="예: 이벤트 당첨, 페널티 등"
+            />
           </div>
           
           <div style={{ marginBottom: '16px' }}>

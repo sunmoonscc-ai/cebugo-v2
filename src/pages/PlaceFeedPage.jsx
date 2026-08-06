@@ -462,10 +462,22 @@ export default function PlaceFeedPage() {
             const isExpired = statusInfo.status === 'expired';
             const isTickerActive = (post.isTicker === true || post.isTicker === 'true') && !isExpired;
             const isExpanded = !!expandedEndedPosts[post.id];
-            const shouldCollapse = isExpired && !isExpanded;
+            
+            const is24HoursPassed = (() => {
+              if (post.category !== 'event') return false;
+              const postTime = post.createdAt || post.updatedAt || (post.date ? `${post.date}T00:00:00Z` : null);
+              if (!postTime) return false;
+              const postDate = new Date(postTime);
+              if (isNaN(postDate.getTime())) return false;
+              const diffHours = (new Date() - postDate) / (1000 * 60 * 60);
+              return diffHours >= 24;
+            })();
+
+            const isCollapsible = isExpired || is24HoursPassed;
+            const shouldCollapse = isCollapsible && !isExpanded;
 
             const toggleExpand = () => {
-              if (isExpired) {
+              if (isCollapsible) {
                 setExpandedEndedPosts(prev => ({ ...prev, [post.id]: !prev[post.id] }));
               }
             };
@@ -474,27 +486,30 @@ export default function PlaceFeedPage() {
               <div 
                 key={post.id} 
                 className="glass-card post-card fade-in"
-                style={{ opacity: isExpired && !isExpanded ? 0.5 : 1, transition: 'opacity 0.3s' }}
+                style={{ 
+                  color: isExpired ? 'rgba(30, 41, 59, 0.5)' : undefined, 
+                  transition: 'color 0.3s' 
+                }}
               >
                 <div 
                   className="post-header-row"
-                  style={{ cursor: isExpired ? 'pointer' : 'default' }}
-                  onClick={isExpired ? toggleExpand : undefined}
+                  style={{ cursor: isCollapsible ? 'pointer' : 'default' }}
+                  onClick={isCollapsible ? toggleExpand : undefined}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className={`post-cat-badge ${post.category}`}>
+                    <span className={`post-cat-badge ${post.category}`} style={{ opacity: isExpired ? 0.5 : 1 }}>
                       {post.category === 'ad' ? '📣 광고' : '🎉 이벤트'}
                     </span>
                     {post.advertiserId && advertisers.find(a => a.id === post.advertiserId) ? (() => {
                       const adv = advertisers.find(a => a.id === post.advertiserId);
                       return (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }} onClick={() => setSelectedAdvertiserId(adv.id)}>
-                          {adv.logoUrl && <img src={adv.logoUrl} alt={adv.name} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', opacity: isExpired && !isExpanded ? 0.5 : 1 }} />}
-                          <span className="post-place-name" style={{ fontWeight: 'bold', color: isExpired && !isExpanded ? 'rgba(30, 41, 59, 0.45)' : undefined }}>{adv.name}</span>
+                          {adv.logoUrl && <img src={adv.logoUrl} alt={adv.name} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', opacity: isExpired ? 0.5 : 1 }} />}
+                          <span className="post-place-name" style={{ fontWeight: 'bold', color: isExpired ? 'rgba(30, 41, 59, 0.5)' : undefined }}>{adv.name}</span>
                         </div>
                       );
                     })() : (
-                      <span className="post-place-name" style={{ color: isExpired && !isExpanded ? 'rgba(30, 41, 59, 0.45)' : undefined }}>{post.authorName || post.placeName}</span>
+                      <span className="post-place-name" style={{ color: isExpired ? 'rgba(30, 41, 59, 0.5)' : undefined }}>{post.authorName || post.placeName}</span>
                     )}
                     {post.location && (
                       <span className="post-cat-badge" style={{ background: '#f0f9ff', color: '#0284c7', border: '1px solid #bae6fd', fontWeight: 600 }}>
@@ -601,14 +616,14 @@ export default function PlaceFeedPage() {
                 <h3 
                   className="post-title"
                   style={{ 
-                    cursor: isExpired ? 'pointer' : 'default',
-                    color: isExpired && !isExpanded ? 'rgba(15, 23, 42, 0.45)' : undefined
+                    cursor: isCollapsible ? 'pointer' : 'default',
+                    color: isExpired ? 'rgba(15, 23, 42, 0.5)' : undefined
                   }}
-                  onClick={isExpired ? toggleExpand : undefined}
+                  onClick={isCollapsible ? toggleExpand : undefined}
                 >
                   {post.title}
-                  {isExpired && (
-                    <span style={{ fontSize: '0.85rem', color: '#64748b', marginLeft: '8px', fontWeight: 'normal' }}>
+                  {isCollapsible && (
+                    <span style={{ fontSize: '0.85rem', color: '#64748b', marginLeft: '8px', fontWeight: 'normal', opacity: isExpired ? 0.5 : 1 }}>
                       {isExpanded ? '▲ 접기' : '▼ 펼쳐보기'}
                     </span>
                   )}

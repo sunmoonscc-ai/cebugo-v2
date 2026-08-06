@@ -48,8 +48,7 @@ export default function AdminSubmissionsPage() {
   useEffect(() => {
     const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
       const userList = snapshot.docs
-        .map(d => ({ ...d.data(), uid: d.id }))
-        .filter(u => !u.isAdmin); // Exclude admins
+        .map(d => ({ ...d.data(), uid: d.id }));
       setUsers(userList);
     });
     return () => unsubUsers();
@@ -78,6 +77,32 @@ export default function AdminSubmissionsPage() {
       );
     } catch (e) {
       console.error('Failed to update ticker speed in Firestore:', e);
+    }
+  };
+
+  const handleApproveAdvertiser = async (id, placeId) => {
+    try {
+      const placeRef = doc(db, 'cebugo_places', placeId);
+      const placeSnap = await getDoc(placeRef);
+      if (placeSnap.exists()) {
+        const placeData = placeSnap.data();
+        const allImages = [
+          ...(placeData.images?.cover || []),
+          ...(placeData.images?.facility || []),
+          ...(placeData.images?.product || []),
+          ...(placeData.images?.menu || [])
+        ].filter(Boolean);
+        const logoUrl = allImages.length > 0 ? allImages[0] : '';
+        await setDoc(doc(db, 'cebugo_advertisers', placeId), {
+          name: placeData.name,
+          logoUrl: logoUrl
+        });
+      }
+
+      await setDoc(doc(db, 'cebugo_submissions', id), { status: 'approved', processedAt: new Date().toISOString() }, { merge: true });
+      alert('광고주가 승인되었습니다.');
+    } catch (err) {
+      console.error('Failed to approve advertiser:', err);
     }
   };
 
