@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../firebase/config';
 import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
 import { CATEGORY_MAP } from '../constants/categories';
-import { sanitizePlaceForFirestore } from '../utils/imageHelper';
+import { sanitizePlaceForFirestore, compressImageDataUrl, uploadImageToFirebaseStorage } from '../utils/imageHelper';
 
 const PlacesContext = createContext();
 
@@ -266,38 +266,7 @@ const INITIAL_PLACES = [
 ];
 
 // Initial Mock Marketplace Listings
-const INITIAL_MARKETPLACE = [
-  {
-    id: 'listing_1',
-    sellerUid: 'user_1',
-    sellerName: '막탄주민',
-    sellerLevel: 7,
-    title: '스노클링 장비 & 오리발 풀세트 (상태 A급)',
-    description: '지난주 세부 여행에서 1회 사용한 스노클링 장비 판매합니다. 세척 완료했습니다.',
-    price: '1,200 PHP',
-    category: 'sports',
-    images: ['https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&q=80'],
-    status: 'available',
-    phone: '09171234567',
-    sns: 'k_cebulover',
-    createdAt: '2026-07-22'
-  },
-  {
-    id: 'listing_2',
-    sellerUid: 'user_2',
-    sellerName: '세부살이',
-    sellerLevel: 12,
-    title: '필리핀 110V-220V 변압기 및 멀티어댑터',
-    description: '귀국으로 인해 처분합니다. 귀국 전 막탄 제이파크 부근 직거래 가능합니다.',
-    price: '300 PHP',
-    category: 'electronics',
-    images: ['https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=600&q=80'],
-    status: 'available',
-    phone: '09209876543',
-    sns: 'k_cebuadapter',
-    createdAt: '2026-07-23'
-  }
-];
+const INITIAL_MARKETPLACE = [];
 
 // Initial Submissions for Admin Approval
 const INITIAL_SUBMISSIONS = [
@@ -661,17 +630,51 @@ export const PlacesProvider = ({ children }) => {
     };
     setMarketplace((prev) => [newListing, ...prev]);
     try {
-      await setDoc(doc(db, 'cebugo_marketplace', docId), newListing);
+      const uploadedImages = [];
+      if (Array.isArray(listing.images)) {
+        for (const img of listing.images) {
+          if (typeof img === 'string' && img.startsWith('data:image')) {
+            const compressed = await compressImageDataUrl(img, 1000, 0.8);
+            const cloudUrl = await uploadImageToFirebaseStorage(compressed, 'marketplace');
+            uploadedImages.push(cloudUrl);
+          } else {
+            uploadedImages.push(img);
+          }
+        }
+      }
+      
+      const finalListing = { ...newListing, images: uploadedImages };
+      await setDoc(doc(db, 'cebugo_marketplace', docId), finalListing);
+      
+      // Update local state with real URLs
+      setMarketplace((prev) => prev.map(m => m.id === docId ? finalListing : m));
     } catch (e) {
       console.error('Failed to save listing to Firestore:', e);
+      alert('중고물품 등록 중 오류가 발생했습니다.');
+      setMarketplace((prev) => prev.filter(m => m.id !== docId));
     }
   };
 
   const updateMarketplaceListing = async (id, data) => {
     try {
-      await setDoc(doc(db, 'cebugo_marketplace', id), { ...data, updatedAt: new Date().toISOString() }, { merge: true });
+      const uploadedImages = [];
+      if (Array.isArray(data.images)) {
+        for (const img of data.images) {
+          if (typeof img === 'string' && img.startsWith('data:image')) {
+            const compressed = await compressImageDataUrl(img, 1000, 0.8);
+            const cloudUrl = await uploadImageToFirebaseStorage(compressed, 'marketplace');
+            uploadedImages.push(cloudUrl);
+          } else {
+            uploadedImages.push(img);
+          }
+        }
+      }
+      const finalData = { ...data, images: uploadedImages, updatedAt: new Date().toISOString() };
+      
+      await setDoc(doc(db, 'cebugo_marketplace', id), finalData, { merge: true });
     } catch (e) {
       console.error('Failed to update listing in Firestore:', e);
+      alert('중고물품 수정 중 오류가 발생했습니다.');
     }
   };
 

@@ -13,7 +13,8 @@ import {
   RiDownload2Line,
   RiUser3Line,
   RiStore2Line,
-  RiAddLine
+  RiAddLine,
+  RiSettings3Line
 } from 'react-icons/ri';
 import ZoomableImage from '../../components/common/ZoomableImage';
 import AdminUserEditModal from '../../components/modals/AdminUserEditModal';
@@ -34,6 +35,11 @@ export default function AdminSubmissionsPage() {
   const [editingAdvertiser, setEditingAdvertiser] = useState(null);
   const [isAdvertiserModalOpen, setIsAdvertiserModalOpen] = useState(false);
 
+  const [marketplaceRules, setMarketplaceRules] = useState({
+    readLevel: 1, reqPhoneRead: false, reqKakaoRead: false,
+    writeLevel: 4, reqPhoneWrite: true, reqKakaoWrite: true
+  });
+
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'cebugo_config', 'ticker_speed'), (docSnap) => {
       if (docSnap.exists()) {
@@ -42,7 +48,14 @@ export default function AdminSubmissionsPage() {
         setAdSpeedMultiplier(data.adSpeedMultiplier || 1);
       }
     });
-    return () => unsub();
+
+    const unsubRules = onSnapshot(doc(db, 'cebugo_config', 'marketplace_rules'), (docSnap) => {
+      if (docSnap.exists()) {
+        setMarketplaceRules(docSnap.data());
+      }
+    });
+
+    return () => { unsub(); unsubRules(); };
   }, []);
 
   useEffect(() => {
@@ -77,6 +90,35 @@ export default function AdminSubmissionsPage() {
       );
     } catch (e) {
       console.error('Failed to update ticker speed in Firestore:', e);
+    }
+  };
+
+  const handleSaveMarketplaceRules = async () => {
+    try {
+      await setDoc(doc(db, 'cebugo_config', 'marketplace_rules'), {
+        ...marketplaceRules,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      alert('중고거래 설정이 성공적으로 저장되었습니다.');
+    } catch (e) {
+      console.error('Failed to save marketplace rules:', e);
+      alert('설정 저장 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleApproveRejoin = async (user) => {
+    if (!window.confirm(`${user.displayName} 사용자의 재가입을 승인하시겠습니까?`)) return;
+    try {
+      await setDoc(doc(db, 'users', user.uid), {
+        deleted: false,
+        deleteReason: null,
+        deletedAt: null,
+        rejoinRequested: false,
+        rejoinRequestedAt: null
+      }, { merge: true });
+      alert('승인 완료되었습니다. 사용자가 다시 로그인할 수 있습니다.');
+    } catch (err) {
+      alert('승인 중 오류 발생: ' + err.message);
     }
   };
 
@@ -235,7 +277,25 @@ export default function AdminSubmissionsPage() {
           onClick={() => setAdminTab('users')}
         >
           <RiUser3Line className="tab-icon" />
-          <span>사용자 ({users.length})</span>
+          <span>사용자 ({users.filter(u => !u.deleted).length})</span>
+        </button>
+
+        <button 
+          type="button"
+          className={`news-tab-btn ${adminTab === 'deleted_users' ? 'active' : ''}`}
+          onClick={() => setAdminTab('deleted_users')}
+        >
+          <RiUser3Line className="tab-icon" />
+          <span>탈퇴 사용자 ({users.filter(u => u.deleted).length})</span>
+        </button>
+
+        <button 
+          type="button"
+          className={`news-tab-btn ${adminTab === 'marketplace' ? 'active' : ''}`}
+          onClick={() => setAdminTab('marketplace')}
+        >
+          <RiSettings3Line className="tab-icon" />
+          <span>중고거래 권한</span>
         </button>
 
         <button 
@@ -304,6 +364,63 @@ export default function AdminSubmissionsPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 1.5: 중고거래 권한 설정 */}
+      {adminTab === 'marketplace' && (
+        <div className="tab-content-section fade-in">
+          <div className="glass-card config-form" style={{ padding: '22px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <RiSettings3Line style={{ fontSize: '1.4rem', color: 'var(--primary)' }} />
+              <h3 style={{ margin: 0, fontSize: '1.08rem', fontWeight: 700, color: '#1e293b' }}>
+                🛡️ 중고거래 접근 권한 설정
+              </h3>
+            </div>
+            <p style={{ fontSize: '0.84rem', color: '#64748b', marginBottom: '18px', lineHeight: '1.45' }}>
+              중고거래 게시판을 열람하거나 새 매물을 등록할 수 있는 최소 레벨 및 필수 인증 조건을 설정합니다.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+              {/* 읽기 권한 */}
+              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                <h4 style={{ margin: '0 0 12px 0', color: '#1e293b' }}>👀 읽기(열람) 권한</h4>
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>최소 레벨 (Lv)</label>
+                  <input type="number" min="1" max="20" className="form-input" value={marketplaceRules.readLevel} onChange={e => setMarketplaceRules({...marketplaceRules, readLevel: parseInt(e.target.value, 10) || 1})} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <input type="checkbox" id="reqPhoneRead" checked={marketplaceRules.reqPhoneRead} onChange={e => setMarketplaceRules({...marketplaceRules, reqPhoneRead: e.target.checked})} />
+                  <label htmlFor="reqPhoneRead" style={{ fontSize: '0.85rem' }}>전화번호 인증 필수</label>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input type="checkbox" id="reqKakaoRead" checked={marketplaceRules.reqKakaoRead} onChange={e => setMarketplaceRules({...marketplaceRules, reqKakaoRead: e.target.checked})} />
+                  <label htmlFor="reqKakaoRead" style={{ fontSize: '0.85rem' }}>카카오톡 인증 필수</label>
+                </div>
+              </div>
+
+              {/* 쓰기 권한 */}
+              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                <h4 style={{ margin: '0 0 12px 0', color: '#1e293b' }}>✍️ 쓰기(등록) 권한</h4>
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>최소 레벨 (Lv)</label>
+                  <input type="number" min="1" max="20" className="form-input" value={marketplaceRules.writeLevel} onChange={e => setMarketplaceRules({...marketplaceRules, writeLevel: parseInt(e.target.value, 10) || 1})} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <input type="checkbox" id="reqPhoneWrite" checked={marketplaceRules.reqPhoneWrite} onChange={e => setMarketplaceRules({...marketplaceRules, reqPhoneWrite: e.target.checked})} />
+                  <label htmlFor="reqPhoneWrite" style={{ fontSize: '0.85rem' }}>전화번호 인증 필수</label>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input type="checkbox" id="reqKakaoWrite" checked={marketplaceRules.reqKakaoWrite} onChange={e => setMarketplaceRules({...marketplaceRules, reqKakaoWrite: e.target.checked})} />
+                  <label htmlFor="reqKakaoWrite" style={{ fontSize: '0.85rem' }}>카카오톡 인증 필수</label>
+                </div>
+              </div>
+            </div>
+
+            <button type="button" className="btn btn-primary" style={{ width: '100%', padding: '12px' }} onClick={handleSaveMarketplaceRules}>
+              <RiCheckLine /> 중고거래 권한 설정 저장
+            </button>
           </div>
         </div>
       )}
@@ -440,18 +557,19 @@ export default function AdminSubmissionsPage() {
       </div>
     </div>
   )}
+
   {/* TAB 3: 사용자 목록 */}
   {adminTab === 'users' && (
     <div className="tab-content-section fade-in">
       <div className="section-title">
-        <h2>일반 사용자 목록 <span>({users.length})</span></h2>
+        <h2>일반 사용자 목록 <span>({users.filter(u => !u.deleted).length})</span></h2>
       </div>
       
-      {users.length === 0 ? (
+      {users.filter(u => !u.deleted).length === 0 ? (
         <div className="glass-card empty-state"><p>조회된 사용자가 없습니다.</p></div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {users.map(u => (
+          {users.filter(u => !u.deleted).map(u => (
             <div 
               key={u.uid} 
               className="glass-card hover-lift" 
@@ -471,6 +589,58 @@ export default function AdminSubmissionsPage() {
                 </div>
               </div>
               <button className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>수정</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )}
+
+  {/* TAB 5: 탈퇴 사용자 */}
+  {adminTab === 'deleted_users' && (
+    <div className="tab-content-section fade-in">
+      <div className="section-title">
+        <h2 style={{ color: '#ef4444' }}>탈퇴 사용자 목록 <span>({users.filter(u => u.deleted).length})</span></h2>
+      </div>
+      
+      {users.filter(u => u.deleted).length === 0 ? (
+        <div className="glass-card empty-state"><p>탈퇴한 사용자가 없습니다.</p></div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {users.filter(u => u.deleted).map(u => (
+            <div 
+              key={u.uid} 
+              className="glass-card" 
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', opacity: 0.7 }} 
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#1e293b', textDecoration: 'line-through' }}>
+                  {u.displayName || '이름 없음'} <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'normal', textDecoration: 'none' }}>(Lv.{u.level || 1})</span>
+                </h3>
+                <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '6px', display: 'flex', gap: '10px' }}>
+                  <span><strong style={{color: '#2563eb'}}>P</strong> {u.points || 0}</span>
+                  <span>|</span>
+                  <span>📞 {u.phoneNumber || '미입력'}</span>
+                  <span>|</span>
+                  <span>💬 {u.kakaoId || '미입력'}</span>
+                </div>
+                <div style={{ marginTop: '10px', color: '#ef4444', fontSize: '0.85rem', backgroundColor: '#fee2e2', padding: '6px 10px', borderRadius: '6px' }}>
+                  <strong>탈퇴 사유:</strong> {u.deleteReason || '기록 없음'} <br/>
+                  <strong style={{ marginTop: '4px', display: 'block' }}>탈퇴 일시:</strong> {u.deletedAt ? new Date(u.deletedAt).toLocaleString() : '기록 없음'}
+                </div>
+              </div>
+              
+              {u.rejoinRequested && (
+                <div style={{ marginLeft: '16px' }}>
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ fontSize: '0.8rem', padding: '8px 12px', background: '#2563eb' }}
+                    onClick={() => handleApproveRejoin(u)}
+                  >
+                    재가입 승인
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

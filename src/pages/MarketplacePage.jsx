@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { usePlaces } from '../context/PlacesContext';
 import { useAuth } from '../context/AuthContext';
+import { db } from '../firebase/config';
+import { doc, onSnapshot } from 'firebase/firestore';
 import PhoneAuthModal from '../components/modals/PhoneAuthModal';
 import { LevelBadge, PhoneVerifiedBadge, KakaoVerifiedBadge } from '../components/common/Badge';
 import { parseSnsEntry } from '../utils/phoneSnsClassifier';
@@ -53,12 +55,50 @@ export default function MarketplacePage() {
 
   const [inputKakaoId, setInputKakaoId] = useState('');
 
-  const writeLevelRequired = 4;
-  const readLevelRequired = 3;
+  const [rules, setRules] = useState({
+    readLevel: 1, reqPhoneRead: false, reqKakaoRead: false,
+    writeLevel: 4, reqPhoneWrite: true, reqKakaoWrite: true
+  });
 
-  const userCanRead = userProfile?.isAdmin || (userProfile?.level >= readLevelRequired);
-  // Requires both Phone Verified and Kakao Verified
-  const userCanWrite = userProfile?.isAdmin || (userProfile?.level >= writeLevelRequired && userProfile?.phoneVerified && userProfile?.kakaoVerified);
+  React.useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'cebugo_config', 'marketplace_rules'), (docSnap) => {
+      if (docSnap.exists()) {
+        setRules(docSnap.data());
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const isValidUser = userProfile && !userProfile.isGuest;
+
+  const userCanRead = isValidUser && (
+    userProfile.isAdmin || (
+      userProfile.level >= rules.readLevel &&
+      (!rules.reqPhoneRead || userProfile.phoneVerified) &&
+      (!rules.reqKakaoRead || userProfile.kakaoVerified)
+    )
+  );
+  
+  const userCanWrite = isValidUser && (
+    userProfile.isAdmin || (
+      userProfile.level >= rules.writeLevel &&
+      (!rules.reqPhoneWrite || userProfile.phoneVerified) &&
+      (!rules.reqKakaoWrite || userProfile.kakaoVerified)
+    )
+  );
+
+  const checkWriteAccess = () => {
+    if (userCanWrite) {
+      setShowWriteForm(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    let msg = `새 매물을 등록하려면 다음 조건을 충족해야 합니다.\n\n- 최소 레벨: Lv.${rules.writeLevel}\n`;
+    if (rules.reqPhoneWrite) msg += `- 전화번호 인증 완료\n`;
+    if (rules.reqKakaoWrite) msg += `- 카카오톡 인증 완료\n`;
+    alert(msg);
+  };
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -183,56 +223,60 @@ export default function MarketplacePage() {
         <div className="header-info">
           <h2>
             <RiShoppingBagLine /> 중고거래
-            <span className="header-info-sub"> - 세부 현지 중고물품 거래 (열람은 레벨3 이상, 작성은 레벨4 이상 & 현지 휴대전화 및 카카오톡 인증 시 가능)</span>
+            <span className="header-info-sub"> - 세부 현지 중고물품 거래 (열람은 Lv.{rules.readLevel} 이상, 작성은 Lv.{rules.writeLevel} 이상 및 설정된 필수인증 필요)</span>
           </h2>
         </div>
 
-        <div className="user-eligibility-box">
-          <div className="eligibility-status">
-            <span>내 인증 상태:</span>
-            <LevelBadge level={userProfile?.level || 1} />
-            <PhoneVerifiedBadge isVerified={userProfile?.phoneVerified} />
-            <KakaoVerifiedBadge isVerified={userProfile?.kakaoVerified} />
-          </div>
+        {isValidUser && (
+          <div className="user-eligibility-box">
+            <div className="eligibility-status">
+              <span>내 인증 상태:</span>
+              <LevelBadge level={userProfile.level || 1} />
+              <PhoneVerifiedBadge isVerified={userProfile.phoneVerified} />
+              <KakaoVerifiedBadge isVerified={userProfile.kakaoVerified} />
+            </div>
 
-          <div className="verification-request-actions">
-            {!userProfile?.phoneVerified && (
-              <button className="btn btn-secondary phone-auth-btn" onClick={() => setShowPhoneAuthModal(true)}>
-                현지폰 인증 신청
-              </button>
-            )}
-
-            {!userProfile?.kakaoVerified && (
-              <form onSubmit={handleReqKakaoVerif} className="kakao-verif-form">
-                <input
-                  type="text"
-                  placeholder="카톡 ID 입력"
-                  value={inputKakaoId}
-                  onChange={(e) => setInputKakaoId(e.target.value)}
-                  className="form-input"
-                  style={{ width: '120px', padding: '4px 8px', fontSize: '0.8rem' }}
-                  required
-                />
-                <button type="submit" className="btn btn-secondary phone-auth-btn">
-                  카톡 인증 신청
+            <div className="verification-request-actions">
+              {!userProfile.phoneVerified && (
+                <button className="btn btn-secondary phone-auth-btn" onClick={() => setShowPhoneAuthModal(true)}>
+                  현지폰 인증 신청
                 </button>
-              </form>
-            )}
-          </div>
-        </div>
+              )}
 
-        {userCanWrite ? (
-          <button className="btn btn-primary create-listing-btn" onClick={() => {
-            if (showWriteForm) cancelEdit();
-            else setShowWriteForm(true);
-          }}>
-            <RiAddLine /> {showWriteForm ? '작성 취소' : '중고 물품 등록하기'}
-          </button>
-        ) : (
-          <div className="lock-notice">
-            <RiLock2Line />
-            <span>등록 조건 미충족 (Lv.4 이상 + [현지폰 & 카톡 수동인증] 필요)</span>
+              {!userProfile.kakaoVerified && (
+                <form onSubmit={handleReqKakaoVerif} className="kakao-verif-form">
+                  <input
+                    type="text"
+                    placeholder="카톡 ID 입력"
+                    value={inputKakaoId}
+                    onChange={(e) => setInputKakaoId(e.target.value)}
+                    className="form-input"
+                    style={{ width: '120px', padding: '4px 8px', fontSize: '0.8rem' }}
+                    required
+                  />
+                  <button type="submit" className="btn btn-secondary phone-auth-btn">
+                    카톡 인증 신청
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
+        )}
+
+        {isValidUser && (
+          userCanWrite ? (
+            <button className="btn btn-primary create-listing-btn" onClick={() => {
+              if (showWriteForm) cancelEdit();
+              else setShowWriteForm(true);
+            }}>
+              <RiAddLine /> {showWriteForm ? '작성 취소' : '중고 물품 등록하기'}
+            </button>
+          ) : (
+            <div className="lock-notice" onClick={checkWriteAccess} style={{ cursor: 'pointer' }}>
+              <RiLock2Line />
+              <span>등록 조건 미충족 (클릭하여 조건 확인)</span>
+            </div>
+          )
         )}
       </div>
 
@@ -353,10 +397,20 @@ export default function MarketplacePage() {
 
       {/* Listings List */}
       {!userCanRead ? (
-        <div className="glass-card empty-state">
-          <RiShieldUserLine style={{ fontSize: '2.5rem', color: '#cbd5e1' }} />
-          <h3>열람 권한 제한</h3>
-          <p>중고 매물 열람은 **레벨 3 이상** 여행자부터 가능합니다.</p>
+        <div className="glass-card flex-center" style={{ padding: '60px 20px', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}>
+          <RiLock2Line style={{ fontSize: '4rem', color: '#94a3b8' }} />
+          <h2 style={{ margin: 0, color: '#334155', textAlign: 'center' }}>중고장터 접근 제한</h2>
+          <p style={{ color: '#64748b', textAlign: 'center', lineHeight: '1.6' }}>
+            {!isValidUser && (
+              <>
+                <strong style={{ color: '#ef4444' }}>회원가입 및 로그인이 필요합니다.</strong><br/><br/>
+              </>
+            )}
+            중고장터 매물을 열람하려면 다음 조건이 필요합니다.<br/>
+            <strong>최소 레벨: Lv.{rules.readLevel}</strong>
+            {rules.reqPhoneRead && <span> / <strong>전화번호 인증</strong></span>}
+            {rules.reqKakaoRead && <span> / <strong>카카오톡 인증</strong></span>}
+          </p>
         </div>
       ) : (
         <div className="listings-grid">

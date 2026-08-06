@@ -4,7 +4,7 @@ import { RiShieldUserFill, RiPhoneFill, RiSmartphoneLine, RiKakaoTalkFill } from
 import './Badge.css';
 
 export function LevelBadge({ level = 1, isGuest = false }) {
-  if (level <= 1 || isGuest) {
+  if (isGuest || level < 1) {
     return (
       <span 
         className="badge level-badge level-guest"
@@ -22,10 +22,25 @@ export function LevelBadge({ level = 1, isGuest = false }) {
   else if (level >= 10) colorClass = 'level-gold';
   else if (level >= 5) colorClass = 'level-silver';
 
+  const renderRankStripes = (lvl) => {
+    let count = 1;
+    if (lvl >= 17) count = 4;
+    else if (lvl >= 11) count = 3;
+    else if (lvl >= 4) count = 2;
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginLeft: '6px', justifyContent: 'center' }}>
+        {Array.from({ length: count }).map((_, i) => (
+          <div key={i} style={{ width: '14px', height: '3px', backgroundColor: 'currentColor', borderRadius: '1px' }} />
+        ))}
+      </div>
+    );
+  };
+
   return (
     <span className={`badge level-badge ${colorClass}`}>
       <RiShieldUserFill />
-      Lv.{level} {getLevelTitle(level).split(' ')[0]}
+      Lv.{level} {renderRankStripes(level)}
     </span>
   );
 }

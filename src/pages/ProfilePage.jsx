@@ -21,7 +21,7 @@ import ZoomableImage from '../components/common/ZoomableImage';
 import './ProfilePage.css';
 
 export default function ProfilePage() {
-  const { currentUser, userProfile, updateUserProfile, loginWithGoogle, logout } = useAuth();
+  const { currentUser, userProfile, updateUserProfile, loginWithGoogle, logout, deleteAccount } = useAuth();
   const { places, submissions, addSubmission } = usePlaces();
   const [activeTab, setActiveTab] = useState('favorites'); // favorites, submissions, points
   const [showPhoneModal, setShowPhoneModal] = useState(false);
@@ -32,6 +32,7 @@ export default function ProfilePage() {
   const [editName, setEditName] = useState('');
   const [editKakao, setEditKakao] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  const [editPhoneKr, setEditPhoneKr] = useState('');
 
   // Update states when userProfile loads
   React.useEffect(() => {
@@ -39,14 +40,27 @@ export default function ProfilePage() {
       setEditName(userProfile.displayName || '');
       setEditKakao(userProfile.kakaoId || '');
       setEditPhone(userProfile.phoneNumber || '');
+      setEditPhoneKr(userProfile.phoneNumberKr || '');
     }
   }, [userProfile]);
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    await updateUserProfile({ displayName: editName, kakaoId: editKakao, phoneNumber: editPhone });
+    await updateUserProfile({ displayName: editName, kakaoId: editKakao, phoneNumber: editPhone, phoneNumberKr: editPhoneKr });
     setIsEditingProfile(false);
     alert('프로필 정보가 저장되었습니다.');
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm("정말 탈퇴하시겠습니까?\n\n탈퇴 시 모든 정보와 포인트가 영구적으로 삭제되며 복구할 수 없습니다.");
+    if (confirmed) {
+      try {
+        await deleteAccount();
+        alert("회원 탈퇴가 완료되었습니다.");
+      } catch (err) {
+        alert("탈퇴 처리에 실패했습니다. 다시 로그인 후 시도해주세요.");
+      }
+    }
   };
 
   const handleReqKakaoVerif = () => {
@@ -150,11 +164,20 @@ export default function ProfilePage() {
           <form onSubmit={handleSaveProfile} className="glass-card" style={{ padding: '16px', marginBottom: '16px', background: '#f8fafc' }}>
             <label className="form-label">닉네임</label>
             <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="form-input" required />
-            <label className="form-label" style={{ marginTop: '12px' }}>현지 휴대폰 번호</label>
+            
+            <label className="form-label" style={{ marginTop: '12px' }}>한국 휴대폰 번호</label>
+            <input type="text" value={editPhoneKr} onChange={(e) => setEditPhoneKr(e.target.value)} className="form-input" placeholder="010..." />
+
+            <label className="form-label" style={{ marginTop: '12px' }}>필리핀 현지 휴대폰 번호</label>
             <input type="text" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="form-input" placeholder="0917..." />
+            
             <label className="form-label" style={{ marginTop: '12px' }}>카카오톡 ID (중고거래용)</label>
             <input type="text" value={editKakao} onChange={(e) => setEditKakao(e.target.value)} className="form-input" placeholder="카카오톡 ID 입력" />
+            
             <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '16px' }}>저장하기</button>
+            <div style={{ marginTop: '12px', textAlign: 'right' }}>
+              <button type="button" onClick={handleDeleteAccount} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}>회원 탈퇴</button>
+            </div>
           </form>
         )}
 

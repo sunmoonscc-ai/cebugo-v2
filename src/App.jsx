@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/common/Header';
 import BottomNav from './components/common/BottomNav';
 import AdTickerBanner from './components/common/AdTickerBanner';
+import ScrollToTopButton from './components/common/ScrollToTopButton';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -47,6 +48,7 @@ export default function App() {
       </main>
       <AdTickerBanner />
       <BottomNav />
+      <ScrollToTopButton />
     </div>
   );
 }

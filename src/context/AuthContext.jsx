@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, googleProvider, db } from '../firebase/config';
-import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { signInWithPopup, signOut, onAuthStateChanged, deleteUser } from 'firebase/auth';
+import { doc, getDoc, setDoc, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { calculateLevelFromPoints } from '../utils/imageHelper';
 
 const AuthContext = createContext();
@@ -34,6 +34,33 @@ export const AuthProvider = ({ children }) => {
           const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
 
           const dbData = userSnap && userSnap.exists() ? userSnap.data() : null;
+
+          if (dbData?.deleted) {
+            if (dbData.rejoinRequested) {
+              alert(`재가입 승인 대기 중입니다.\n관리자의 승인이 완료될 때까지 잠시 기다려주세요.`);
+              await signOut(auth);
+              return;
+            } else {
+              const confirmRejoin = window.confirm(`탈퇴 처리된 계정입니다.\n사유: ${dbData.deleteReason || '알 수 없음'}\n\n관리자에게 재가입 승인을 요청하시겠습니까?`);
+              if (confirmRejoin) {
+                await setDoc(userDocRef, {
+                  rejoinRequested: true,
+                  rejoinRequestedAt: new Date().toISOString()
+                }, { merge: true });
+                alert('재가입 요청이 접수되었습니다. 승인 후 다시 로그인해주세요.');
+              }
+              await signOut(auth);
+              return;
+            }
+          }
+
+          if (!dbData) {
+            const agreed = window.confirm("구글 계정으로 간편하게 로그인 및 회원가입이 진행됩니다.\n\n동의하시면 구글 로그인 후 가입 축하 포인트 및 출석 포인트가 지급되며, 레벨 1부터 시작하게 됩니다.\n\n진행하시겠습니까?");
+            if (!agreed) {
+              await signOut(auth);
+              return;
+            }
+          }
 
           let currentPoints = dbData?.points ?? 100;
           let lastCheckInDate = dbData?.lastCheckInDate || '';
@@ -81,6 +108,7 @@ export const AuthProvider = ({ children }) => {
             pointLedger,
             phoneVerified: dbData?.phoneVerified ?? false,
             phoneNumber: dbData?.phoneNumber || '',
+            phoneNumberKr: dbData?.phoneNumberKr || '',
             phoneCarrier: dbData?.phoneCarrier || '',
             kakaoVerified: dbData?.kakaoVerified ?? false,
             kakaoId: dbData?.kakaoId || '',
@@ -134,6 +162,23 @@ export const AuthProvider = ({ children }) => {
     setUserProfile(null);
   };
 
+  const deleteAccount = async () => {
+    if (!currentUser) return;
+    try {
+      await setDoc(doc(db, 'users', currentUser.uid), {
+        deleted: true,
+        deleteReason: '본인 요청에 의한 탈퇴',
+        deletedAt: new Date().toISOString()
+      }, { merge: true });
+      await deleteUser(currentUser);
+      setCurrentUser(null);
+      setUserProfile(null);
+    } catch (e) {
+      console.error('Failed to delete user account:', e);
+      throw e;
+    }
+  };
+
   const updateUserProfile = async (data) => {
     if (!currentUser) return;
     const userDocRef = doc(db, 'users', currentUser.uid);
@@ -183,6 +228,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         loginWithGoogle,
         logout,
+        deleteAccount,
         updateUserProfile,
         toggleUserVerificationByAdmin,
         toggleFavorite
