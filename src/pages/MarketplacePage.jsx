@@ -35,7 +35,8 @@ export default function MarketplacePage() {
     toggleMarketplaceFavorite,
     addSubmission
   } = usePlaces();
-  const { userProfile, updateUserProfile } = useAuth();
+  const { userProfile, updateUserProfile, appConfig } = useAuth();
+  const maxImages = userProfile?.isAdmin ? appConfig?.imageUploadLimits?.admin ?? 30 : appConfig?.imageUploadLimits?.user ?? 30;
   const [showPhoneAuthModal, setShowPhoneAuthModal] = useState(false);
   const [showWriteForm, setShowWriteForm] = useState(false);
   const [editingListingId, setEditingListingId] = useState(null);
@@ -105,14 +106,14 @@ export default function MarketplacePage() {
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
-    if (images.length + files.length > 30) {
-      alert('이미지는 최대 30장까지 업로드 가능합니다.');
+    if (images.length + files.length > maxImages) {
+      alert(`이미지는 최대 ${maxImages}장까지 업로드 가능합니다.`);
       return;
     }
     files.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImages(prev => prev.length < 30 ? [...prev, reader.result] : prev);
+        setImages(prev => prev.length < maxImages ? [...prev, reader.result] : prev);
       };
       reader.readAsDataURL(file);
     });
@@ -394,7 +395,7 @@ export default function MarketplacePage() {
               <option value="vehicles">차량</option>
             </select>
 
-            <label className="form-label">이미지 첨부 (최대 30장)</label>
+            <label className="form-label">이미지 첨부 (최대 {maxImages}장)</label>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
               {images.map((img, idx) => (
                 <div key={idx} style={{ position: 'relative', width: '80px', height: '80px' }}>
@@ -405,10 +406,10 @@ export default function MarketplacePage() {
                   {idx === 0 && <span style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: '0.6rem', padding: '2px 4px', borderRadius: '4px' }}>대표</span>}
                 </div>
               ))}
-              {images.length < 30 && (
+              {images.length < maxImages && (
                 <label className="image-upload-dropzone">
                   <RiImageAddLine className="upload-icon" />
-                  <span style={{ fontSize: '0.7rem', marginTop: '4px' }}>{images.length}/30</span>
+                  <span style={{ fontSize: '0.7rem', marginTop: '4px' }}>{images.length}/{maxImages}</span>
                   <input type="file" multiple accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
                 </label>
               )}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { RiCloseLine, RiCheckLine, RiImageAddLine } from 'react-icons/ri';
+import { useAuth } from '../../context/AuthContext';
 import { usePlaces } from '../../context/PlacesContext';
 import { db } from '../../firebase/config';
 import { collection, onSnapshot } from 'firebase/firestore';
@@ -63,6 +64,8 @@ function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.7) {
 
 export default function AdFormModal({ editingPost, initialCategory, onClose, onSave }) {
   const { places = [] } = usePlaces() || {};
+  const { userProfile, appConfig } = useAuth();
+  const maxImages = userProfile?.isAdmin ? appConfig?.imageUploadLimits?.admin ?? 30 : appConfig?.imageUploadLimits?.user ?? 30;
 
   const [formData, setFormData] = useState({
     category: initialCategory || 'ad',
@@ -165,8 +168,8 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
     const files = Array.from(e.target.files);
     if (!files.length) return;
 
-    if (formData.images.length + files.length > 30) {
-      alert('이미지는 최대 30개까지 첨부할 수 있습니다.');
+    if (formData.images.length + files.length > maxImages) {
+      alert(`이미지는 최대 ${maxImages}개까지 첨부할 수 있습니다.`);
       return;
     }
 
@@ -178,7 +181,7 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
         const compressed = await compressImage(file, 800, 800, 0.7);
         if (compressed) {
           setFormData((prev) => {
-            if (prev.images.length >= 30) return prev;
+            if (prev.images.length >= maxImages) return prev;
             const updatedImages = [...prev.images, compressed];
             const updated = { ...prev, images: updatedImages };
             
@@ -381,12 +384,12 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
 
             <div className="form-group">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label className="form-label">이미지 첨부 ({formData.images.length} / 30개)</label>
-                <span className="field-hint">최대 30개 파일 첨부 가능</span>
+                <label className="form-label">이미지 첨부 ({formData.images.length} / {maxImages}개)</label>
+                <span className="field-hint">최대 {maxImages}개 파일 첨부 가능</span>
               </div>
 
               <div className="image-upload-wrapper">
-                {formData.images.length < 30 && (
+                {formData.images.length < maxImages && (
                   <label className="image-upload-dropzone">
                     <RiImageAddLine className="upload-icon" />
                     <span>이미지 추가</span>

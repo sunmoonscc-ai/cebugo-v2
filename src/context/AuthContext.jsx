@@ -18,6 +18,16 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [appConfig, setAppConfig] = useState({ imageUploadLimits: { user: 30, admin: 30 } });
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'cebugo_config', 'image_upload'), (docSnap) => {
+      if (docSnap.exists()) {
+        setAppConfig(prev => ({ ...prev, imageUploadLimits: docSnap.data() }));
+      }
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     let unsubUserDoc = null;
@@ -231,7 +241,8 @@ export const AuthProvider = ({ children }) => {
         deleteAccount,
         updateUserProfile,
         toggleUserVerificationByAdmin,
-        toggleFavorite
+        toggleFavorite,
+        appConfig
       }}
     >
       {!loading && children}

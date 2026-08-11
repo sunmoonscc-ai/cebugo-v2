@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { CATEGORIES } from '../../constants/categories';
 import { RiCloseLine, RiCheckLine, RiImageAddLine, RiMapPinLine, RiAddLine, RiDeleteBinLine } from 'react-icons/ri';
+import { useAuth } from '../../context/AuthContext';
 import { uploadImageToFirebaseStorage } from '../../utils/imageHelper';
 import ZoomableImage from '../common/ZoomableImage';
 import './PlaceFormModal.css';
@@ -82,6 +83,8 @@ function parseInitialSnsList(editingPlace) {
 }
 
 export default function PlaceFormModal({ editingPlace, defaultCategory = 'restaurant', onClose, onSave }) {
+  const { userProfile, appConfig } = useAuth();
+  const maxImages = userProfile?.isAdmin ? appConfig?.imageUploadLimits?.admin ?? 30 : appConfig?.imageUploadLimits?.user ?? 30;
   const initialCategory = defaultCategory && defaultCategory !== 'all' ? defaultCategory : 'restaurant';
 
   const [formData, setFormData] = useState({
@@ -279,8 +282,8 @@ const compressImageFile = (file) => {
 
         setFormData((prev) => {
           const currentTypeImgs = prev.images[imgType] || [];
-          if (currentTypeImgs.length >= 30) {
-            alert('각 분류당 최대 30개까지 첨부 가능합니다.');
+          if (currentTypeImgs.length >= maxImages) {
+            alert(`각 분류당 최대 ${maxImages}개까지 첨부 가능합니다.`);
             return prev;
           }
           const nextImages = {
@@ -577,7 +580,7 @@ const compressImageFile = (file) => {
               </div>
 
               <div className="image-upload-wrapper" style={{ marginTop: '10px' }}>
-                {(formData.images[activeImageTab]?.length || 0) < 30 && (
+                {(formData.images[activeImageTab]?.length || 0) < maxImages && (
                   <label className="image-upload-dropzone">
                     <RiImageAddLine className="upload-icon" />
                     <span>이미지 추가</span>

@@ -41,6 +41,10 @@ export default function AdminSubmissionsPage() {
     writeLevel: 4, reqPhoneWrite: true, reqKakaoWrite: true
   });
 
+  const [imageUploadLimits, setImageUploadLimits] = useState({
+    user: 30, admin: 30
+  });
+
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'cebugo_config', 'ticker_speed'), (docSnap) => {
       if (docSnap.exists()) {
@@ -56,7 +60,13 @@ export default function AdminSubmissionsPage() {
       }
     });
 
-    return () => { unsub(); unsubRules(); };
+    const unsubImage = onSnapshot(doc(db, 'cebugo_config', 'image_upload'), (docSnap) => {
+      if (docSnap.exists()) {
+        setImageUploadLimits(docSnap.data());
+      }
+    });
+
+    return () => { unsub(); unsubRules(); unsubImage(); };
   }, []);
 
   useEffect(() => {
@@ -103,6 +113,19 @@ export default function AdminSubmissionsPage() {
       alert('중고거래 설정이 성공적으로 저장되었습니다.');
     } catch (e) {
       console.error('Failed to save marketplace rules:', e);
+      alert('설정 저장 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleSaveImageLimits = async () => {
+    try {
+      await setDoc(doc(db, 'cebugo_config', 'image_upload'), {
+        ...imageUploadLimits,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      alert('이미지 업로드 설정이 성공적으로 저장되었습니다.');
+    } catch (e) {
+      console.error('Failed to save image upload limits:', e);
       alert('설정 저장 중 오류가 발생했습니다.');
     }
   };
@@ -319,6 +342,15 @@ export default function AdminSubmissionsPage() {
         >
           <RiStore2Line className="tab-icon" />
           <span>광고주 ({advertisers.length})</span>
+        </button>
+
+        <button 
+          type="button"
+          className={`news-tab-btn ${adminTab === 'etc' ? 'active' : ''}`}
+          onClick={() => setAdminTab('etc')}
+        >
+          <RiSettings3Line className="tab-icon" />
+          <span>기타</span>
         </button>
       </div>
 
@@ -722,6 +754,53 @@ export default function AdminSubmissionsPage() {
           ))}
         </div>
       )}
+    </div>
+  )}
+
+  {/* TAB 5: 기타 설정 */}
+  {adminTab === 'etc' && (
+    <div className="tab-content-section fade-in">
+      <div className="glass-card config-form" style={{ padding: '22px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <RiSettings3Line style={{ fontSize: '1.4rem', color: 'var(--primary)' }} />
+          <h3 style={{ margin: 0, fontSize: '1.08rem', fontWeight: 700, color: '#1e293b' }}>
+            ⚙️ 기타 설정 (이미지 업로드 제한)
+          </h3>
+        </div>
+        <p style={{ fontSize: '0.84rem', color: '#64748b', marginBottom: '18px' }}>
+          사용자 그룹별로 한 번에 업로드 가능한 최대 이미지 개수를 설정합니다.
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, color: '#1e293b', marginBottom: '10px' }}>
+              일반 사용자 업로드 제한 (장)
+            </label>
+            <input 
+              type="number" 
+              className="form-input" 
+              value={imageUploadLimits.user}
+              onChange={(e) => setImageUploadLimits({ ...imageUploadLimits, user: parseInt(e.target.value) || 0 })}
+            />
+          </div>
+
+          <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, color: '#1e293b', marginBottom: '10px' }}>
+              관리자 업로드 제한 (장)
+            </label>
+            <input 
+              type="number" 
+              className="form-input" 
+              value={imageUploadLimits.admin}
+              onChange={(e) => setImageUploadLimits({ ...imageUploadLimits, admin: parseInt(e.target.value) || 0 })}
+            />
+          </div>
+        </div>
+
+        <button type="button" className="btn btn-primary save-btn" onClick={handleSaveImageLimits}>
+          설정 저장하기
+        </button>
+      </div>
     </div>
   )}
 

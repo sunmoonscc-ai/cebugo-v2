@@ -8,7 +8,8 @@ import './SuggestEditModal.css';
 
 export default function SuggestEditModal({ place, onClose }) {
   const { addSubmission } = usePlaces();
-  const { userProfile } = useAuth();
+  const { userProfile, appConfig } = useAuth();
+  const maxImages = userProfile?.isAdmin ? appConfig?.imageUploadLimits?.admin ?? 30 : appConfig?.imageUploadLimits?.user ?? 30;
 
   const [field, setField] = useState('영업시간');
   const [newValue, setNewValue] = useState('');
@@ -48,8 +49,8 @@ export default function SuggestEditModal({ place, onClose }) {
         const cloudUrl = await uploadImageToFirebaseStorage(compressedDataUrl, 'submissions');
 
         setImages((prev) => {
-          if (prev.length >= 30) {
-            alert('사진은 최대 30장까지 첨부 가능합니다.');
+          if (prev.length >= maxImages) {
+            alert(`사진은 최대 ${maxImages}장까지 첨부 가능합니다.`);
             return prev;
           }
           return [...prev, cloudUrl];
@@ -124,9 +125,9 @@ export default function SuggestEditModal({ place, onClose }) {
               required
             />
 
-            <label className="form-label" style={{ marginTop: '16px' }}>사진 첨부 (최대 30장)</label>
+            <label className="form-label" style={{ marginTop: '16px' }}>사진 첨부 (최대 {maxImages}장)</label>
             <div className="image-upload-wrapper">
-              {images.length < 30 && (
+              {images.length < maxImages && (
                 <label className="image-upload-dropzone" style={{ minHeight: '80px', padding: '12px' }}>
                   <RiImageAddLine className="upload-icon" style={{ fontSize: '24px' }} />
                   <span style={{ fontSize: '0.85rem' }}>이미지 추가</span>
