@@ -86,6 +86,10 @@ export function getDefaultImageForCategory(categoryOrPlace) {
     return '/default_food.png';
   }
 
+  if (catStr.includes('institution') || catStr.includes('기관')) {
+    return '/default_institution.png';
+  }
+
   return FALLBACK_DEFAULT_IMAGE;
 }
 
