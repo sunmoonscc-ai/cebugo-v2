@@ -520,8 +520,8 @@ export default function DailyInfoPage() {
     if (!files.length) return;
 
     const currentCount = newsFormData.images.length;
-    if (currentCount + files.length > 20) {
-      alert(`이미지는 최대 20개까지 첨부할 수 있습니다. (현재: ${currentCount}개)`);
+    if (currentCount + files.length > 30) {
+      alert(`이미지는 최대 30개까지 첨부할 수 있습니다. (현재: ${currentCount}개)`);
       return;
     }
 
@@ -529,7 +529,7 @@ export default function DailyInfoPage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setNewsFormData((prev) => {
-          if (prev.images.length >= 10) return prev;
+          if (prev.images.length >= 30) return prev;
           return {
             ...prev,
             images: [...prev.images, reader.result]
@@ -647,8 +647,8 @@ export default function DailyInfoPage() {
     if (!files.length) return;
 
     const currentCount = infoFormData.images.length;
-    if (currentCount + files.length > 20) {
-      alert(`이미지는 최대 20개까지 첨부할 수 있습니다. (현재: ${currentCount}개)`);
+    if (currentCount + files.length > 30) {
+      alert(`이미지는 최대 30개까지 첨부할 수 있습니다. (현재: ${currentCount}개)`);
       return;
     }
 
@@ -656,7 +656,7 @@ export default function DailyInfoPage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setInfoFormData((prev) => {
-          if (prev.images.length >= 20) return prev;
+          if (prev.images.length >= 30) return prev;
           return {
             ...prev,
             images: [...prev.images, reader.result]
@@ -1235,8 +1235,8 @@ export default function DailyInfoPage() {
     if (!files.length) return;
 
     const currentCount = noticeFormData.images.length;
-    if (currentCount + files.length > 20) {
-      alert(`이미지는 최대 20개까지 첨부할 수 있습니다. (현재: ${currentCount}개)`);
+    if (currentCount + files.length > 30) {
+      alert(`이미지는 최대 30개까지 첨부할 수 있습니다. (현재: ${currentCount}개)`);
       return;
     }
 
@@ -1245,7 +1245,7 @@ export default function DailyInfoPage() {
         const compressed = await compressImage(file, 800, 800, 0.7);
         if (compressed) {
           setNoticeFormData((prev) => {
-            if (prev.images.length >= 20) return prev;
+            if (prev.images.length >= 30) return prev;
             return {
               ...prev,
               images: [...prev.images, compressed]
@@ -1606,12 +1606,12 @@ export default function DailyInfoPage() {
                   {/* Image Attachment (Max 10) */}
                   <div className="form-group">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label className="form-label">이미지 첨부 ({noticeFormData.images.length} / 20개)</label>
-                      <span className="field-hint">최대 20개 파일 첨부 가능</span>
+                      <label className="form-label">이미지 첨부 ({noticeFormData.images.length} / 30개)</label>
+                      <span className="field-hint">최대 30개 파일 첨부 가능</span>
                     </div>
 
                     <div className="image-upload-wrapper">
-                      {noticeFormData.images.length < 10 && (
+                      {noticeFormData.images.length < 30 && (
                         <label className="image-upload-dropzone">
                           <RiImageAddLine className="upload-icon" />
                           <span>이미지 추가</span>
@@ -2371,12 +2371,12 @@ export default function DailyInfoPage() {
                   {/* Image Attachment (Max 10) */}
                   <div className="form-group">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label className="form-label">이미지 첨부 ({infoFormData.images.length} / 20개)</label>
-                      <span className="field-hint">최대 20개 파일 첨부 가능</span>
+                      <label className="form-label">이미지 첨부 ({infoFormData.images.length} / 30개)</label>
+                      <span className="field-hint">최대 30개 파일 첨부 가능</span>
                     </div>
 
                     <div className="image-upload-wrapper">
-                      {infoFormData.images.length < 10 && (
+                      {infoFormData.images.length < 30 && (
                         <label className="image-upload-dropzone">
                           <RiImageAddLine className="upload-icon" />
                           <span>이미지 추가</span>
@@ -2753,12 +2753,12 @@ export default function DailyInfoPage() {
                   {/* Image Attachment (Max 10) */}
                   <div className="form-group">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label className="form-label">이미지 첨부 ({newsFormData.images.length} / 20개)</label>
-                      <span className="field-hint">최대 20개 파일 첨부 가능</span>
+                      <label className="form-label">이미지 첨부 ({newsFormData.images.length} / 30개)</label>
+                      <span className="field-hint">최대 30개 파일 첨부 가능</span>
                     </div>
 
                     <div className="image-upload-wrapper">
-                      {newsFormData.images.length < 10 && (
+                      {newsFormData.images.length < 30 && (
                         <label className="image-upload-dropzone">
                           <RiImageAddLine className="upload-icon" />
                           <span>이미지 추가</span>

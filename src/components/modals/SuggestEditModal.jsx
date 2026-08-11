@@ -48,8 +48,8 @@ export default function SuggestEditModal({ place, onClose }) {
         const cloudUrl = await uploadImageToFirebaseStorage(compressedDataUrl, 'submissions');
 
         setImages((prev) => {
-          if (prev.length >= 20) {
-            alert('사진은 최대 20장까지 첨부 가능합니다.');
+          if (prev.length >= 30) {
+            alert('사진은 최대 30장까지 첨부 가능합니다.');
             return prev;
           }
           return [...prev, cloudUrl];
@@ -124,9 +124,9 @@ export default function SuggestEditModal({ place, onClose }) {
               required
             />
 
-            <label className="form-label" style={{ marginTop: '16px' }}>사진 첨부 (최대 20장)</label>
-            <div className="image-upload-wrapper" style={{ marginTop: '4px' }}>
-              {images.length < 20 && (
+            <label className="form-label" style={{ marginTop: '16px' }}>사진 첨부 (최대 30장)</label>
+            <div className="image-upload-wrapper">
+              {images.length < 30 && (
                 <label className="image-upload-dropzone" style={{ minHeight: '80px', padding: '12px' }}>
                   <RiImageAddLine className="upload-icon" style={{ fontSize: '24px' }} />
                   <span style={{ fontSize: '0.85rem' }}>이미지 추가</span>

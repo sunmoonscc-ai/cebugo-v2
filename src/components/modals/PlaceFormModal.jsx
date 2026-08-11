@@ -279,8 +279,8 @@ const compressImageFile = (file) => {
 
         setFormData((prev) => {
           const currentTypeImgs = prev.images[imgType] || [];
-          if (currentTypeImgs.length >= 20) {
-            alert('각 분류당 최대 20개까지 첨부 가능합니다.');
+          if (currentTypeImgs.length >= 30) {
+            alert('각 분류당 최대 30개까지 첨부 가능합니다.');
             return prev;
           }
           const nextImages = {
@@ -577,7 +577,7 @@ const compressImageFile = (file) => {
               </div>
 
               <div className="image-upload-wrapper" style={{ marginTop: '10px' }}>
-                {(formData.images[activeImageTab]?.length || 0) < 20 && (
+                {(formData.images[activeImageTab]?.length || 0) < 30 && (
                   <label className="image-upload-dropzone">
                     <RiImageAddLine className="upload-icon" />
                     <span>이미지 추가</span>
