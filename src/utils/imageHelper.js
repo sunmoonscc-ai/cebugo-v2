@@ -90,6 +90,10 @@ export function getDefaultImageForCategory(categoryOrPlace) {
     return '/default_institution.png';
   }
 
+  if (catStr.includes('hospital') || catStr.includes('병원') || catStr.includes('medical') || catStr.includes('의료')) {
+    return '/default_hospital.png';
+  }
+
   return FALLBACK_DEFAULT_IMAGE;
 }
 
