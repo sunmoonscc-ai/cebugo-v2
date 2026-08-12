@@ -83,13 +83,32 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
   });
 
   const [advertisers, setAdvertisers] = useState([]);
+  const [selectableAdvertisers, setSelectableAdvertisers] = useState([]);
+  
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'cebugo_advertisers'), (snapshot) => {
       const advs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
       setAdvertisers(advs);
+      
+      if (userProfile?.isAdmin) {
+        setSelectableAdvertisers(advs);
+      } else {
+        const myAdvs = advs.filter(a => a.googleEmail && a.googleEmail === userProfile?.email);
+        setSelectableAdvertisers(myAdvs);
+        
+        // Auto-select if they only have one and no advertiser is selected yet
+        if (myAdvs.length === 1 && !formData.advertiserId) {
+          setFormData(prev => ({
+            ...prev,
+            advertiserId: myAdvs[0].id,
+            authorName: myAdvs[0].name,
+            placeId: myAdvs[0].placeId || ''
+          }));
+        }
+      }
     });
     return () => unsub();
-  }, []);
+  }, [userProfile, formData.advertiserId]);
 
   useEffect(() => {
     if (editingPost) {
@@ -332,8 +351,8 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
                   required
                 >
                   <option value="">광고주 선택</option>
-                  <option value="manual">미등록 업체 (직접 입력)</option>
-                  {advertisers.map(adv => (
+                  {userProfile?.isAdmin && <option value="manual">미등록 업체 (직접 입력)</option>}
+                  {selectableAdvertisers.map(adv => (
                     <option key={adv.id} value={adv.id}>{adv.name}</option>
                   ))}
                 </select>

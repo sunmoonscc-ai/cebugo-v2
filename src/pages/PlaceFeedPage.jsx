@@ -144,7 +144,8 @@ export default function PlaceFeedPage() {
     return sDate <= targetDate && eDate >= targetDate;
   };
 
-  const canPost = userProfile?.isAdmin || (userProfile?.level && userProfile.level >= 5);
+  const isAdvertiser = userProfile?.email && advertisers.some(adv => adv.googleEmail === userProfile.email);
+  const canPost = userProfile?.isAdmin || (userProfile?.level && userProfile.level >= 5) || isAdvertiser;
 
   let minDate = todayStr;
   let maxDate = todayStr;
@@ -475,6 +476,8 @@ export default function PlaceFeedPage() {
 
             const isCollapsible = isExpired || is24HoursPassed;
             const shouldCollapse = isCollapsible && !isExpanded;
+            
+            const canManageThisPost = userProfile?.isAdmin || (post.advertiserId && advertisers.find(a => a.id === post.advertiserId)?.googleEmail === userProfile?.email);
 
             const toggleExpand = () => {
               if (isCollapsible) {
@@ -550,7 +553,7 @@ export default function PlaceFeedPage() {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span className="post-date">{post.date}</span>
-                    {canPost && (
+                    {canManageThisPost && (
                       <div className="admin-card-actions">
                         <button
                           type="button"

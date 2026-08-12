@@ -32,11 +32,23 @@ export default function ListPage() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all'); // 'all', 'Cebu', 'Cordova', 'Lapu-Lapu', 'Mandaue'
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortOption, setSortOption] = useState('distance'); // 'distance' (default), 'name', 'latest', 'open'
-  const [userCoords, setUserCoords] = useState({ lat: 10.324581378196822, lng: 124.01394151354162 }); // Fixed user location
+  const [sortOption, setSortOption] = useState('name'); // 'name' (default), 'distance', 'latest', 'open'
+  const [userCoords, setUserCoords] = useState({ lat: 10.324581378196822, lng: 124.01394151354162 }); // Default fallback location
 
   useEffect(() => {
-    setUserCoords({ lat: 10.324581378196822, lng: 124.01394151354162 });
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserCoords({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.warn("Could not get location, using default:", error);
+        }
+      );
+    }
   }, []);
 
   // Helper function for matching city locations
@@ -306,8 +318,8 @@ export default function ListPage() {
                   className="sort-select"
                   title="정렬 기준"
                 >
-                  <option value="distance">거리순 (기본)</option>
-                  <option value="name">이름순 (가나다)</option>
+                  <option value="name">이름순 (가나다, 기본)</option>
+                  <option value="distance">거리순</option>
                   <option value="latest">최신순</option>
                   <option value="open">영업중만 보기</option>
                 </select>

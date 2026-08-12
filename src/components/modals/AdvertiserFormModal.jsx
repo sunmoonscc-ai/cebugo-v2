@@ -42,7 +42,8 @@ export default function AdvertiserFormModal({ editingAdvertiser, onClose, onSave
     name: '',
     description: '',
     placeId: '',
-    logoUrl: ''
+    logoUrl: '',
+    googleEmail: ''
   });
   
   const { places = [] } = usePlaces() || {};
@@ -54,7 +55,8 @@ export default function AdvertiserFormModal({ editingAdvertiser, onClose, onSave
         name: editingAdvertiser.name || '',
         description: editingAdvertiser.description || '',
         placeId: editingAdvertiser.placeId || '',
-        logoUrl: editingAdvertiser.logoUrl || ''
+        logoUrl: editingAdvertiser.logoUrl || '',
+        googleEmail: editingAdvertiser.googleEmail || ''
       });
     }
   }, [editingAdvertiser]);
@@ -131,6 +133,21 @@ export default function AdvertiserFormModal({ editingAdvertiser, onClose, onSave
                 rows={3}
                 className="form-input"
               />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">광고주 구글 계정 (사용자 연결용)</label>
+              <input
+                type="email"
+                name="googleEmail"
+                value={formData.googleEmail}
+                onChange={handleChange}
+                placeholder="예: advertiser@gmail.com"
+                className="form-input"
+              />
+              <span className="field-hint" style={{ marginTop: '4px', display: 'block', fontSize: '0.78rem', color: '#64748b' }}>
+                ※ 구글 계정을 입력하면 해당 사용자가 연결된 업체의 정보를 수정할 수 있습니다.
+              </span>
             </div>
 
             <div className="form-group">

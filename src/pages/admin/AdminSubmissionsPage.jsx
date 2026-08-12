@@ -328,15 +328,6 @@ export default function AdminSubmissionsPage() {
 
         <button 
           type="button"
-          className={`news-tab-btn ${adminTab === 'marketplace' ? 'active' : ''}`}
-          onClick={() => setAdminTab('marketplace')}
-        >
-          <RiSettings3Line className="tab-icon" />
-          <span>중고거래 권한</span>
-        </button>
-
-        <button 
-          type="button"
           className={`news-tab-btn ${adminTab === 'advertisers' ? 'active' : ''}`}
           onClick={() => setAdminTab('advertisers')}
         >
@@ -346,11 +337,11 @@ export default function AdminSubmissionsPage() {
 
         <button 
           type="button"
-          className={`news-tab-btn ${adminTab === 'etc' ? 'active' : ''}`}
-          onClick={() => setAdminTab('etc')}
+          className={`news-tab-btn ${adminTab === 'permissions' ? 'active' : ''}`}
+          onClick={() => setAdminTab('permissions')}
         >
           <RiSettings3Line className="tab-icon" />
-          <span>기타</span>
+          <span>권한설정</span>
         </button>
       </div>
 
@@ -414,10 +405,11 @@ export default function AdminSubmissionsPage() {
         </div>
       )}
 
-      {/* TAB 1.5: 중고거래 권한 설정 */}
-      {adminTab === 'marketplace' && (
+      {/* TAB: 권한설정 (중고거래 접근 권한 + 이미지 업로드 제한) */}
+      {adminTab === 'permissions' && (
         <div className="tab-content-section fade-in">
-          <div className="glass-card config-form" style={{ padding: '22px' }}>
+          {/* Marketplace Rules Section */}
+          <div className="glass-card config-form" style={{ padding: '22px', marginBottom: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <RiSettings3Line style={{ fontSize: '1.4rem', color: 'var(--primary)' }} />
               <h3 style={{ margin: 0, fontSize: '1.08rem', fontWeight: 700, color: '#1e293b' }}>
@@ -466,6 +458,49 @@ export default function AdminSubmissionsPage() {
 
             <button type="button" className="btn btn-primary" style={{ width: '100%', padding: '12px' }} onClick={handleSaveMarketplaceRules}>
               <RiCheckLine /> 중고거래 권한 설정 저장
+            </button>
+          </div>
+
+          {/* Etc (Image Upload Limits) Section */}
+          <div className="glass-card config-form" style={{ padding: '22px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <RiSettings3Line style={{ fontSize: '1.4rem', color: 'var(--primary)' }} />
+              <h3 style={{ margin: 0, fontSize: '1.08rem', fontWeight: 700, color: '#1e293b' }}>
+                ⚙️ 기타 설정 (이미지 업로드 제한)
+              </h3>
+            </div>
+            <p style={{ fontSize: '0.84rem', color: '#64748b', marginBottom: '18px' }}>
+              사용자 그룹별로 한 번에 업로드 가능한 최대 이미지 개수를 설정합니다.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, color: '#1e293b', marginBottom: '10px' }}>
+                  일반 사용자 업로드 제한 (장)
+                </label>
+                <input 
+                  type="number" 
+                  className="form-input" 
+                  value={imageUploadLimits.user}
+                  onChange={(e) => setImageUploadLimits({ ...imageUploadLimits, user: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+
+              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, color: '#1e293b', marginBottom: '10px' }}>
+                  관리자 업로드 제한 (장)
+                </label>
+                <input 
+                  type="number" 
+                  className="form-input" 
+                  value={imageUploadLimits.admin}
+                  onChange={(e) => setImageUploadLimits({ ...imageUploadLimits, admin: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+
+            <button type="button" className="btn btn-primary save-btn" onClick={handleSaveImageLimits}>
+              <RiCheckLine /> 이미지 업로드 제한 설정 저장
             </button>
           </div>
         </div>
