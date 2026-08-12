@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { CATEGORIES } from '../../constants/categories';
+import { useCategories } from '../../context/CategoriesContext';
 import { RiCloseLine, RiCheckLine, RiImageAddLine, RiMapPinLine, RiAddLine, RiDeleteBinLine } from 'react-icons/ri';
 import { useAuth } from '../../context/AuthContext';
 import { uploadImageToFirebaseStorage } from '../../utils/imageHelper';
@@ -84,6 +84,7 @@ function parseInitialSnsList(editingPlace) {
 
 export default function PlaceFormModal({ editingPlace, defaultCategory = 'restaurant', onClose, onSave }) {
   const { userProfile, appConfig } = useAuth();
+  const { categories } = useCategories();
   const maxImages = userProfile?.isAdmin ? appConfig?.imageUploadLimits?.admin ?? 30 : appConfig?.imageUploadLimits?.user ?? 30;
   const initialCategory = defaultCategory && defaultCategory !== 'all' ? defaultCategory : 'restaurant';
 
@@ -332,7 +333,7 @@ const compressImageFile = (file) => {
     doFinalSave(formData);
   };
 
-  const selectableCategories = CATEGORIES.filter((c) => c.id !== 'all');
+  const selectableCategories = categories.filter((c) => c.id !== 'all');
 
   return ReactDOM.createPortal(
     <div className="modal-overlay fade-in">

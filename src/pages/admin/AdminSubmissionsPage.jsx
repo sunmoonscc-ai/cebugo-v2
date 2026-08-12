@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePlaces } from '../../context/PlacesContext';
+import { useCategories } from '../../context/CategoriesContext';
 import { db } from '../../firebase/config';
 import { doc, onSnapshot, setDoc, collection } from 'firebase/firestore';
 import { 
@@ -23,6 +24,7 @@ import './AdminSubmissionsPage.css';
 
 export default function AdminSubmissionsPage() {
   const { submissions, approveSubmission, rejectSubmission } = usePlaces();
+  const { categories, addCategory, updateCategory, deleteCategory, reorderCategories } = useCategories();
 
   const [adminTab, setAdminTab] = useState('notice'); // 'notice' (공지/속도) or 'submission' (제보)
   const [noticeSpeedMultiplier, setNoticeSpeedMultiplier] = useState(1);
@@ -45,6 +47,15 @@ export default function AdminSubmissionsPage() {
     user: 30, admin: 30
   });
 
+  const [listConfig, setListConfig] = useState({
+    defaultSortOption: 'name'
+  });
+
+  const [newCatId, setNewCatId] = useState('');
+  const [newCatName, setNewCatName] = useState('');
+  const [editingCatId, setEditingCatId] = useState(null);
+  const [editingCatName, setEditingCatName] = useState('');
+
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'cebugo_config', 'ticker_speed'), (docSnap) => {
       if (docSnap.exists()) {
@@ -66,7 +77,13 @@ export default function AdminSubmissionsPage() {
       }
     });
 
-    return () => { unsub(); unsubRules(); unsubImage(); };
+    const unsubList = onSnapshot(doc(db, 'cebugo_config', 'list_settings'), (docSnap) => {
+      if (docSnap.exists()) {
+        setListConfig(docSnap.data());
+      }
+    });
+
+    return () => { unsub(); unsubRules(); unsubImage(); unsubList(); };
   }, []);
 
   useEffect(() => {
@@ -128,6 +145,28 @@ export default function AdminSubmissionsPage() {
       console.error('Failed to save image upload limits:', e);
       alert('설정 저장 중 오류가 발생했습니다.');
     }
+  };
+
+  const handleSaveListConfig = async () => {
+    try {
+      await setDoc(doc(db, 'cebugo_config', 'list_settings'), listConfig, { merge: true });
+      alert('업체 정렬 기본 방식이 저장되었습니다.');
+    } catch (e) {
+      console.error(e);
+      alert('저장에 실패했습니다.');
+    }
+  };
+
+  const moveCategory = (index, direction) => {
+    if (categories[index].id === 'all') return;
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= categories.length) return;
+    if (categories[newIndex].id === 'all') return; // Cannot swap with 'all'
+    
+    const newList = [...categories];
+    const [removed] = newList.splice(index, 1);
+    newList.splice(newIndex, 0, removed);
+    reorderCategories(newList);
   };
 
   const handleApproveRejoin = async (user) => {
@@ -337,11 +376,20 @@ export default function AdminSubmissionsPage() {
 
         <button 
           type="button"
-          className={`news-tab-btn ${adminTab === 'permissions' ? 'active' : ''}`}
-          onClick={() => setAdminTab('permissions')}
+          className={`news-tab-btn ${adminTab === 'settings' ? 'active' : ''}`}
+          onClick={() => setAdminTab('settings')}
         >
           <RiSettings3Line className="tab-icon" />
-          <span>권한설정</span>
+          <span>설정</span>
+        </button>
+
+        <button 
+          type="button"
+          className={`news-tab-btn ${adminTab === 'categories' ? 'active' : ''}`}
+          onClick={() => setAdminTab('categories')}
+        >
+          <RiStore2Line className="tab-icon" />
+          <span>업체분류 관리</span>
         </button>
       </div>
 
@@ -405,8 +453,8 @@ export default function AdminSubmissionsPage() {
         </div>
       )}
 
-      {/* TAB: 권한설정 (중고거래 접근 권한 + 이미지 업로드 제한) */}
-      {adminTab === 'permissions' && (
+      {/* TAB: 설정 (Settings) */}
+      {adminTab === 'settings' && (
         <div className="tab-content-section fade-in">
           {/* Marketplace Rules Section */}
           <div className="glass-card config-form" style={{ padding: '22px', marginBottom: '20px' }}>
@@ -502,6 +550,141 @@ export default function AdminSubmissionsPage() {
             <button type="button" className="btn btn-primary save-btn" onClick={handleSaveImageLimits}>
               <RiCheckLine /> 이미지 업로드 제한 설정 저장
             </button>
+          </div>
+
+          {/* List Config Panel */}
+          <div className="glass-card config-form" style={{ padding: '22px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px' }}>업체 리스트 설정</h3>
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label className="form-label" style={{ fontWeight: 'bold' }}>기본 정렬 방식</label>
+              <select 
+                className="form-input" 
+                value={listConfig.defaultSortOption || 'name'} 
+                onChange={(e) => setListConfig({ ...listConfig, defaultSortOption: e.target.value })}
+              >
+                <option value="name">이름순 (가나다)</option>
+                <option value="distance">거리순</option>
+                <option value="latest">최신순</option>
+              </select>
+            </div>
+            <button type="button" className="btn btn-primary save-btn" onClick={handleSaveListConfig}>
+              <RiCheckLine /> 리스트 설정 저장
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: 업체분류 관리 */}
+      {adminTab === 'categories' && (
+        <div className="tab-content-section fade-in">
+          <div className="section-title">
+            <h2>업체분류 (카테고리) 관리</h2>
+            <p>메인 화면과 업체 등록 시 선택할 수 있는 탭 메뉴(카테고리)를 관리합니다.</p>
+          </div>
+
+          <div className="glass-card config-form" style={{ padding: '22px', marginBottom: '20px' }}>
+            <h3 style={{ marginTop: 0 }}>신규 카테고리 추가</h3>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+              <div style={{ flex: 1 }}>
+                <label className="form-label">카테고리 ID (영문 소문자)</label>
+                <input type="text" className="form-input" placeholder="예: hospital" value={newCatId} onChange={e => setNewCatId(e.target.value)} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label className="form-label">카테고리 표시명 (한글)</label>
+                <input type="text" className="form-input" placeholder="예: 병원" value={newCatName} onChange={e => setNewCatName(e.target.value)} />
+              </div>
+              <button 
+                type="button" 
+                className="btn btn-primary"
+                onClick={() => {
+                  if (!newCatId.trim() || !newCatName.trim()) {
+                    alert('ID와 표시명을 모두 입력해주세요.');
+                    return;
+                  }
+                  if (newCatId === 'all') {
+                    alert("'all' ID는 시스템 예약어입니다.");
+                    return;
+                  }
+                  addCategory(newCatId.trim().toLowerCase(), newCatName.trim());
+                  setNewCatId('');
+                  setNewCatName('');
+                }}
+              >
+                <RiAddLine /> 추가
+              </button>
+            </div>
+          </div>
+
+          <div className="glass-card" style={{ padding: '22px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px' }}>현재 카테고리 목록</h3>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {categories.map((cat, index) => (
+                <li key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontWeight: 700, width: '24px', textAlign: 'center', color: '#94a3b8' }}>{index + 1}</span>
+                    {editingCatId === cat.id ? (
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        value={editingCatName} 
+                        onChange={e => setEditingCatName(e.target.value)}
+                        style={{ width: '200px', padding: '6px' }}
+                      />
+                    ) : (
+                      <div>
+                        <strong style={{ fontSize: '1.05rem', color: '#1e293b' }}>{cat.name}</strong>
+                        <span style={{ marginLeft: '8px', fontSize: '0.8rem', color: '#64748b' }}>(ID: {cat.id})</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {cat.id === 'all' ? (
+                      <span style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: 'bold' }}>*수정/삭제 불가 (기본 항목)</span>
+                    ) : editingCatId === cat.id ? (
+                      <>
+                        <button type="button" className="btn btn-secondary" onClick={() => setEditingCatId(null)}>취소</button>
+                        <button type="button" className="btn btn-primary" onClick={() => {
+                          if (!editingCatName.trim()) return;
+                          updateCategory(cat.id, editingCatName.trim());
+                          setEditingCatId(null);
+                        }}>저장</button>
+                      </>
+                    ) : (
+                      <>
+                        <button 
+                          type="button" 
+                          className="btn btn-secondary" 
+                          style={{ padding: '6px 8px' }}
+                          onClick={() => moveCategory(index, 'up')}
+                          disabled={index <= 1} // Index 0 is 'all', so index 1 can't go up
+                        >
+                          ▲
+                        </button>
+                        <button 
+                          type="button" 
+                          className="btn btn-secondary" 
+                          style={{ padding: '6px 8px' }}
+                          onClick={() => moveCategory(index, 'down')}
+                          disabled={index === categories.length - 1}
+                        >
+                          ▼
+                        </button>
+                        <button type="button" className="btn btn-secondary" onClick={() => {
+                          setEditingCatId(cat.id);
+                          setEditingCatName(cat.name);
+                        }}>수정</button>
+                        <button type="button" className="btn btn-danger" style={{ background: '#ef4444', color: 'white', border: 'none' }} onClick={() => {
+                          if (window.confirm(`'${cat.name}' 카테고리를 정말 삭제하시겠습니까? (기존 업체 정보는 유지되지만 탭에서 사라집니다)`)) {
+                            deleteCategory(cat.id);
+                          }
+                        }}>삭제</button>
+                      </>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       )}

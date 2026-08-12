@@ -21,12 +21,20 @@ export const AuthProvider = ({ children }) => {
   const [appConfig, setAppConfig] = useState({ imageUploadLimits: { user: 30, admin: 30 } });
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'cebugo_config', 'image_upload'), (docSnap) => {
+    const unsubImages = onSnapshot(doc(db, 'cebugo_config', 'image_upload'), (docSnap) => {
       if (docSnap.exists()) {
         setAppConfig(prev => ({ ...prev, imageUploadLimits: docSnap.data() }));
       }
     });
-    return () => unsub();
+    const unsubListSettings = onSnapshot(doc(db, 'cebugo_config', 'list_settings'), (docSnap) => {
+      if (docSnap.exists()) {
+        setAppConfig(prev => ({ ...prev, listSettings: docSnap.data() }));
+      }
+    });
+    return () => {
+      unsubImages();
+      unsubListSettings();
+    };
   }, []);
 
   useEffect(() => {

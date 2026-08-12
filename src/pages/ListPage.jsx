@@ -6,7 +6,7 @@ import PlaceCard from '../components/places/PlaceCard';
 import PlacesMapView from '../components/places/PlacesMapView';
 import PlaceFormModal from '../components/modals/PlaceFormModal';
 import PlaceReorderModal from '../components/modals/PlaceReorderModal';
-import { CATEGORIES } from '../constants/categories';
+import { useCategories } from '../context/CategoriesContext';
 import { calculateDistanceKm, isOpenNow } from '../utils/placeFilterHelpers';
 import { 
   RiSearchLine, 
@@ -26,14 +26,36 @@ import './ListPage.css';
 export default function ListPage() {
   const location = useLocation();
   const { places, addPlace, updatePlace, deletePlace, movePlace, reorderPlaces } = usePlaces();
-  const { userProfile } = useAuth();
+  const { categories } = useCategories();
+  const { userProfile, appConfig } = useAuth();
 
-  const [viewMode, setViewMode] = useState(location.state?.fromView || 'list'); // 'list' or 'map'
+  const [viewMode, setViewModeState] = useState(() => {
+    try {
+      return sessionStorage.getItem('cebugo_view_mode') || location.state?.fromView || 'list';
+    } catch (e) {
+      return location.state?.fromView || 'list';
+    }
+  });
+
+  const setViewMode = (mode) => {
+    setViewModeState(mode);
+    try {
+      sessionStorage.setItem('cebugo_view_mode', mode);
+    } catch (e) {}
+  };
+
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all'); // 'all', 'Cebu', 'Cordova', 'Lapu-Lapu', 'Mandaue'
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortOption, setSortOption] = useState('name'); // 'name' (default), 'distance', 'latest', 'open'
+  const [sortOption, setSortOption] = useState('name'); // will be overridden by effect
   const [userCoords, setUserCoords] = useState({ lat: 10.324581378196822, lng: 124.01394151354162 }); // Default fallback location
+
+  // Load default sort option from config
+  useEffect(() => {
+    if (appConfig?.listSettings?.defaultSortOption) {
+      setSortOption(appConfig.listSettings.defaultSortOption);
+    }
+  }, [appConfig?.listSettings?.defaultSortOption]);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -252,7 +274,7 @@ export default function ListPage() {
             <span>즐겨찾기</span>
           </button>
 
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <button
               key={cat.id}
               ref={(el) => (pillRefs.current[cat.id] = el)}

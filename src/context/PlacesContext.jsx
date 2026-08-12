@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../firebase/config';
 import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
-import { CATEGORY_MAP } from '../constants/categories';
+import { useCategories } from './CategoriesContext';
 import { sanitizePlaceForFirestore, compressImageDataUrl, uploadImageToFirebaseStorage } from '../utils/imageHelper';
 
 const PlacesContext = createContext();
@@ -299,6 +299,7 @@ const getInitialPlaces = () => {
 };
 
 export const PlacesProvider = ({ children }) => {
+  const { categoryMap } = useCategories();
   const [places, setPlaces] = useState(getInitialPlaces);
   const [marketplace, setMarketplace] = useState(INITIAL_MARKETPLACE);
   const [submissions, setSubmissions] = useState(INITIAL_SUBMISSIONS);
@@ -409,7 +410,7 @@ export const PlacesProvider = ({ children }) => {
 
   const addPlace = async (placeData) => {
     const docId = placeData.id || `p_${Date.now()}`;
-    const categoryName = CATEGORY_MAP[placeData.category] || '기타';
+    const categoryName = categoryMap[placeData.category] || '기타';
 
     let placeToSave = {
       id: docId,
@@ -436,7 +437,7 @@ export const PlacesProvider = ({ children }) => {
 
   const updatePlace = async (id, placeData) => {
     const targetId = id || placeData.id || `p_${Date.now()}`;
-    const categoryName = CATEGORY_MAP[placeData.category] || placeData.categoryName || '기타';
+    const categoryName = categoryMap[placeData.category] || placeData.categoryName || '기타';
     let placeToSave = {
       ...placeData,
       id: targetId,
