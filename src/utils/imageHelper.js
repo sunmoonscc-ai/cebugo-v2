@@ -94,6 +94,34 @@ export function getDefaultImageForCategory(categoryOrPlace) {
     return '/default_hospital.png';
   }
 
+  if (catStr.includes('볼거리') || catStr.includes('sight')) {
+    return '/default_sightseeing.png';
+  }
+
+  if (catStr.includes('살거리') || catStr.includes('shopping')) {
+    return '/default_shopping.png';
+  }
+
+  if (catStr.includes('뷰티') || catStr.includes('마사지') || catStr.includes('beauty') || catStr.includes('massage')) {
+    return '/default_beauty.png';
+  }
+
+  if (catStr.includes('서비스') || catStr.includes('service')) {
+    return '/default_service.png';
+  }
+
+  if (catStr.includes('숙박') || catStr.includes('hotel') || catStr.includes('accommodation')) {
+    return '/default_hotel.png';
+  }
+
+  if (catStr.includes('즐길거리') || catStr.includes('activity') || catStr.includes('entertainment')) {
+    return '/default_activity.png';
+  }
+
+  if (catStr.includes('탈거리') || catStr.includes('ride') || catStr.includes('transport')) {
+    return '/default_transport.png';
+  }
+
   return FALLBACK_DEFAULT_IMAGE;
 }
 
