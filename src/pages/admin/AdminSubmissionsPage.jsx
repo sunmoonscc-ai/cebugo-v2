@@ -40,7 +40,8 @@ export default function AdminSubmissionsPage() {
 
   const [marketplaceRules, setMarketplaceRules] = useState({
     readLevel: 1, reqPhoneRead: false, reqKakaoRead: false,
-    writeLevel: 4, reqPhoneWrite: true, reqKakaoWrite: true
+    writeLevel: 4, reqPhoneWrite: true, reqKakaoWrite: true,
+    contactExposureLevel: 1
   });
 
   const [imageUploadLimits, setImageUploadLimits] = useState({
@@ -461,7 +462,7 @@ export default function AdminSubmissionsPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <RiSettings3Line style={{ fontSize: '1.4rem', color: 'var(--primary)' }} />
               <h3 style={{ margin: 0, fontSize: '1.08rem', fontWeight: 700, color: '#1e293b' }}>
-                🛡️ 중고거래 접근 권한 설정
+                🛡️ 중고거래
               </h3>
             </div>
             <p style={{ fontSize: '0.84rem', color: '#64748b', marginBottom: '18px', lineHeight: '1.45' }}>
@@ -500,6 +501,15 @@ export default function AdminSubmissionsPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <input type="checkbox" id="reqKakaoWrite" checked={marketplaceRules.reqKakaoWrite} onChange={e => setMarketplaceRules({...marketplaceRules, reqKakaoWrite: e.target.checked})} />
                   <label htmlFor="reqKakaoWrite" style={{ fontSize: '0.85rem' }}>카카오톡 인증 필수</label>
+                </div>
+              </div>
+
+              {/* 연락처 공개 권한 */}
+              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                <h4 style={{ margin: '0 0 12px 0', color: '#1e293b' }}>📞 연락처 공개 권한</h4>
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>최소 레벨 (Lv)</label>
+                  <input type="number" min="1" max="20" className="form-input" value={marketplaceRules.contactExposureLevel || 1} onChange={e => setMarketplaceRules({...marketplaceRules, contactExposureLevel: parseInt(e.target.value, 10) || 1})} />
                 </div>
               </div>
             </div>
