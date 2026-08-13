@@ -18,7 +18,8 @@ export const DEFAULT_SNS_PREFIXES = [
   { prefix: 'f_', name: '페이스북', key: 'facebook', icon: 'RiFacebookCircleFill', color: '#1877F2' },
   { prefix: 'i_', name: '인스타그램', key: 'instagram', icon: 'RiInstagramLine', color: '#E4405F' },
   { prefix: 't_', name: '텔레그램', key: 'telegram', icon: 'RiTelegramFill', color: '#24A1DE' },
-  { prefix: 'h_', name: '홈페이지', key: 'homepage', icon: 'RiGlobalLine', color: '#475569' }
+  { prefix: 'h_', name: '홈페이지', key: 'homepage', icon: 'RiGlobalLine', color: '#475569' },
+  { prefix: 'e_', name: '기타', key: 'etc', icon: 'RiLinksLine', color: '#64748b' }
 ];
 
 /**

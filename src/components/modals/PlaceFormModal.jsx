@@ -61,7 +61,7 @@ function parseInitialSnsList(editingPlace) {
         return { platform: item.platform && item.platform !== 'custom' ? item.platform : 'k_', handle: item.handle || '' };
       }
       const str = String(item);
-      const prefixes = ['k_', 'l_', 'w_', 'f_', 'i_', 't_'];
+      const prefixes = ['k_', 'l_', 'w_', 'f_', 'i_', 't_', 'h_', 'e_'];
       for (const p of prefixes) {
         if (str.startsWith(p)) {
           return { platform: p, handle: str.replace(p, '') };
@@ -73,7 +73,7 @@ function parseInitialSnsList(editingPlace) {
 
   const str = editingPlace?.sns || '';
   if (!str) return [{ platform: 'k_', handle: '' }];
-  const prefixes = ['k_', 'l_', 'w_', 'f_', 'i_', 't_'];
+  const prefixes = ['k_', 'l_', 'w_', 'f_', 'i_', 't_', 'h_', 'e_'];
   for (const p of prefixes) {
     if (str.startsWith(p)) {
       return [{ platform: p, handle: str.replace(p, '') }];
@@ -508,6 +508,7 @@ const compressImageFile = (file) => {
                     <option value="i_">인스타그램</option>
                     <option value="t_">텔레그램</option>
                     <option value="h_">홈페이지</option>
+                    <option value="e_">기타</option>
                   </select>
                   <input
                     type="text"
