@@ -29,7 +29,7 @@ export default function DetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { places, reviews, addReview, updatePlace, deletePlace } = usePlaces();
+  const { places, reviews, addReview, updatePlace, deletePlace, updateReview, deleteReview, hideReview } = usePlaces();
   const { userProfile, toggleFavorite } = useAuth();
 
   const fromView = location.state?.fromView || 'list';
@@ -48,6 +48,9 @@ export default function DetailPage() {
   // Review Form state
   const [rating, setRating] = useState(5);
   const [reviewContent, setReviewContent] = useState('');
+  const [editingReviewId, setEditingReviewId] = useState(null);
+  const [editContent, setEditContent] = useState('');
+  const [editRating, setEditRating] = useState(5);
 
   if (!place) {
     return (
@@ -60,7 +63,7 @@ export default function DetailPage() {
     );
   }
 
-  const placeReviews = reviews.filter((r) => r.placeId === place.id);
+  const placeReviews = reviews.filter((r) => r.placeId === place.id && (userProfile?.isAdmin || !r.isHidden));
 
   const carrier = classifyPhoneCarrier(place.phone);
   const snsInfo = parseSnsEntry(place.sns);
@@ -413,21 +416,83 @@ export default function DetailPage() {
 
         {/* Reviews List */}
         <div className="reviews-list">
-          {placeReviews.map((rev) => (
-            <div key={rev.id} className="review-item">
-              <div className="review-user-row">
-                <strong>{rev.userName}</strong>
-                <LevelBadge level={rev.userLevel} />
-                <span className="review-date">{rev.createdAt}</span>
+          {placeReviews.map((rev) => {
+            const isAuthor = userProfile && (userProfile.displayName === rev.userName || userProfile.uid === rev.uid);
+            const isEditing = editingReviewId === rev.id;
+
+            return (
+              <div key={rev.id} className="review-item" style={{ opacity: rev.isHidden ? 0.5 : 1 }}>
+                <div className="review-user-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <strong>{rev.userName ? `${rev.userName.charAt(0)}****` : '****'}</strong>
+                    <LevelBadge level={rev.userLevel} />
+                    <span className="review-date">{rev.createdAt}</span>
+                    {rev.isHidden && <span style={{ color: '#ef4444', fontSize: '0.8rem', marginLeft: '4px', fontWeight: 'bold' }}>[숨김 처리됨]</span>}
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {isAuthor && !isEditing && (
+                      <>
+                        <button type="button" className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '4px' }} onClick={() => {
+                          setEditingReviewId(rev.id);
+                          setEditContent(rev.content);
+                          setEditRating(rev.rating || 5);
+                        }}>수정</button>
+                        <button type="button" className="btn btn-danger" style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '4px', background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => {
+                          if (window.confirm('리뷰를 정말 삭제하시겠습니까?')) {
+                            deleteReview(rev.id);
+                          }
+                        }}>삭제</button>
+                      </>
+                    )}
+                    {userProfile?.isAdmin && (
+                      <button type="button" className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '4px', background: rev.isHidden ? '#10b981' : '#f59e0b', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => hideReview(rev.id, !rev.isHidden)}>
+                        {rev.isHidden ? '감추기 해제' : '감추기'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {isEditing ? (
+                  <div style={{ marginTop: '12px', background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div className="star-rating-select" style={{ marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.9rem', marginRight: '8px', color: '#64748b' }}>평점 수정:</span>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <RiStarFill
+                          key={star}
+                          className={`star-select-icon ${star <= editRating ? 'active' : ''}`}
+                          onClick={() => setEditRating(star)}
+                        />
+                      ))}
+                    </div>
+                    <textarea
+                      rows="3"
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      className="form-textarea"
+                    />
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                      <button type="button" className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.85rem' }} onClick={() => {
+                        updateReview(rev.id, editContent, editRating);
+                        setEditingReviewId(null);
+                      }}>저장</button>
+                      <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.85rem' }} onClick={() => setEditingReviewId(null)}>취소</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="review-stars" style={{ marginTop: '6px' }}>
+                      {[...Array(Math.max(1, Math.min(5, Math.floor(rev.rating || 5))))].map((_, i) => (
+                        <RiStarFill key={i} className="star-icon" />
+                      ))}
+                    </div>
+                    <p className="review-text">{rev.content}</p>
+                  </>
+                )}
               </div>
-              <div className="review-stars">
-                {[...Array(Math.max(1, Math.min(5, Math.floor(rev.rating || 5))))].map((_, i) => (
-                  <RiStarFill key={i} className="star-icon" />
-                ))}
-              </div>
-              <p className="review-text">{rev.content}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 

@@ -722,6 +722,30 @@ export const PlacesProvider = ({ children }) => {
     }
   };
 
+  const recalculatePlaceRating = (placeId, currentReviews) => {
+    const visibleReviews = currentReviews.filter(r => r.placeId === placeId && !r.isHidden);
+    const newCount = visibleReviews.length;
+    let newRating = 5.0;
+    if (newCount > 0) {
+      const sum = visibleReviews.reduce((acc, r) => acc + (Number(r.rating) || 5), 0);
+      newRating = Number((sum / newCount).toFixed(1));
+    }
+    
+    setPlaces((prev) =>
+      prev.map((p) => {
+        if (p.id === placeId) {
+          const updatedPlace = { ...p, rating: newRating, reviewsCount: newCount };
+          // Fire-and-forget Firestore update if place exists in DB
+          if (updatedPlace.id && !updatedPlace.id.startsWith('mock')) {
+             setDoc(doc(db, 'places', placeId), { rating: newRating, reviewsCount: newCount }, { merge: true }).catch(e => console.error(e));
+          }
+          return updatedPlace;
+        }
+        return p;
+      })
+    );
+  };
+
   const addReview = (placeId, review) => {
     const newRev = {
       id: `rev_${Date.now()}`,
@@ -729,18 +753,38 @@ export const PlacesProvider = ({ children }) => {
       createdAt: new Date().toISOString().split('T')[0],
       ...review
     };
-    setReviews((prev) => [newRev, ...prev]);
+    setReviews((prev) => {
+      const updated = [newRev, ...prev];
+      recalculatePlaceRating(placeId, updated);
+      return updated;
+    });
+  };
 
-    setPlaces((prev) =>
-      prev.map((p) => {
-        if (p.id === placeId) {
-          const newCount = p.reviewsCount + 1;
-          const newRating = Number(((p.rating * p.reviewsCount + review.rating) / newCount).toFixed(1));
-          return { ...p, rating: newRating, reviewsCount: newCount };
-        }
-        return p;
-      })
-    );
+  const updateReview = (id, newContent, newRating) => {
+    setReviews((prev) => {
+      const updated = prev.map((r) => r.id === id ? { ...r, content: newContent, rating: newRating } : r);
+      const targetRev = prev.find(r => r.id === id);
+      if (targetRev) recalculatePlaceRating(targetRev.placeId, updated);
+      return updated;
+    });
+  };
+
+  const deleteReview = (id) => {
+    setReviews((prev) => {
+      const targetRev = prev.find(r => r.id === id);
+      const updated = prev.filter((r) => r.id !== id);
+      if (targetRev) recalculatePlaceRating(targetRev.placeId, updated);
+      return updated;
+    });
+  };
+
+  const hideReview = (id, isHidden) => {
+    setReviews((prev) => {
+      const updated = prev.map((r) => r.id === id ? { ...r, isHidden } : r);
+      const targetRev = prev.find(r => r.id === id);
+      if (targetRev) recalculatePlaceRating(targetRev.placeId, updated);
+      return updated;
+    });
   };
 
   return (
@@ -764,7 +808,10 @@ export const PlacesProvider = ({ children }) => {
         updateMarketplaceStatus,
         bumpMarketplaceListing,
         toggleMarketplaceFavorite,
-        addReview
+        addReview,
+        updateReview,
+        deleteReview,
+        hideReview
       }}
     >
       {children}
