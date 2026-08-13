@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePlaces } from '../context/PlacesContext';
 import PlaceCard from '../components/places/PlaceCard';
@@ -15,15 +16,18 @@ import {
   RiGoogleFill,
   RiAddLine,
   RiCloseLine,
-  RiSendPlaneFill
+  RiSendPlaneFill,
+  RiChat1Line,
+  RiStarFill
 } from 'react-icons/ri';
 import ZoomableImage from '../components/common/ZoomableImage';
 import './ProfilePage.css';
 
 export default function ProfilePage() {
+  const navigate = useNavigate();
   const { currentUser, userProfile, updateUserProfile, loginWithGoogle, logout, deleteAccount } = useAuth();
-  const { places, submissions, addSubmission } = usePlaces();
-  const [activeTab, setActiveTab] = useState('favorites'); // favorites, submissions, points
+  const { places, submissions, addSubmission, reviews } = usePlaces();
+  const [activeTab, setActiveTab] = useState('favorites'); // favorites, submissions, points, reviews
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [expandedSubId, setExpandedSubId] = useState(null);
@@ -132,6 +136,7 @@ export default function ProfilePage() {
 
   const favPlaces = places.filter((p) => userProfile?.favorites?.includes(p.id));
   const userSubmissions = submissions.filter((s) => s.uid === userProfile?.uid || s.userName === userProfile?.displayName);
+  const userReviews = reviews.filter((r) => r.uid === userProfile?.uid || r.userName === userProfile?.displayName);
   const progress = getLevelProgress(userProfile?.points || 0);
 
   const handleSendFeedback = (e) => {
@@ -332,12 +337,15 @@ export default function ProfilePage() {
       </div>
 
       {/* Profile Activity Tabs */}
-      <div className="profile-tabs glass-card">
+      <div className="profile-tabs glass-card" style={{ display: 'flex', overflowX: 'auto', whiteSpace: 'nowrap' }}>
         <button className={activeTab === 'favorites' ? 'active' : ''} onClick={() => setActiveTab('favorites')}>
           <RiHeartFill /> 즐겨찾기 ({favPlaces.length})
         </button>
         <button className={activeTab === 'submissions' ? 'active' : ''} onClick={() => setActiveTab('submissions')}>
           <RiHistoryLine /> 내 제보내역 ({userSubmissions.length})
+        </button>
+        <button className={activeTab === 'reviews' ? 'active' : ''} onClick={() => setActiveTab('reviews')}>
+          <RiChat1Line /> 나의 댓글 ({userReviews.length})
         </button>
         <button className={activeTab === 'points' ? 'active' : ''} onClick={() => setActiveTab('points')}>
           <RiCoinLine /> 포인트 내역
@@ -441,6 +449,47 @@ export default function ProfilePage() {
                 )}
               </div>
             ))
+          )}
+        </div>
+      )}
+
+      {activeTab === 'reviews' && (
+        <div className="tab-section fade-in">
+          {userReviews.length === 0 ? (
+            <div className="glass-card empty-state" style={{ textAlign: 'center', padding: '36px 16px' }}>
+              <p style={{ color: '#64748b' }}>작성하신 리뷰(댓글)가 없습니다.</p>
+            </div>
+          ) : (
+            userReviews.map((rev) => {
+              const placeObj = places.find(p => p.id === rev.placeId);
+              return (
+                <div 
+                  key={rev.id} 
+                  className="glass-card" 
+                  style={{ marginBottom: '12px', padding: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '8px' }}
+                  onClick={() => navigate(`/place/${rev.placeId}`)}
+                  title="해당 업체로 이동하여 수정/삭제"
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <strong style={{ fontSize: '1rem', color: '#1e293b' }}>
+                      {placeObj ? placeObj.name : '알 수 없는 업체'}
+                    </strong>
+                    <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{rev.createdAt}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#fbbf24' }}>
+                    {[...Array(Math.max(1, Math.min(5, Math.floor(rev.rating || 5))))].map((_, i) => (
+                      <RiStarFill key={i} style={{ fontSize: '1.1rem' }} />
+                    ))}
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.9rem', color: '#475569', lineHeight: '1.4', wordBreak: 'keep-all' }}>
+                    {rev.content}
+                  </p>
+                  <div style={{ textAlign: 'right', marginTop: '4px' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'underline' }}>해당 업체로 이동하여 관리하기 →</span>
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       )}

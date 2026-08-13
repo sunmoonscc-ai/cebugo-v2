@@ -75,6 +75,7 @@ export default function DetailPage() {
     addReview(place.id, {
       userName: userProfile?.displayName || '세부여행자',
       userLevel: userProfile?.level || 1,
+      uid: userProfile?.uid || 'guest',
       rating,
       content: reviewContent
     });
@@ -388,31 +389,44 @@ export default function DetailPage() {
         <h3><RiChat1Line /> 방문자 리뷰 ({placeReviews.length})</h3>
 
         {/* Review Form */}
-        <form onSubmit={handleReviewSubmit} className="review-form">
-          <div className="star-rating-select">
-            <span>평점 선택:</span>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <RiStarFill
-                key={star}
-                className={`star-select-icon ${star <= rating ? 'active' : ''}`}
-                onClick={() => setRating(star)}
-              />
-            ))}
+        {userProfile ? (
+          <form onSubmit={handleReviewSubmit} className="review-form">
+            <div className="star-rating-select">
+              <span>평점 선택:</span>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <RiStarFill
+                  key={star}
+                  className={`star-select-icon ${star <= rating ? 'active' : ''}`}
+                  onClick={() => setRating(star)}
+                />
+              ))}
+            </div>
+
+            <textarea
+              rows="3"
+              placeholder="실제 방문 경험을 후기로 남겨주세요."
+              value={reviewContent}
+              onChange={(e) => setReviewContent(e.target.value)}
+              className="form-textarea"
+              required
+            />
+
+            <button type="submit" className="btn btn-primary review-submit-btn">
+              리뷰 등록하기
+            </button>
+          </form>
+        ) : (
+          <div className="review-form" style={{ textAlign: 'center', padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#64748b' }}>
+            리뷰를 작성하시려면 로그인이 필요합니다.<br/>
+            <button 
+              className="btn btn-secondary" 
+              style={{ marginTop: '10px', fontSize: '0.85rem' }}
+              onClick={() => navigate('/profile')}
+            >
+              로그인하러 가기
+            </button>
           </div>
-
-          <textarea
-            rows="3"
-            placeholder="실제 방문 경험을 후기로 남겨주세요."
-            value={reviewContent}
-            onChange={(e) => setReviewContent(e.target.value)}
-            className="form-textarea"
-            required
-          />
-
-          <button type="submit" className="btn btn-primary review-submit-btn">
-            리뷰 등록하기
-          </button>
-        </form>
+        )}
 
         {/* Reviews List */}
         <div className="reviews-list">

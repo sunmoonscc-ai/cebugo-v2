@@ -303,17 +303,7 @@ export const PlacesProvider = ({ children }) => {
   const [places, setPlaces] = useState(getInitialPlaces);
   const [marketplace, setMarketplace] = useState(INITIAL_MARKETPLACE);
   const [submissions, setSubmissions] = useState(INITIAL_SUBMISSIONS);
-  const [reviews, setReviews] = useState([
-    {
-      id: 'rev_1',
-      placeId: 'place_1',
-      userName: '여행조아',
-      userLevel: 6,
-      rating: 5,
-      content: '알리망오 크랩 칠리 소스가 정말 맛있었어요! 카카오톡 사전 예약 필수입니다.',
-      createdAt: '2026-07-20'
-    }
-  ]);
+  const [reviews, setReviews] = useState([]);
 
   // Clean legacy local storage caches on startup
   useEffect(() => {
@@ -406,6 +396,27 @@ export const PlacesProvider = ({ children }) => {
       }
     );
     return () => unsubSubs();
+  }, []);
+
+  // Sync Reviews from Firestore
+  useEffect(() => {
+    const unsubReviews = onSnapshot(
+      collection(db, 'cebugo_reviews'),
+      (snapshot) => {
+        let list = [];
+        if (!snapshot.empty) {
+          list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+          list.sort((a, b) => {
+            const dateA = new Date(a.createdAt || 0).getTime();
+            const dateB = new Date(b.createdAt || 0).getTime();
+            return dateB - dateA;
+          });
+        }
+        setReviews(list);
+      },
+      (err) => console.error('Firestore reviews sync error:', err)
+    );
+    return () => unsubReviews();
   }, []);
 
   const addPlace = async (placeData) => {
@@ -746,45 +757,71 @@ export const PlacesProvider = ({ children }) => {
     );
   };
 
-  const addReview = (placeId, review) => {
+  const addReview = async (placeId, review) => {
+    const docId = `rev_${Date.now()}`;
     const newRev = {
-      id: `rev_${Date.now()}`,
+      id: docId,
       placeId,
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString(),
       ...review
     };
+    
     setReviews((prev) => {
       const updated = [newRev, ...prev];
       recalculatePlaceRating(placeId, updated);
       return updated;
     });
+
+    try {
+      await setDoc(doc(db, 'cebugo_reviews', docId), newRev);
+    } catch (err) {
+      console.error('Failed to add review:', err);
+    }
   };
 
-  const updateReview = (id, newContent, newRating) => {
+  const updateReview = async (id, newContent, newRating) => {
     setReviews((prev) => {
       const updated = prev.map((r) => r.id === id ? { ...r, content: newContent, rating: newRating } : r);
       const targetRev = prev.find(r => r.id === id);
       if (targetRev) recalculatePlaceRating(targetRev.placeId, updated);
       return updated;
     });
+
+    try {
+      await setDoc(doc(db, 'cebugo_reviews', id), { content: newContent, rating: newRating }, { merge: true });
+    } catch (err) {
+      console.error('Failed to update review:', err);
+    }
   };
 
-  const deleteReview = (id) => {
+  const deleteReview = async (id) => {
     setReviews((prev) => {
       const targetRev = prev.find(r => r.id === id);
       const updated = prev.filter((r) => r.id !== id);
       if (targetRev) recalculatePlaceRating(targetRev.placeId, updated);
       return updated;
     });
+
+    try {
+      await deleteDoc(doc(db, 'cebugo_reviews', id));
+    } catch (err) {
+      console.error('Failed to delete review:', err);
+    }
   };
 
-  const hideReview = (id, isHidden) => {
+  const hideReview = async (id, isHidden) => {
     setReviews((prev) => {
       const updated = prev.map((r) => r.id === id ? { ...r, isHidden } : r);
       const targetRev = prev.find(r => r.id === id);
       if (targetRev) recalculatePlaceRating(targetRev.placeId, updated);
       return updated;
     });
+
+    try {
+      await setDoc(doc(db, 'cebugo_reviews', id), { isHidden }, { merge: true });
+    } catch (err) {
+      console.error('Failed to hide review:', err);
+    }
   };
 
   return (
