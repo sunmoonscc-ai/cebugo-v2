@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { usePlaces } from '../context/PlacesContext';
 import { useAuth } from '../context/AuthContext';
+import { db } from '../firebase/config';
+import { doc, onSnapshot } from 'firebase/firestore';
 import ImageCarousel from '../components/places/ImageCarousel';
 import SuggestEditModal from '../components/modals/SuggestEditModal';
 import PlaceFormModal from '../components/modals/PlaceFormModal';
@@ -34,10 +36,21 @@ export default function DetailPage() {
 
   const fromView = location.state?.fromView || 'list';
 
+  const [siteRules, setSiteRules] = useState({ reviewWriteLevel: 1 });
+
   // Automatically scroll to very top when Detail Page is loaded or ID changes
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [id]);
+
+  useEffect(() => {
+    const unsubSite = onSnapshot(doc(db, 'cebugo_config', 'site_rules'), (docSnap) => {
+      if (docSnap.exists()) {
+        setSiteRules(docSnap.data());
+      }
+    });
+    return () => unsubSite();
+  }, []);
 
   const place = places.find((p) => String(p.id) === String(id)) || places.find((p) => (p.name || '').toLowerCase().includes((id || '').toLowerCase())) || places[0];
 
@@ -390,31 +403,38 @@ export default function DetailPage() {
 
         {/* Review Form */}
         {userProfile ? (
-          <form onSubmit={handleReviewSubmit} className="review-form">
-            <div className="star-rating-select">
-              <span>평점 선택:</span>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <RiStarFill
-                  key={star}
-                  className={`star-select-icon ${star <= rating ? 'active' : ''}`}
-                  onClick={() => setRating(star)}
-                />
-              ))}
+          userProfile.level >= (siteRules?.reviewWriteLevel || 1) ? (
+            <form onSubmit={handleReviewSubmit} className="review-form">
+              <div className="star-rating-select">
+                <span>평점 선택:</span>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <RiStarFill
+                    key={star}
+                    className={`star-select-icon ${star <= rating ? 'active' : ''}`}
+                    onClick={() => setRating(star)}
+                  />
+                ))}
+              </div>
+
+              <textarea
+                rows="3"
+                placeholder="실제 방문 경험을 후기로 남겨주세요."
+                value={reviewContent}
+                onChange={(e) => setReviewContent(e.target.value)}
+                className="form-textarea"
+                required
+              />
+
+              <button type="submit" className="btn btn-primary review-submit-btn">
+                리뷰 등록하기
+              </button>
+            </form>
+          ) : (
+            <div className="review-form" style={{ textAlign: 'center', padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#64748b' }}>
+              리뷰(댓글) 작성 권한이 없습니다.<br/>
+              <span style={{ fontSize: '0.85rem' }}>현재 내 레벨: Lv.{userProfile.level} / 필요 레벨: Lv.{siteRules?.reviewWriteLevel || 1}</span>
             </div>
-
-            <textarea
-              rows="3"
-              placeholder="실제 방문 경험을 후기로 남겨주세요."
-              value={reviewContent}
-              onChange={(e) => setReviewContent(e.target.value)}
-              className="form-textarea"
-              required
-            />
-
-            <button type="submit" className="btn btn-primary review-submit-btn">
-              리뷰 등록하기
-            </button>
-          </form>
+          )
         ) : (
           <div className="review-form" style={{ textAlign: 'center', padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#64748b' }}>
             리뷰를 작성하시려면 로그인이 필요합니다.<br/>

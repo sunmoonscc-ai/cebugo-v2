@@ -65,12 +65,12 @@ const createCustomCircleMarker = (place) => {
 
 const FIXED_USER_LOCATION = [10.324581378196822, 124.01394151354162];
 
-const getSavedMapCenter = () => {
+const getSavedMapCenter = (defaultCenter) => {
   try {
     const saved = sessionStorage.getItem('cebugo_map_center');
     if (saved) return JSON.parse(saved);
   } catch (e) {}
-  return FIXED_USER_LOCATION;
+  return defaultCenter;
 };
 
 const getSavedMapZoom = () => {
@@ -111,16 +111,17 @@ function RecenterMap({ center, zoom }) {
   return null;
 }
 
-export default function PlacesMapView({ places }) {
+export default function PlacesMapView({ places, userCoords }) {
   const navigate = useNavigate();
-  const [mapCenter, setMapCenter] = useState(getSavedMapCenter);
+  const defaultCenter = userCoords ? [userCoords.lat, userCoords.lng] : FIXED_USER_LOCATION;
+  const [mapCenter, setMapCenter] = useState(() => getSavedMapCenter(defaultCenter));
   const [mapZoom, setMapZoom] = useState(getSavedMapZoom);
-  const userLocation = FIXED_USER_LOCATION;
+  const userLocation = userCoords ? [userCoords.lat, userCoords.lng] : FIXED_USER_LOCATION;
 
   const handleFindLocation = () => {
-    setMapCenter(FIXED_USER_LOCATION);
+    setMapCenter(userLocation);
     setMapZoom(13);
-    sessionStorage.setItem('cebugo_map_center', JSON.stringify(FIXED_USER_LOCATION));
+    sessionStorage.setItem('cebugo_map_center', JSON.stringify(userLocation));
     sessionStorage.setItem('cebugo_map_zoom', JSON.stringify(13));
   };
 

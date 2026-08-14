@@ -131,8 +131,6 @@ export function getOptimizedImageUrl(url, width = 600, quality = 80) {
   if (
     url.startsWith('data:') ||
     url.startsWith('blob:') ||
-    url.includes('firebasestorage.googleapis.com') ||
-    url.includes('firebase') ||
     url.includes('unsplash.com') ||
     url.includes('weserv.nl') ||
     url.includes('default_cafe')

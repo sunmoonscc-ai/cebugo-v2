@@ -15,11 +15,13 @@ import {
   RiUser3Line,
   RiStore2Line,
   RiAddLine,
-  RiSettings3Line
+  RiSettings3Line,
+  RiMapPinLine
 } from 'react-icons/ri';
 import ZoomableImage from '../../components/common/ZoomableImage';
 import AdminUserEditModal from '../../components/modals/AdminUserEditModal';
 import AdvertiserFormModal from '../../components/modals/AdvertiserFormModal';
+import MapLocationModal from '../../components/modals/MapLocationModal';
 import './AdminSubmissionsPage.css';
 
 export default function AdminSubmissionsPage() {
@@ -27,6 +29,7 @@ export default function AdminSubmissionsPage() {
   const { categories, addCategory, updateCategory, deleteCategory, reorderCategories } = useCategories();
 
   const [adminTab, setAdminTab] = useState('notice'); // 'notice' (공지/속도) or 'submission' (제보)
+  const [showAdminLocationModal, setShowAdminLocationModal] = useState(false);
   const [noticeSpeedMultiplier, setNoticeSpeedMultiplier] = useState(1);
   const [adSpeedMultiplier, setAdSpeedMultiplier] = useState(1);
   const [expandedSubmissionId, setExpandedSubmissionId] = useState(null);
@@ -42,6 +45,11 @@ export default function AdminSubmissionsPage() {
     readLevel: 1, reqPhoneRead: false, reqKakaoRead: false,
     writeLevel: 4, reqPhoneWrite: true, reqKakaoWrite: true,
     contactExposureLevel: 1
+  });
+
+  const [siteRules, setSiteRules] = useState({
+    locationPolicy: 'manual',
+    reviewWriteLevel: 1
   });
 
   const [imageUploadLimits, setImageUploadLimits] = useState({
@@ -84,7 +92,13 @@ export default function AdminSubmissionsPage() {
       }
     });
 
-    return () => { unsub(); unsubRules(); unsubImage(); unsubList(); };
+    const unsubSite = onSnapshot(doc(db, 'cebugo_config', 'site_rules'), (docSnap) => {
+      if (docSnap.exists()) {
+        setSiteRules(docSnap.data());
+      }
+    });
+
+    return () => { unsub(); unsubRules(); unsubImage(); unsubList(); unsubSite(); };
   }, []);
 
   useEffect(() => {
@@ -124,13 +138,26 @@ export default function AdminSubmissionsPage() {
 
   const handleSaveMarketplaceRules = async () => {
     try {
-      await setDoc(doc(db, 'cebugo_config', 'marketplace_rules'), {
-        ...marketplaceRules,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
+      // Remove locationPolicy if it exists from marketplaceRules before saving (cleanup)
+      const dataToSave = { ...marketplaceRules, updatedAt: new Date().toISOString() };
+      delete dataToSave.locationPolicy;
+      await setDoc(doc(db, 'cebugo_config', 'marketplace_rules'), dataToSave, { merge: true });
       alert('중고거래 설정이 성공적으로 저장되었습니다.');
     } catch (e) {
       console.error('Failed to save marketplace rules:', e);
+      alert('설정 저장 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleSaveSiteRules = async () => {
+    try {
+      await setDoc(doc(db, 'cebugo_config', 'site_rules'), {
+        ...siteRules,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      alert('일반 서비스 권한/정책이 성공적으로 저장되었습니다.');
+    } catch (e) {
+      console.error('Failed to save site rules:', e);
       alert('설정 저장 중 오류가 발생했습니다.');
     }
   };
@@ -512,6 +539,8 @@ export default function AdminSubmissionsPage() {
                   <input type="number" min="1" max="20" className="form-input" value={marketplaceRules.contactExposureLevel || 1} onChange={e => setMarketplaceRules({...marketplaceRules, contactExposureLevel: parseInt(e.target.value, 10) || 1})} />
                 </div>
               </div>
+
+
             </div>
 
             <button type="button" className="btn btn-primary" style={{ width: '100%', padding: '12px' }} onClick={handleSaveMarketplaceRules}>
@@ -519,8 +548,76 @@ export default function AdminSubmissionsPage() {
             </button>
           </div>
 
+          {/* General Site Rules Section */}
+          <div className="glass-card config-form" style={{ padding: '22px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <RiSettings3Line style={{ fontSize: '1.4rem', color: 'var(--primary)' }} />
+              <h3 style={{ margin: 0, fontSize: '1.08rem', fontWeight: 700, color: '#1e293b' }}>
+                🌐 일반 서비스 권한/정책
+              </h3>
+            </div>
+            <p style={{ fontSize: '0.84rem', color: '#64748b', marginBottom: '18px', lineHeight: '1.45' }}>
+              앱 전체에 적용되는 일반적인 권한 및 서비스 방식을 설정합니다.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+              {/* 위치 기반 서비스 정책 */}
+              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                <h4 style={{ margin: '0 0 12px 0', color: '#1e293b' }}>📍 위치 기반 서비스 정책</h4>
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>설정 방식</label>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <select 
+                      className="form-input" 
+                      style={{ flex: 1 }}
+                      value={siteRules.locationPolicy || 'manual'} 
+                      onChange={e => setSiteRules({...siteRules, locationPolicy: e.target.value})}
+                    >
+                      <option value="manual">지도에서 직접 위치 지정 (수동)</option>
+                      <option value="gps">사용자 동의 후 실제 기기 위치 기반 (GPS)</option>
+                    </select>
+                    
+                    {siteRules.locationPolicy === 'manual' && (
+                      <button 
+                        type="button"
+                        className="btn btn-secondary" 
+                        onClick={() => setShowAdminLocationModal(true)}
+                        style={{ whiteSpace: 'nowrap', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <RiMapPinLine /> 
+                        {siteRules.defaultLocation ? '기본 위치 변경' : '기본 위치 설정'}
+                      </button>
+                    )}
+                  </div>
+                  {siteRules.locationPolicy === 'manual' && siteRules.defaultLocation && (
+                    <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <RiCheckLine /> 공통 기본 위치가 지도에 지정되었습니다.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 댓글 작성 권한 */}
+              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                <h4 style={{ margin: '0 0 12px 0', color: '#1e293b' }}>💬 댓글(리뷰) 작성 권한</h4>
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>최소 레벨 (Lv)</label>
+                  <input 
+                    type="number" min="1" max="20" className="form-input" 
+                    value={siteRules.reviewWriteLevel || 1} 
+                    onChange={e => setSiteRules({...siteRules, reviewWriteLevel: parseInt(e.target.value, 10) || 1})} 
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button type="button" className="btn btn-primary" style={{ width: '100%', padding: '12px' }} onClick={handleSaveSiteRules}>
+              <RiCheckLine /> 일반 서비스 정책 저장
+            </button>
+          </div>
+
           {/* Etc (Image Upload Limits) Section */}
-          <div className="glass-card config-form" style={{ padding: '22px' }}>
+          <div className="glass-card config-form" style={{ padding: '22px', marginBottom: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <RiSettings3Line style={{ fontSize: '1.4rem', color: 'var(--primary)' }} />
               <h3 style={{ margin: 0, fontSize: '1.08rem', fontWeight: 700, color: '#1e293b' }}>
@@ -1042,13 +1139,25 @@ export default function AdminSubmissionsPage() {
 
   {/* 광고주 폼 모달 */}
   {isAdvertiserModalOpen && (
-    <AdvertiserFormModal 
-      editingAdvertiser={editingAdvertiser}
-      onClose={() => { setIsAdvertiserModalOpen(false); setEditingAdvertiser(null); }}
-      onSave={handleSaveAdvertiser}
-    />
-  )}
+      <AdvertiserFormModal 
+        editingAdvertiser={editingAdvertiser}
+        onClose={() => { setIsAdvertiserModalOpen(false); setEditingAdvertiser(null); }}
+        onSave={handleSaveAdvertiser}
+      />
+    )}
 
-</div>
+    {/* 공통 기본 위치 설정 모달 */}
+    {showAdminLocationModal && (
+      <MapLocationModal 
+        onClose={() => setShowAdminLocationModal(false)}
+        onSave={(position) => {
+          setSiteRules({ ...siteRules, defaultLocation: position });
+          setShowAdminLocationModal(false);
+        }}
+        initialLocation={siteRules.defaultLocation}
+      />
+    )}
+
+  </div>
   );
 }

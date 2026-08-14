@@ -12,6 +12,11 @@ export default function BottomNav() {
   return (
     <nav className="bottom-nav">
       <div className="bottom-nav-inner">
+        <NavLink to="/" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <RiStore2Line className="nav-icon" />
+          <span className="nav-label">업체정보</span>
+        </NavLink>
+
         <NavLink to="/daily-info" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <RiNewspaperLine className="nav-icon" />
           <span className="nav-label">News</span>
@@ -25,11 +30,6 @@ export default function BottomNav() {
         <NavLink to="/feed" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <RiMegaphoneLine className="nav-icon" />
           <span className="nav-label">광고</span>
-        </NavLink>
-
-        <NavLink to="/" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <RiStore2Line className="nav-icon" />
-          <span className="nav-label">업체정보</span>
         </NavLink>
       </div>
     </nav>

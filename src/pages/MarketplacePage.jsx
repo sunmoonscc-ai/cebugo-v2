@@ -62,6 +62,8 @@ export default function MarketplacePage() {
     readLevel: 1, reqPhoneRead: false, reqKakaoRead: false,
     writeLevel: 4, reqPhoneWrite: true, reqKakaoWrite: true
   });
+  
+  const [siteRules, setSiteRules] = useState({ locationPolicy: 'manual' });
 
   React.useEffect(() => {
     const unsub = onSnapshot(doc(db, 'cebugo_config', 'marketplace_rules'), (docSnap) => {
@@ -69,7 +71,12 @@ export default function MarketplacePage() {
         setRules(docSnap.data());
       }
     });
-    return () => unsub();
+    const unsubSite = onSnapshot(doc(db, 'cebugo_config', 'site_rules'), (docSnap) => {
+      if (docSnap.exists()) {
+        setSiteRules(docSnap.data());
+      }
+    });
+    return () => { unsub(); unsubSite(); };
   }, []);
 
   const isValidUser = userProfile && !userProfile.isGuest;
@@ -606,7 +613,9 @@ export default function MarketplacePage() {
         </div>
       )}
 
-      {showPhoneAuthModal && <PhoneAuthModal onClose={() => setShowPhoneAuthModal(false)} />}
+      {showPhoneAuthModal && (
+        <PhoneAuthModal onClose={() => setShowPhoneAuthModal(false)} />
+      )}
     </div>
   );
 }

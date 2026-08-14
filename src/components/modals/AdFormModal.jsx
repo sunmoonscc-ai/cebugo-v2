@@ -6,6 +6,7 @@ import { usePlaces } from '../../context/PlacesContext';
 import { db } from '../../firebase/config';
 import { collection, onSnapshot } from 'firebase/firestore';
 import ZoomableImage from '../common/ZoomableImage';
+import { uploadImageToFirebaseStorage } from '../../utils/imageHelper';
 
 const LOCATION_OPTIONS = ['전체', 'Cebu', 'Cordova', 'Lapu-Lapu', 'Mandaue', '기타'];
 
@@ -165,7 +166,6 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgressCount, setUploadProgressCount] = useState(0);
-  const isPendingSubmitRef = React.useRef(false);
 
   const doFinalSave = (currentFormData = formData) => {
     onSave({
@@ -199,21 +199,11 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
       try {
         const compressed = await compressImage(file, 800, 800, 0.7);
         if (compressed) {
+          const cloudUrl = await uploadImageToFirebaseStorage(compressed, 'ads');
           setFormData((prev) => {
             if (prev.images.length >= maxImages) return prev;
-            const updatedImages = [...prev.images, compressed];
-            const updated = { ...prev, images: updatedImages };
-            
-            if (isPendingSubmitRef.current) {
-              setTimeout(() => {
-                if (isPendingSubmitRef.current) {
-                  isPendingSubmitRef.current = false;
-                  alert('✅ 사진 업로드가 완료되어 게시물 저장을 완료했습니다!');
-                  doFinalSave(updated);
-                }
-              }, 300);
-            }
-            return updated;
+            const updatedImages = [...prev.images, cloudUrl];
+            return { ...prev, images: updatedImages };
           });
         }
       } catch (err) {
@@ -252,8 +242,7 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
     }
 
     if (isUploading || uploadProgressCount > 0) {
-      isPendingSubmitRef.current = true;
-      alert(`📷 사진을 백그라운드로 업로드 중입니다 (${uploadProgressCount > 0 ? uploadProgressCount + '개 남아있음' : '처리 중'}).\n업로드가 완료되면 자동으로 저장 및 반영됩니다!`);
+      alert('📷 사진이 아직 업로드 중입니다. 잠시만 기다려 주세요.');
       return;
     }
 
@@ -449,8 +438,8 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               취소
             </button>
-            <button type="submit" className="btn btn-primary">
-              <RiCheckLine /> {editingPost ? '수정 완료' : '등록 하기'}
+            <button type="submit" className="btn btn-primary" disabled={isUploading || uploadProgressCount > 0}>
+              <RiCheckLine /> {isUploading || uploadProgressCount > 0 ? `사진 업로드 중... (${uploadProgressCount})` : (editingPost ? '수정 완료' : '등록 하기')}
             </button>
           </div>
         </form>

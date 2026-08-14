@@ -1,0 +1,6 @@
+/* MapLocationModal.css */
+/* Styles mostly inherit from global modal styles, but map specific overrides can go here */
+
+.leaflet-container {
+  font-family: 'Pretendard', sans-serif;
+}

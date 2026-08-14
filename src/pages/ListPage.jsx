@@ -58,20 +58,27 @@ export default function ListPage() {
   }, [appConfig?.listSettings?.defaultSortOption]);
 
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserCoords({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.warn("Could not get location, using default:", error);
-        }
-      );
+    const isManual = appConfig?.siteRules?.locationPolicy === 'manual';
+    const defaultLoc = appConfig?.siteRules?.defaultLocation;
+
+    if (isManual && defaultLoc) {
+      setUserCoords({ lat: defaultLoc.lat, lng: defaultLoc.lng });
+    } else {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setUserCoords({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            });
+          },
+          (error) => {
+            console.warn("Could not get location, using default:", error);
+          }
+        );
+      }
     }
-  }, []);
+  }, [appConfig?.siteRules]);
 
   // Helper function for matching city locations
   const matchesCityFilter = (place, city) => {
@@ -309,7 +316,7 @@ export default function ListPage() {
 
       {/* Main View: List or Map */}
       {viewMode === 'map' ? (
-        <PlacesMapView places={sortedPlaces} />
+        <PlacesMapView places={sortedPlaces} userCoords={userCoords} />
       ) : (
         <>
           <div className="list-meta-header">

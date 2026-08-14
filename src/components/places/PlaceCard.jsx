@@ -68,6 +68,8 @@ export default function PlaceCard({ place, index, totalCount, onMove, onEdit, on
                   e.target.src = imgSrc;
                 }
               }}
+              loading="lazy"
+              decoding="async"
             />
           ))}
         </div>

@@ -31,9 +31,15 @@ export const AuthProvider = ({ children }) => {
         setAppConfig(prev => ({ ...prev, listSettings: docSnap.data() }));
       }
     });
+    const unsubSiteRules = onSnapshot(doc(db, 'cebugo_config', 'site_rules'), (docSnap) => {
+      if (docSnap.exists()) {
+        setAppConfig(prev => ({ ...prev, siteRules: docSnap.data() }));
+      }
+    });
     return () => {
       unsubImages();
       unsubListSettings();
+      unsubSiteRules();
     };
   }, []);
 
