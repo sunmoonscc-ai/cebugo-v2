@@ -44,7 +44,20 @@ export default function ListPage() {
     } catch (e) {}
   };
 
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategoryState] = useState(() => {
+    try {
+      return location.state?.fromCategory || sessionStorage.getItem('cebugo_selected_category') || 'all';
+    } catch (e) {
+      return location.state?.fromCategory || 'all';
+    }
+  });
+
+  const setSelectedCategory = (cat) => {
+    setSelectedCategoryState(cat);
+    try {
+      sessionStorage.setItem('cebugo_selected_category', cat);
+    } catch (e) {}
+  };
   const [selectedCity, setSelectedCity] = useState('all'); // 'all', 'Cebu', 'Cordova', 'Lapu-Lapu', 'Mandaue'
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('name'); // will be overridden by effect
@@ -316,7 +329,7 @@ export default function ListPage() {
 
       {/* Main View: List or Map */}
       {viewMode === 'map' ? (
-        <PlacesMapView places={sortedPlaces} userCoords={userCoords} />
+        <PlacesMapView places={sortedPlaces} userCoords={userCoords} selectedCategory={selectedCategory} />
       ) : (
         <>
           <div className="list-meta-header">
@@ -379,6 +392,7 @@ export default function ListPage() {
                 place={place}
                 index={index}
                 totalCount={sortedPlaces.length}
+                selectedCategory={selectedCategory}
                 onMove={movePlace}
                 onEdit={handleOpenEditPlace}
                 onDelete={handleDeletePlace}

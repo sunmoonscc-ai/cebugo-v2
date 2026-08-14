@@ -35,6 +35,7 @@ export default function DetailPage() {
   const { userProfile, toggleFavorite } = useAuth();
 
   const fromView = location.state?.fromView || 'list';
+  const fromCategory = location.state?.fromCategory || 'all';
 
   const [siteRules, setSiteRules] = useState({ reviewWriteLevel: 1 });
 
@@ -121,7 +122,7 @@ export default function DetailPage() {
 
   const handleBack = (e) => {
     e.preventDefault();
-    navigate('/', { state: { fromView } });
+    navigate('/', { state: { fromView, fromCategory } });
   };
 
   const hasBreakTime = place.breakTime && place.breakTime.trim() !== '' && place.breakTime !== '없음';

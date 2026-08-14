@@ -111,7 +111,7 @@ function RecenterMap({ center, zoom }) {
   return null;
 }
 
-export default function PlacesMapView({ places, userCoords }) {
+export default function PlacesMapView({ places, userCoords, selectedCategory }) {
   const navigate = useNavigate();
   const defaultCenter = userCoords ? [userCoords.lat, userCoords.lng] : FIXED_USER_LOCATION;
   const [mapCenter, setMapCenter] = useState(() => getSavedMapCenter(defaultCenter));
@@ -174,14 +174,14 @@ export default function PlacesMapView({ places, userCoords }) {
             icon={createCustomCircleMarker(place)}
             eventHandlers={{
               click: () => {
-                navigate(`/place/${place.id}`, { state: { fromView: 'map' } });
+                navigate(`/place/${place.id}`, { state: { fromView: 'map', fromCategory: selectedCategory } });
               }
             }}
           >
             <Popup>
               <div style={{ padding: '4px', maxWidth: '200px' }}>
                 <strong style={{ fontSize: '0.95rem', display: 'block', marginBottom: '4px' }}>
-                  <Link to={`/place/${place.id}`} state={{ fromView: 'map' }} style={{ color: '#0284c7' }}>{place.name}</Link>
+                  <Link to={`/place/${place.id}`} state={{ fromView: 'map', fromCategory: selectedCategory }} style={{ color: '#0284c7' }}>{place.name}</Link>
                 </strong>
                 <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '2px 0' }}>{place.addr}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ca8a04', fontSize: '0.8rem', marginTop: '4px' }}>

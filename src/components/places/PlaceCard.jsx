@@ -19,14 +19,14 @@ import {
 } from 'react-icons/ri';
 import './PlaceCard.css';
 
-export default function PlaceCard({ place, index, totalCount, onMove, onEdit, onDelete }) {
+export default function PlaceCard({ place, index, totalCount, selectedCategory, onMove, onEdit, onDelete }) {
   const navigate = useNavigate();
   const { userProfile, toggleFavorite } = useAuth();
   const [zoomImgIndex, setZoomImgIndex] = React.useState(null);
   const isFavorite = userProfile?.favorites?.includes(place.id);
 
   const goToDetail = () => {
-    navigate(`/place/${place.id}`);
+    navigate(`/place/${place.id}`, { state: { fromCategory: selectedCategory } });
   };
 
   // Gather all images from cover, facility, product, menu

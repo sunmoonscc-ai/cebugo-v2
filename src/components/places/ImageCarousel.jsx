@@ -13,7 +13,7 @@ export default function ImageCarousel({ images = [], maxWidth = '100%' }) {
   const safeImagesArray = Array.isArray(images)
     ? images.filter(Boolean)
     : (typeof images === 'string' && images.trim() ? [images.trim()] : []);
-  const displayImages = safeImagesArray.length > 0 ? safeImagesArray : ['/default_cafe.png'];
+  const displayImages = safeImagesArray.length > 0 ? safeImagesArray : [];
   const safeIndex = currentIndex >= displayImages.length ? 0 : currentIndex;
 
   const prevSlide = (e) => {
@@ -46,7 +46,7 @@ export default function ImageCarousel({ images = [], maxWidth = '100%' }) {
     touchEndRef.current = 0;
   };
 
-  const currentImgUrl = displayImages[safeIndex] || '/default_cafe.png';
+  const currentImgUrl = displayImages[safeIndex];
 
   return (
     <>
@@ -70,8 +70,8 @@ export default function ImageCarousel({ images = [], maxWidth = '100%' }) {
             alt={`slide-${safeIndex}`}
             className="carousel-main-img fade-in"
             onError={(e) => {
-              if (e.target.src !== '/default_cafe.png') {
-                e.target.src = '/default_cafe.png';
+              if (e.target.src !== currentImgUrl) {
+                e.target.src = currentImgUrl;
               }
             }}
           />
