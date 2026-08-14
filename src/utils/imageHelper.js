@@ -140,6 +140,7 @@ export function getOptimizedImageUrl(url, width = 600, quality = 80) {
     url.startsWith('/') ||
     url.includes('unsplash.com') ||
     url.includes('weserv.nl') ||
+    url.includes('firebasestorage.googleapis.com') ||
     url.includes('default_')
   ) {
     return url;
