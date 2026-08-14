@@ -78,47 +78,53 @@ export function getDefaultImageForCategory(categoryOrPlace) {
     catStr = String(categoryOrPlace || '').toLowerCase();
   }
 
-  if (catStr.includes('education') || catStr.includes('교육')) {
+  const searchStr = `${catStr} ${nameStr}`;
+
+  if (searchStr.includes('education') || searchStr.includes('교육')) {
     return '/default_education.png';
   }
   
-  if (catStr.includes('food') || catStr.includes('먹을거리') || catStr.includes('식당') || catStr.includes('음식')) {
+  if (searchStr.includes('food') || searchStr.includes('먹을거리') || searchStr.includes('식당') || searchStr.includes('음식')) {
     return '/default_food.png';
   }
 
-  if (catStr.includes('institution') || catStr.includes('기관')) {
+  if (searchStr.includes('cafe') || searchStr.includes('마실거리') || searchStr.includes('카페') || searchStr.includes('커피') || searchStr.includes('디저트')) {
+    return '/default_cafe.png';
+  }
+
+  if (searchStr.includes('institution') || searchStr.includes('기관')) {
     return '/default_institution.png';
   }
 
-  if (catStr.includes('hospital') || catStr.includes('병원') || catStr.includes('medical') || catStr.includes('의료')) {
+  if (searchStr.includes('hospital') || searchStr.includes('병원') || searchStr.includes('medical') || searchStr.includes('의료')) {
     return '/default_hospital.png';
   }
 
-  if (catStr.includes('볼거리') || catStr.includes('sight')) {
+  if (searchStr.includes('볼거리') || searchStr.includes('sight')) {
     return '/default_sightseeing.png';
   }
 
-  if (catStr.includes('살거리') || catStr.includes('shopping')) {
+  if (searchStr.includes('살거리') || searchStr.includes('shopping') || searchStr.includes('쇼핑')) {
     return '/default_shopping.png';
   }
 
-  if (catStr.includes('뷰티') || catStr.includes('마사지') || catStr.includes('beauty') || catStr.includes('massage')) {
+  if (searchStr.includes('뷰티') || searchStr.includes('마사지') || searchStr.includes('beauty') || searchStr.includes('massage') || searchStr.includes('네일') || searchStr.includes('스파')) {
     return '/default_beauty.png';
   }
 
-  if (catStr.includes('서비스') || catStr.includes('service')) {
+  if (searchStr.includes('서비스') || searchStr.includes('service')) {
     return '/default_service.png';
   }
 
-  if (catStr.includes('숙박') || catStr.includes('hotel') || catStr.includes('accommodation')) {
+  if (searchStr.includes('숙박') || searchStr.includes('hotel') || searchStr.includes('accommodation') || searchStr.includes('호텔') || searchStr.includes('리조트')) {
     return '/default_hotel.png';
   }
 
-  if (catStr.includes('즐길거리') || catStr.includes('activity') || catStr.includes('entertainment')) {
+  if (searchStr.includes('즐길거리') || searchStr.includes('activity') || searchStr.includes('entertainment') || searchStr.includes('액티비티')) {
     return '/default_activity.png';
   }
 
-  if (catStr.includes('탈거리') || catStr.includes('ride') || catStr.includes('transport')) {
+  if (searchStr.includes('탈거리') || searchStr.includes('ride') || searchStr.includes('transport') || searchStr.includes('렌트') || searchStr.includes('차량')) {
     return '/default_transport.png';
   }
 
@@ -131,9 +137,10 @@ export function getOptimizedImageUrl(url, width = 600, quality = 80) {
   if (
     url.startsWith('data:') ||
     url.startsWith('blob:') ||
+    url.startsWith('/') ||
     url.includes('unsplash.com') ||
     url.includes('weserv.nl') ||
-    url.includes('default_cafe')
+    url.includes('default_')
   ) {
     return url;
   }
