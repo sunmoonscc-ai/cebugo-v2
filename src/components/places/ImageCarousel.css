@@ -18,6 +18,8 @@
 .carousel-img-wrapper {
   position: relative;
   width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: 540px;
   cursor: pointer;
   display: flex;
   justify-content: center;
@@ -28,8 +30,7 @@
 
 .carousel-main-img {
   width: 100%;
-  height: auto;
-  max-height: 540px;
+  height: 100%;
   object-fit: contain;
   display: block;
 }

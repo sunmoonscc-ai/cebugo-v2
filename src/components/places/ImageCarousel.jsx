@@ -66,6 +66,7 @@ export default function ImageCarousel({ images = [], maxWidth = '100%' }) {
           title="클릭하여 화면 전체 크기로 확대보기"
         >
           <img
+            key={currentImgUrl}
             src={getOptimizedImageUrl(currentImgUrl, 800)}
             alt={`slide-${safeIndex}`}
             className="carousel-main-img fade-in"
