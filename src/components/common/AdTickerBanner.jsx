@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebase/config';
 import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { RiMegaphoneFill } from 'react-icons/ri';
+import { getLocalTodayString } from '../../utils/dateHelper';
 import './AdTickerBanner.css';
 
 export default function AdTickerBanner() {
@@ -28,7 +29,7 @@ export default function AdTickerBanner() {
       (snapshot) => {
         if (!snapshot.empty) {
           const list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-          const todayStr = new Date().toISOString().split('T')[0];
+          const todayStr = getLocalTodayString();
           // Filter strictly admin-selected ticker items (isTicker === true) and active date period
           const selected = list.filter((p) => {
             const isTicker = p.isTicker === true || p.isTicker === 'true';

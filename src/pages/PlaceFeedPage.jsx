@@ -6,6 +6,7 @@ import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch } from 'fire
 import ImageCarousel from '../components/places/ImageCarousel';
 import AdFormModal from '../components/modals/AdFormModal';
 import AdReorderModal from '../components/modals/AdReorderModal';
+import { getLocalTodayString } from '../utils/dateHelper';
 import { 
   RiMegaphoneLine, 
   RiCalendarEventLine, 
@@ -106,7 +107,7 @@ export default function PlaceFeedPage() {
     };
   }, []);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalTodayString();
 
   const getPostStatus = (p) => {
     if (p.startDate && todayStr < p.startDate) {
@@ -393,7 +394,7 @@ export default function PlaceFeedPage() {
           className="btn-secondary" 
           style={{ padding: '6px 12px', fontSize: '0.85rem', marginLeft: 'auto' }}
           onClick={() => {
-            const today = new Date().toISOString().split('T')[0];
+            const today = getLocalTodayString();
             setFilterMonth(today.substring(0, 7));
             setTimeout(() => setFilterDate(today), 0);
           }}

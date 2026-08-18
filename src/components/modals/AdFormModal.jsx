@@ -7,6 +7,7 @@ import { db } from '../../firebase/config';
 import { collection, onSnapshot } from 'firebase/firestore';
 import ZoomableImage from '../common/ZoomableImage';
 import { uploadImageToFirebaseStorage } from '../../utils/imageHelper';
+import { getLocalTodayString } from '../../utils/dateHelper';
 
 const LOCATION_OPTIONS = ['전체', 'Cebu', 'Cordova', 'Lapu-Lapu', 'Mandaue', '기타'];
 
@@ -74,8 +75,8 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
     advertiserId: '',
     authorName: '',
     placeId: '',
-    date: new Date().toISOString().split('T')[0],
-    startDate: new Date().toISOString().split('T')[0],
+    date: getLocalTodayString(),
+    startDate: getLocalTodayString(),
     endDate: '',
     location: '전체',
     content: '',
@@ -131,7 +132,7 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
         advertiserId: editingPost.advertiserId || '',
         authorName: editingPost.authorName || editingPost.placeName || '',
         placeId: editingPost.placeId || '',
-        date: editingPost.date || new Date().toISOString().split('T')[0],
+        date: editingPost.date || getLocalTodayString(),
         startDate: editingPost.startDate || '',
         endDate: editingPost.endDate || '',
         location: initLoc,
@@ -173,7 +174,7 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
       title: currentFormData.title.trim(),
       advertiserId: currentFormData.advertiserId || '',
       authorName: currentFormData.authorName.trim(),
-      date: currentFormData.date || new Date().toISOString().split('T')[0],
+      date: currentFormData.date || getLocalTodayString(),
       startDate: currentFormData.startDate || '',
       endDate: currentFormData.endDate || '',
       location: currentFormData.location || '전체',

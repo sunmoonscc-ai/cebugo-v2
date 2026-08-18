@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebase/config';
 import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { getLocalTodayString } from '../../utils/dateHelper';
 import './TopNoticeTickerBanner.css';
 
 export default function TopNoticeTickerBanner() {
@@ -34,7 +35,7 @@ export default function TopNoticeTickerBanner() {
       collection(db, 'cebugo_notices'),
       (snapshot) => {
         if (!snapshot.empty) {
-          const todayStr = new Date().toISOString().split('T')[0];
+          const todayStr = getLocalTodayString();
           noticeItems = snapshot.docs
             .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
             .filter((item) => {
