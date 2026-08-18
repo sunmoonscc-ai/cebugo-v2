@@ -9,6 +9,9 @@ export default function TopNoticeTickerBanner() {
   const [tickerItems, setTickerItems] = useState([]);
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
   const [durationSeconds, setDurationSeconds] = useState(25);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isClickPaused, setIsClickPaused] = useState(false);
+  const clickPauseTimeoutRef = useRef(null);
   const trackRef = useRef(null);
   const navigate = useNavigate();
 
@@ -110,8 +113,19 @@ export default function TopNoticeTickerBanner() {
           <div 
             ref={trackRef}
             className="top-notice-ticker-track" 
-            onClick={() => navigate('/daily-info')}
-            style={{ animationDuration: `${durationSeconds}s` }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            onClick={() => {
+              if (clickPauseTimeoutRef.current) clearTimeout(clickPauseTimeoutRef.current);
+              setIsClickPaused(true);
+              setIsHovered(false);
+              clickPauseTimeoutRef.current = setTimeout(() => setIsClickPaused(false), 3000);
+              navigate('/daily-info');
+            }}
+            style={{ 
+              animationDuration: `${durationSeconds}s`,
+              animationPlayState: (isHovered || isClickPaused) ? 'paused' : 'running'
+            }}
           >
             {displayItems.map((item, idx) => (
               <span key={`${item.id}-${idx}`} className="top-ticker-item">

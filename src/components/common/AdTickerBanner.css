@@ -71,9 +71,6 @@
   cursor: pointer;
 }
 
-.ad-ticker-track-wrap:hover .ad-ticker-track {
-  animation-play-state: paused;
-}
 
 .ticker-item {
   display: inline-flex;

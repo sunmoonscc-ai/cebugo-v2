@@ -10,6 +10,9 @@ export default function AdTickerBanner() {
   const [tickerPosts, setTickerPosts] = useState([]);
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
   const [durationSeconds, setDurationSeconds] = useState(25);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isClickPaused, setIsClickPaused] = useState(false);
+  const clickPauseTimeoutRef = useRef(null);
   const trackRef = useRef(null);
   const navigate = useNavigate();
 
@@ -84,8 +87,19 @@ export default function AdTickerBanner() {
           <div 
             ref={trackRef}
             className="ad-ticker-track" 
-            onClick={() => navigate('/feed')}
-            style={{ animationDuration: `${durationSeconds}s` }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            onClick={() => {
+              if (clickPauseTimeoutRef.current) clearTimeout(clickPauseTimeoutRef.current);
+              setIsClickPaused(true);
+              setIsHovered(false);
+              clickPauseTimeoutRef.current = setTimeout(() => setIsClickPaused(false), 3000);
+              navigate('/feed');
+            }}
+            style={{ 
+              animationDuration: `${durationSeconds}s`,
+              animationPlayState: (isHovered || isClickPaused) ? 'paused' : 'running'
+            }}
           >
             {displayItems.map((item, idx) => (
               <span 
@@ -93,6 +107,10 @@ export default function AdTickerBanner() {
                 className="ticker-item"
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (clickPauseTimeoutRef.current) clearTimeout(clickPauseTimeoutRef.current);
+                  setIsClickPaused(true);
+                  setIsHovered(false);
+                  clickPauseTimeoutRef.current = setTimeout(() => setIsClickPaused(false), 3000);
                   navigate('/feed', { state: { category: item.category || 'ad', postId: item.id } });
                 }}
               >

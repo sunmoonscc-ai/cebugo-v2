@@ -37,9 +37,6 @@
   cursor: pointer;
 }
 
-.top-notice-ticker-track-wrap:hover .top-notice-ticker-track {
-  animation-play-state: paused;
-}
 
 .top-ticker-item {
   display: inline-flex;
