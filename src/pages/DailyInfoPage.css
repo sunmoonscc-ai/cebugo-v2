@@ -985,3 +985,4 @@ button.contact-link-badge.sns.copied {
   align-items: center;
   gap: 6px;
 }
+.notice-content-text { white-space: pre-wrap; }

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { renderTextWithLinks } from '../utils/textHelper';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ImageCarousel from '../components/places/ImageCarousel';
@@ -1312,7 +1313,7 @@ export default function DailyInfoPage() {
   };
 
   return (
-    <div className="page-content fade-in">
+    <div className="page-content">
       <div className="daily-header">
         <h1>
           <RiNewspaperLine /> News
@@ -1365,7 +1366,7 @@ export default function DailyInfoPage() {
 
       {/* TAB 1: 공지 (Announcements) */}
       {activeTab === 'notice' && (
-        <div className="tab-content-section fade-in">
+        <div className="tab-content-section">
           {userProfile?.isAdmin && (
             <div className="admin-notice-actions">
               <button 
@@ -1495,7 +1496,7 @@ export default function DailyInfoPage() {
                   </div>
                 )}
 
-                <p className="notice-content-text">{item.content}</p>
+                <p className="notice-content-text" style={{ whiteSpace: 'pre-wrap' }}>{renderTextWithLinks(item.content)}</p>
               </div>
             );
           })}
@@ -1810,7 +1811,7 @@ export default function DailyInfoPage() {
 
       {/* TAB 2: 연락처 (Emergency Directory) */}
       {activeTab === 'contacts' && (
-        <div className="tab-content-section fade-in">
+        <div className="tab-content-section">
           {userProfile?.isAdmin && (
             <div className="admin-notice-actions">
               <button 
@@ -1889,7 +1890,7 @@ export default function DailyInfoPage() {
                     )}
                   </div>
 
-                  {item.desc && <p className="contact-desc">{item.desc}</p>}
+                  {item.desc && <p className="contact-desc" style={{ whiteSpace: 'pre-wrap' }}>{renderTextWithLinks(item.desc)}</p>}
 
                   {/* Multiple Call Buttons */}
                   <div className="contact-phones-column">
@@ -2241,7 +2242,7 @@ export default function DailyInfoPage() {
 
       {/* TAB 3: 정보 (Travel & Living Info) */}
       {activeTab === 'info' && (
-        <div className="tab-content-section fade-in">
+        <div className="tab-content-section">
           {userProfile?.isAdmin && (
             <div className="admin-notice-actions">
               <button 
@@ -2318,7 +2319,7 @@ export default function DailyInfoPage() {
                   </div>
                 )}
 
-                <p className="notice-content-text">{item.desc}</p>
+                <p className="notice-content-text" style={{ whiteSpace: 'pre-wrap' }}>{renderTextWithLinks(item.desc)}</p>
               </div>
             ))}
           </div>
@@ -2499,7 +2500,7 @@ export default function DailyInfoPage() {
 
       {/* TAB 4: 필리핀뉴스 (PH News) */}
       {activeTab === 'phnews' && (
-        <div className="tab-content-section fade-in">
+        <div className="tab-content-section">
           <div className="news-filter-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
             <div className="news-cat-pills">
               <button
@@ -2819,7 +2820,7 @@ export default function DailyInfoPage() {
 
       {/* TAB 4: 환율 (Exchange Rate Calculator) */}
       {activeTab === 'exchange' && (
-        <div className="tab-content-section fade-in">
+        <div className="tab-content-section">
           <div className="glass-card exchange-card">
             <div 
               className="announcement-banner" 
