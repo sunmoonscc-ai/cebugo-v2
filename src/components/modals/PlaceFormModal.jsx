@@ -264,8 +264,11 @@ const compressImageFile = (file) => {
   };
 
   const handleImageFileUpload = async (e, imgType) => {
-    const files = Array.from(e.target.files);
-    if (!files.length) return;
+    const originalFiles = Array.from(e.target.files);
+    if (!originalFiles.length) return;
+
+    // Reverse files so they are prepended in the order they were selected
+    const files = [...originalFiles].reverse();
 
     setIsUploading(true);
     setUploadProgressCount((prev) => prev + files.length);
@@ -289,7 +292,7 @@ const compressImageFile = (file) => {
           }
           const nextImages = {
             ...prev.images,
-            [imgType]: [...currentTypeImgs, cloudUrl]
+            [imgType]: [cloudUrl, ...currentTypeImgs]
           };
           const updated = { ...prev, images: nextImages };
           return updated;

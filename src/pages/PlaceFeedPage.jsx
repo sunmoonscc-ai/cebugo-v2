@@ -63,13 +63,34 @@ export default function PlaceFeedPage() {
   const [filterDate, setFilterDate] = useState('all');
   const [expandedEndedPosts, setExpandedEndedPosts] = useState({});
 
+  const processedLocationKey = React.useRef(null);
+
   useEffect(() => {
     if (location.state?.category) {
       setActiveTab(location.state.category);
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [location.state]);
-  
+    
+    if (location.state?.postId) {
+      if (processedLocationKey.current !== location.key) {
+        if (posts.length > 0) {
+          const targetPost = posts.find(p => p.id === location.state.postId);
+          if (targetPost) {
+            setSelectedAdvertiserId(targetPost.advertiserId || null);
+            setFilterMonth('all');
+            setFilterDate('all');
+          }
+          processedLocationKey.current = location.key;
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+    } else {
+      if (processedLocationKey.current !== location.key) {
+        processedLocationKey.current = location.key;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  }, [location.state, location.key, posts]);
+
   // Modals state
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState(null);

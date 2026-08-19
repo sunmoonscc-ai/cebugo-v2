@@ -185,8 +185,11 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
   };
 
   const handleImageFileUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    if (!files.length) return;
+    const originalFiles = Array.from(e.target.files);
+    if (!originalFiles.length) return;
+
+    // Reverse files so they are prepended in the order they were selected
+    const files = [...originalFiles].reverse();
 
     if (formData.images.length + files.length > maxImages) {
       alert(`이미지는 최대 ${maxImages}개까지 첨부할 수 있습니다.`);
@@ -203,7 +206,7 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
           const cloudUrl = await uploadImageToFirebaseStorage(compressed, 'ads');
           setFormData((prev) => {
             if (prev.images.length >= maxImages) return prev;
-            const updatedImages = [...prev.images, cloudUrl];
+            const updatedImages = [cloudUrl, ...prev.images];
             return { ...prev, images: updatedImages };
           });
         }
