@@ -3,6 +3,7 @@ import { renderTextWithLinks } from '../utils/textHelper';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ImageCarousel from '../components/places/ImageCarousel';
+import ScrollableImageGallery from '../components/places/ScrollableImageGallery';
 import ZoomableImage from '../components/common/ZoomableImage';
 import { fetchGoogleNews } from '../services/googleNewsService';
 import { fetchExchangeRates } from '../services/exchangeRateService';
@@ -1492,7 +1493,7 @@ export default function DailyInfoPage() {
                 {/* Attached Images Carousel / Preview */}
                 {item.images && item.images.length > 0 && (
                   <div className="notice-card-images" style={{ margin: '12px 0' }}>
-                    <ImageCarousel images={item.images} />
+                    <ScrollableImageGallery images={item.images} />
                   </div>
                 )}
 
@@ -2315,7 +2316,7 @@ export default function DailyInfoPage() {
                 {/* Attached Images Carousel / Preview */}
                 {item.images && item.images.length > 0 && (
                   <div className="notice-card-images" style={{ margin: '12px 0' }}>
-                    <ImageCarousel images={item.images} />
+                    <ScrollableImageGallery images={item.images} />
                   </div>
                 )}
 
@@ -2645,7 +2646,7 @@ export default function DailyInfoPage() {
                   {/* Attached Images Carousel */}
                   {item.images && item.images.length > 0 && (
                     <div className="notice-card-images" style={{ margin: '10px 0' }}>
-                      <ImageCarousel images={item.images} />
+                      <ScrollableImageGallery images={item.images} />
                     </div>
                   )}
 

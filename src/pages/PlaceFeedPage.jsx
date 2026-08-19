@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
 import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import ImageCarousel from '../components/places/ImageCarousel';
+import ScrollableImageGallery from '../components/places/ScrollableImageGallery';
 import AdFormModal from '../components/modals/AdFormModal';
 import AdReorderModal from '../components/modals/AdReorderModal';
 import { getLocalTodayString } from '../utils/dateHelper';
@@ -653,7 +654,7 @@ export default function PlaceFeedPage() {
                 {/* Attached Images Carousel */}
                 {imagesList.length > 0 && (
                     <div className="notice-card-images" style={{ margin: '12px 0' }}>
-                      <ImageCarousel images={imagesList} />
+                      <ScrollableImageGallery images={imagesList} />
                     </div>
                   )}
                   </>

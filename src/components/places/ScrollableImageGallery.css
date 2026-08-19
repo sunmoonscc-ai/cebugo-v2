@@ -1,0 +1,56 @@
+.scrollable-gallery-container {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0f172a;
+  border: 1px solid #e2e8f0;
+}
+
+.gallery-scroll-wrap {
+  display: flex;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: 540px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  gap: 4px;
+  background: #090d16;
+}
+
+.gallery-scroll-wrap::-webkit-scrollbar {
+  height: 4px;
+}
+
+.gallery-scroll-wrap::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+}
+
+.gallery-item-img {
+  height: 100%;
+  object-fit: cover;
+  scroll-snap-align: start;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.gallery-item-img:hover {
+  opacity: 0.9;
+}
+
+.gallery-scroll-wrap.single .gallery-item-img {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  flex: 0 0 100%;
+  object-fit: contain;
+}
+
+.gallery-scroll-wrap.dual .gallery-item-img,
+.gallery-scroll-wrap.multi .gallery-item-img {
+  width: 50%;
+  max-width: 50%;
+  flex: 0 0 calc(50% - 2px);
+}
