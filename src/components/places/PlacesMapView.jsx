@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { RiNavigationFill, RiStarFill } from 'react-icons/ri';
@@ -44,9 +44,30 @@ const isFoodOrCafeOrBar = (place) => {
   );
 };
 
-const createCustomCircleMarker = (place) => {
+const createCustomCircleMarker = (place, alignLeft = false) => {
   const circleBg = getCategoryColor(place.category);
   const circleSize = '9px'; // 9px로 증가
+
+  let displayName = place.name;
+  if (displayName.length > 15) {
+    displayName = displayName.substring(0, 15) + '...';
+  }
+
+  if (alignLeft) {
+    return L.divIcon({
+      className: 'custom-circle-place-marker',
+      html: `
+        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px; cursor: pointer; white-space: nowrap; transform: translateX(calc(-100% + 9px));">
+          <span class="place-name-label" style="font-size: 11.5px; font-weight: 700; color: #000000; text-shadow: -1.5px -1.5px 0 #ffffff, 1.5px -1.5px 0 #ffffff, -1.5px 1.5px 0 #ffffff, 1.5px 1.5px 0 #ffffff, 0 0 4px #ffffff; line-height: 1; text-align: right;">
+            ${displayName}
+          </span>
+          <div style="width: ${circleSize}; height: ${circleSize}; border-radius: 50%; background-color: ${circleBg}; border: 1.5px solid #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.4); flex-shrink: 0;"></div>
+        </div>
+      `,
+      iconSize: [160, 20],
+      iconAnchor: [4.5, 10]
+    });
+  }
 
   return L.divIcon({
     className: 'custom-circle-place-marker',
@@ -54,7 +75,7 @@ const createCustomCircleMarker = (place) => {
       <div style="display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap;">
         <div style="width: ${circleSize}; height: ${circleSize}; border-radius: 50%; background-color: ${circleBg}; border: 1.5px solid #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.4); flex-shrink: 0;"></div>
         <span class="place-name-label" style="font-size: 11.5px; font-weight: 700; color: #000000; text-shadow: -1.5px -1.5px 0 #ffffff, 1.5px -1.5px 0 #ffffff, -1.5px 1.5px 0 #ffffff, 1.5px 1.5px 0 #ffffff, 0 0 4px #ffffff; line-height: 1;">
-          ${place.name}
+          ${displayName}
         </span>
       </div>
     `,
@@ -125,18 +146,65 @@ export default function PlacesMapView({ places, userCoords, selectedCategory }) 
     sessionStorage.setItem('cebugo_map_zoom', JSON.stringify(18));
   };
 
+  // Pre-calculate alignments to prevent overlapping text for close markers
+  const validPlaces = useMemo(() => {
+    return places.filter(place => 
+      place.lat && place.lng && 
+      String(place.lat).trim() !== '' && String(place.lng).trim() !== '' &&
+      place.addr && String(place.addr).trim() !== ''
+    );
+  }, [places]);
+
+  const markerAlignments = useMemo(() => {
+    const alignments = {};
+    const positions = [];
+    
+    validPlaces.forEach(p => {
+      let conflict = false;
+      for (const pos of positions) {
+        // ~1mm distance at max zoom is approx 1-3 meters
+        // 0.00005 degrees is ~5.5 meters, enough to detect overlap
+        const dLat = Math.abs(p.lat - pos.lat);
+        const dLng = Math.abs(p.lng - pos.lng);
+        if (dLat < 0.00005 && dLng < 0.00005) {
+          conflict = true;
+          break;
+        }
+      }
+      
+      if (conflict) {
+        alignments[p.id] = true; // align left
+      } else {
+        alignments[p.id] = false; // align right
+        positions.push({ lat: p.lat, lng: p.lng });
+      }
+    });
+    
+    return alignments;
+  }, [validPlaces]);
+
   return (
-    <div className="map-view-container glass-card fade-in" style={{ position: 'relative', width: '100%', height: '520px', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px' }}>
+    <div className="map-container-wrapper" style={{ position: 'relative', width: '100%', height: 'calc(100vh - 180px)', minHeight: '400px', borderRadius: '16px', overflow: 'hidden' }}>
+      {/* Current Location Button */}
       <button 
+        type="button"
         onClick={handleFindLocation}
-        className="btn btn-secondary locate-btn"
         style={{
           position: 'absolute',
           top: '16px',
           right: '16px',
           zIndex: 1000,
+          background: 'rgba(255, 255, 255, 0.95)',
+          border: '1px solid #e2e8f0',
+          borderRadius: '24px',
+          padding: '10px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          cursor: 'pointer',
           boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          background: 'white',
+          fontWeight: '600',
+          color: '#0f172a',
           fontSize: '0.85rem'
         }}
       >
@@ -167,17 +235,11 @@ export default function PlacesMapView({ places, userCoords, selectedCategory }) 
         )}
 
         {/* Places Markers */}
-        {places
-          .filter(place => 
-            place.lat && place.lng && 
-            String(place.lat).trim() !== '' && String(place.lng).trim() !== '' &&
-            place.addr && String(place.addr).trim() !== ''
-          )
-          .map((place) => (
+        {validPlaces.map((place) => (
           <Marker 
             key={place.id} 
             position={[place.lat, place.lng]}
-            icon={createCustomCircleMarker(place)}
+            icon={createCustomCircleMarker(place, markerAlignments[place.id])}
             eventHandlers={{
               click: () => {
                 navigate(`/place/${place.id}`, { state: { fromView: 'map', fromCategory: selectedCategory } });
