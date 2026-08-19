@@ -115,20 +115,25 @@ export default function TopNoticeTickerBanner() {
             className="top-notice-ticker-track" 
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            onClick={() => {
-              if (clickPauseTimeoutRef.current) clearTimeout(clickPauseTimeoutRef.current);
-              setIsClickPaused(true);
-              setIsHovered(false);
-              clickPauseTimeoutRef.current = setTimeout(() => setIsClickPaused(false), 3000);
-              navigate('/daily-info');
-            }}
             style={{ 
               animationDuration: `${durationSeconds}s`,
               animationPlayState: (isHovered || isClickPaused) ? 'paused' : 'running'
             }}
           >
             {displayItems.map((item, idx) => (
-              <span key={`${item.id}-${idx}`} className="top-ticker-item">
+              <span 
+                key={`${item.id}-${idx}`} 
+                className="top-ticker-item"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (clickPauseTimeoutRef.current) clearTimeout(clickPauseTimeoutRef.current);
+                  setIsClickPaused(true);
+                  setIsHovered(false);
+                  clickPauseTimeoutRef.current = setTimeout(() => setIsClickPaused(false), 3000);
+                  navigate('/daily-info', { state: { tab: item.type === 'news' ? 'phnews' : 'notice', targetId: item.id } });
+                }}
+                style={{ cursor: 'pointer' }}
+              >
                 <span className="top-ticker-item-tag">{item.tagLabel}</span>
                 <span className="top-ticker-item-title">{item.title}</span>
                 <span className="top-ticker-item-desc">- {item.content}</span>

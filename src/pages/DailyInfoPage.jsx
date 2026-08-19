@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { renderTextWithLinks } from '../utils/textHelper';
-import { useNavigate } from 'react-router-dom';
+import { getLocalTodayString } from '../utils/dateHelper';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ImageCarousel from '../components/places/ImageCarousel';
 
@@ -238,6 +239,7 @@ const getEmergencyTel = (emergencyStr) => {
 
 export default function DailyInfoPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { userProfile, appConfig } = useAuth();
   const maxImages = userProfile?.isAdmin ? appConfig?.imageUploadLimits?.admin ?? 30 : appConfig?.imageUploadLimits?.user ?? 30;
   const [activeTab, setActiveTabState] = useState(() => {
@@ -254,6 +256,35 @@ export default function DailyInfoPage() {
       sessionStorage.setItem('cebugo_daily_tab', tab);
     } catch (e) {}
   };
+
+  const processedLocationKey = useRef(null);
+
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab);
+    }
+    
+    if (location.state?.targetId) {
+      if (processedLocationKey.current !== location.key) {
+        processedLocationKey.current = location.key;
+        setTimeout(() => {
+          const el = document.getElementById(`daily-item-${location.state.targetId}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('highlight-flash');
+            setTimeout(() => el.classList.remove('highlight-flash'), 2500);
+          } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }, 500);
+      }
+    } else {
+      if (processedLocationKey.current !== location.key) {
+        processedLocationKey.current = location.key;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  }, [location.state, location.key]);
 
   const [activeCurrency, setActiveCurrency] = useState('USD');
   const [usdVal, setUsdVal] = useState('1');
@@ -485,7 +516,7 @@ export default function DailyInfoPage() {
   const [newsFormData, setNewsFormData] = useState({
     title: '',
     category: '세부소식 / 현지',
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalTodayString(),
     summary: '',
     url: '',
     moreUrl: '',
@@ -497,7 +528,7 @@ export default function DailyInfoPage() {
     setNewsFormData({
       title: '',
       category: '세부소식 / 현지',
-      date: new Date().toISOString().split('T')[0],
+      date: getLocalTodayString(),
       summary: '',
       url: '',
       moreUrl: '',
@@ -512,7 +543,7 @@ export default function DailyInfoPage() {
     setNewsFormData({
       title: item.title,
       category: item.category || '세부소식 / 현지',
-      date: item.date || new Date().toISOString().split('T')[0],
+      date: item.date || getLocalTodayString(),
       summary: item.summary,
       url: item.url || '',
       moreUrl: item.moreUrl || '',
@@ -701,10 +732,12 @@ export default function DailyInfoPage() {
       return;
     }
 
+    const minOrder = travelInfos.length > 0 ? Math.min(...travelInfos.map((t) => t.order !== undefined ? t.order : 0)) : 0;
     const docId = editingInfo ? editingInfo.id : `i_${Date.now()}`;
     const infoToSave = {
       id: docId,
       ...infoFormData,
+      order: editingInfo && editingInfo.order !== undefined ? editingInfo.order : minOrder - 1,
       updatedAt: new Date().toISOString()
     };
 
@@ -1087,6 +1120,7 @@ export default function DailyInfoPage() {
       ? contactFormData.customCategory.trim()
       : contactFormData.category;
 
+    const minOrder = contacts.length > 0 ? Math.min(...contacts.map((c) => c.order !== undefined ? c.order : 0)) : 0;
     const docId = editingContact ? editingContact.id : `c_${Date.now()}`;
 
     const contactToSave = {
@@ -1095,6 +1129,7 @@ export default function DailyInfoPage() {
       category: finalCategory,
       phones: cleanPhones.length > 0 ? cleanPhones : ['미등록'],
       snsList: cleanSns,
+      order: editingContact && editingContact.order !== undefined ? editingContact.order : minOrder - 1,
       updatedAt: new Date().toISOString()
     };
     delete contactToSave.customCategory;
@@ -1179,8 +1214,8 @@ export default function DailyInfoPage() {
   const [noticeFormData, setNoticeFormData] = useState({
     title: '',
     badge: tags[0] || '중요공지',
-    date: new Date().toISOString().split('T')[0],
-    startDate: new Date().toISOString().split('T')[0],
+    date: getLocalTodayString(),
+    startDate: getLocalTodayString(),
     endDate: '',
     content: '',
     images: [],
@@ -1192,8 +1227,8 @@ export default function DailyInfoPage() {
     setNoticeFormData({
       title: '',
       badge: tags[0] || '중요공지',
-      date: new Date().toISOString().split('T')[0],
-      startDate: new Date().toISOString().split('T')[0],
+      date: getLocalTodayString(),
+      startDate: getLocalTodayString(),
       endDate: '',
       content: '',
       images: [],
@@ -1207,7 +1242,7 @@ export default function DailyInfoPage() {
     setNoticeFormData({
       title: item.title || '',
       badge: item.badge || tags[0] || '중요공지',
-      date: item.date || new Date().toISOString().split('T')[0],
+      date: item.date || getLocalTodayString(),
       startDate: item.startDate || '',
       endDate: item.endDate || '',
       content: item.content || '',
@@ -1292,17 +1327,19 @@ export default function DailyInfoPage() {
       return;
     }
 
+    const minOrder = notices.length > 0 ? Math.min(...notices.map((n) => n.order !== undefined ? n.order : 0)) : 0;
     const docId = editingNotice ? editingNotice.id : `n_${Date.now()}`;
     const noticeToSave = {
       id: docId,
       title: noticeFormData.title.trim(),
       badge: noticeFormData.badge || '중요공지',
-      date: noticeFormData.date || new Date().toISOString().split('T')[0],
+      date: noticeFormData.date || getLocalTodayString(),
       startDate: noticeFormData.startDate || '',
       endDate: noticeFormData.endDate || '',
       content: noticeFormData.content.trim(),
       images: noticeFormData.images || [],
       isTicker: noticeFormData.isTicker !== undefined ? noticeFormData.isTicker : true,
+      order: editingNotice && editingNotice.order !== undefined ? editingNotice.order : minOrder - 1,
       updatedAt: new Date().toISOString()
     };
 
@@ -1410,20 +1447,20 @@ export default function DailyInfoPage() {
           <div className="news-list">
             {notices
               .filter((item) => userProfile?.isAdmin || (() => {
-                const todayStr = new Date().toISOString().split('T')[0];
+                const todayStr = getLocalTodayString();
                 if (item.startDate && todayStr < item.startDate) return false;
                 if (item.endDate && todayStr > item.endDate) return false;
                 return true;
               })())
               .map((item, index) => {
-                const todayStr = new Date().toISOString().split('T')[0];
+                const todayStr = getLocalTodayString();
                 const isScheduled = item.startDate && todayStr < item.startDate;
                 const isExpired = item.endDate && todayStr > item.endDate;
                 const hasPeriod = Boolean(item.startDate || item.endDate);
                 const periodRange = item.startDate && item.endDate ? `${item.startDate} ~ ${item.endDate}` : (item.startDate ? `${item.startDate}~` : `~${item.endDate}`);
 
                 return (
-                  <div key={item.id} className="glass-card notice-item-card">
+                  <div key={item.id} id={`daily-item-${item.id}`} className="glass-card notice-item-card">
                     <div className="notice-header">
                       <div className="notice-header-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span className="notice-badge-tag">{item.badge}</span>
@@ -1850,7 +1887,7 @@ export default function DailyInfoPage() {
               const IconComp = item.icon || RiPhoneFill;
               const phonesList = item.phones && item.phones.length > 0 ? item.phones : (item.phone ? [item.phone] : []);
               return (
-                <div key={item.id} className="glass-card contact-card">
+                <div key={item.id} id={`daily-item-${item.id}`} className="glass-card contact-card">
                   <div className="contact-top">
                     <div className="contact-top-left">
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -2278,7 +2315,7 @@ export default function DailyInfoPage() {
 
           <div className="news-list">
             {travelInfos.map((item, index) => (
-              <div key={item.id} className="glass-card notice-item-card">
+              <div key={item.id} id={`daily-item-${item.id}`} className="glass-card notice-item-card">
                 <div className="notice-header">
                   <div className="notice-header-left">
                     <span className="notice-badge-tag" style={{ background: '#e0f2fe', color: '#0369a1', borderColor: 'rgba(3, 105, 161, 0.2)' }}>
@@ -2599,7 +2636,7 @@ export default function DailyInfoPage() {
                 return timeB - timeA;
               })
               .map((item) => (
-                <div key={item.id} className="glass-card news-card fade-in">
+                <div key={item.id} id={`daily-item-${item.id}`} className="glass-card news-card fade-in">
                   <div className="news-top">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span className="news-cat">{item.category}</span>
