@@ -55,12 +55,70 @@ const DEFAULT_POSTS = [
 export default function PlaceFeedPage() {
   const { userProfile } = useAuth();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState(location.state?.category || 'ad'); // 'ad' (광고) or 'event' (이벤트)
+  const [activeTab, setActiveTabState] = useState(() => {
+    try {
+      return location.state?.category || sessionStorage.getItem('cebugo_feed_tab') || 'ad';
+    } catch (e) {
+      return location.state?.category || 'ad';
+    }
+  });
+
+  const setActiveTab = (tab) => {
+    setActiveTabState(tab);
+    try {
+      sessionStorage.setItem('cebugo_feed_tab', tab);
+    } catch (e) {}
+  };
+
   const [posts, setPosts] = useState([]);
   const [advertisers, setAdvertisers] = useState([]);
-  const [selectedAdvertiserId, setSelectedAdvertiserId] = useState(null);
-  const [filterMonth, setFilterMonth] = useState('all');
-  const [filterDate, setFilterDate] = useState('all');
+
+  const [selectedAdvertiserId, setSelectedAdvertiserIdState] = useState(() => {
+    try {
+      return sessionStorage.getItem('cebugo_feed_advertiser') || null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const setSelectedAdvertiserId = (id) => {
+    setSelectedAdvertiserIdState(id);
+    try {
+      if (id) sessionStorage.setItem('cebugo_feed_advertiser', id);
+      else sessionStorage.removeItem('cebugo_feed_advertiser');
+    } catch (e) {}
+  };
+
+  const [filterMonth, setFilterMonthState] = useState(() => {
+    try {
+      return sessionStorage.getItem('cebugo_feed_month') || 'all';
+    } catch (e) {
+      return 'all';
+    }
+  });
+
+  const setFilterMonth = (month) => {
+    setFilterMonthState(month);
+    try {
+      sessionStorage.setItem('cebugo_feed_month', month);
+    } catch (e) {}
+  };
+
+  const [filterDate, setFilterDateState] = useState(() => {
+    try {
+      return sessionStorage.getItem('cebugo_feed_date') || 'all';
+    } catch (e) {
+      return 'all';
+    }
+  });
+
+  const setFilterDate = (date) => {
+    setFilterDateState(date);
+    try {
+      sessionStorage.setItem('cebugo_feed_date', date);
+    } catch (e) {}
+  };
+
   const [expandedEndedPosts, setExpandedEndedPosts] = useState({});
 
   const processedLocationKey = React.useRef(null);
@@ -435,7 +493,7 @@ export default function PlaceFeedPage() {
           onClick={() => setActiveTab('ad')}
         >
           <RiMegaphoneLine className="tab-icon" />
-          <span>광고 ({posts.filter((p) => p.category === 'ad').length})</span>
+          <span>광고 ({posts.filter((p) => p.category === 'ad' && getPostStatus(p).status !== 'expired').length})</span>
         </button>
 
         <button
@@ -443,7 +501,16 @@ export default function PlaceFeedPage() {
           onClick={() => setActiveTab('event')}
         >
           <RiCalendarEventLine className="tab-icon" />
-          <span>이벤트 ({posts.filter((p) => p.category === 'event').length})</span>
+          <span>이벤트 ({posts.filter((p) => {
+            if (p.category !== 'event') return false;
+            if (getPostStatus(p).status === 'expired') return false;
+            const postTime = p.createdAt || p.updatedAt || (p.date ? `${p.date}T00:00:00Z` : null);
+            if (!postTime) return true;
+            const postDate = new Date(postTime);
+            if (isNaN(postDate.getTime())) return true;
+            const diffHours = (new Date() - postDate) / (1000 * 60 * 60);
+            return diffHours < 24;
+          }).length})</span>
         </button>
       </div>
 

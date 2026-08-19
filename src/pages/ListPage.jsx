@@ -58,14 +58,56 @@ export default function ListPage() {
       sessionStorage.setItem('cebugo_selected_category', cat);
     } catch (e) {}
   };
-  const [selectedCity, setSelectedCity] = useState('all'); // 'all', 'Cebu', 'Cordova', 'Lapu-Lapu', 'Mandaue'
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortOption, setSortOption] = useState('name'); // will be overridden by effect
+  const [selectedCity, setSelectedCityState] = useState(() => {
+    try {
+      return sessionStorage.getItem('cebugo_list_city') || 'all';
+    } catch (e) {
+      return 'all';
+    }
+  });
+
+  const setSelectedCity = (city) => {
+    setSelectedCityState(city);
+    try {
+      sessionStorage.setItem('cebugo_list_city', city);
+    } catch (e) {}
+  };
+
+  const [searchQuery, setSearchQueryState] = useState(() => {
+    try {
+      return sessionStorage.getItem('cebugo_list_search') || '';
+    } catch (e) {
+      return '';
+    }
+  });
+
+  const setSearchQuery = (q) => {
+    setSearchQueryState(q);
+    try {
+      sessionStorage.setItem('cebugo_list_search', q);
+    } catch (e) {}
+  };
+
+  const [sortOption, setSortOptionState] = useState(() => {
+    try {
+      return sessionStorage.getItem('cebugo_list_sort') || 'name';
+    } catch (e) {
+      return 'name';
+    }
+  });
+
+  const setSortOption = (opt) => {
+    setSortOptionState(opt);
+    try {
+      sessionStorage.setItem('cebugo_list_sort', opt);
+    } catch (e) {}
+  };
+
   const [userCoords, setUserCoords] = useState({ lat: 10.324581378196822, lng: 124.01394151354162 }); // Default fallback location
 
   // Load default sort option from config
   useEffect(() => {
-    if (appConfig?.listSettings?.defaultSortOption) {
+    if (appConfig?.listSettings?.defaultSortOption && !sessionStorage.getItem('cebugo_list_sort')) {
       setSortOption(appConfig.listSettings.defaultSortOption);
     }
   }, [appConfig?.listSettings?.defaultSortOption]);

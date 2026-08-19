@@ -316,6 +316,45 @@ const compressImageFile = (file) => {
     }));
   };
 
+  const [draggedImgIndex, setDraggedImgIndex] = useState(null);
+
+  const handleDragStart = (e, index) => {
+    setDraggedImgIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.currentTarget.style.opacity = '0.5';
+  };
+
+  const handleDragEnd = (e) => {
+    setDraggedImgIndex(null);
+    e.currentTarget.style.opacity = '1';
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e, targetIndex, imgType) => {
+    e.preventDefault();
+    if (draggedImgIndex === null || draggedImgIndex === targetIndex) return;
+
+    setFormData((prev) => {
+      const currentImgs = [...(prev.images[imgType] || [])];
+      const draggedImg = currentImgs[draggedImgIndex];
+      currentImgs.splice(draggedImgIndex, 1);
+      currentImgs.splice(targetIndex, 0, draggedImg);
+      
+      return {
+        ...prev,
+        images: {
+          ...prev.images,
+          [imgType]: currentImgs
+        }
+      };
+    });
+    setDraggedImgIndex(null);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
@@ -600,7 +639,16 @@ const compressImageFile = (file) => {
                 )}
 
                 {(formData.images[activeImageTab] || []).map((imgUrl, idx) => (
-                  <div key={`${activeImageTab}-${idx}`} className="uploaded-img-preview">
+                  <div 
+                    key={`${activeImageTab}-${idx}`} 
+                    className="uploaded-img-preview"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, idx)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, idx, activeImageTab)}
+                    style={{ cursor: 'grab' }}
+                  >
                     <ZoomableImage
                       src={imgUrl}
                       images={formData.images[activeImageTab]}

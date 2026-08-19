@@ -43,8 +43,36 @@ export default function MarketplacePage() {
   const [expandedListingId, setExpandedListingId] = useState(null);
 
   // Search & Filter
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [filterCategory, setFilterCategory] = useState('all');
+  // Search & Filter
+  const [searchKeyword, setSearchKeywordState] = useState(() => {
+    try {
+      return sessionStorage.getItem('cebugo_market_search') || '';
+    } catch (e) {
+      return '';
+    }
+  });
+
+  const setSearchKeyword = (keyword) => {
+    setSearchKeywordState(keyword);
+    try {
+      sessionStorage.setItem('cebugo_market_search', keyword);
+    } catch (e) {}
+  };
+
+  const [filterCategory, setFilterCategoryState] = useState(() => {
+    try {
+      return sessionStorage.getItem('cebugo_market_category') || 'all';
+    } catch (e) {
+      return 'all';
+    }
+  });
+
+  const setFilterCategory = (category) => {
+    setFilterCategoryState(category);
+    try {
+      sessionStorage.setItem('cebugo_market_category', category);
+    } catch (e) {}
+  };
 
   // New Listing Form State
   const [title, setTitle] = useState('');

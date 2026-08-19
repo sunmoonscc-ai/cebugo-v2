@@ -240,7 +240,20 @@ export default function DailyInfoPage() {
   const navigate = useNavigate();
   const { userProfile, appConfig } = useAuth();
   const maxImages = userProfile?.isAdmin ? appConfig?.imageUploadLimits?.admin ?? 30 : appConfig?.imageUploadLimits?.user ?? 30;
-  const [activeTab, setActiveTab] = useState('notice'); // notice, contacts, info, phnews, exchange
+  const [activeTab, setActiveTabState] = useState(() => {
+    try {
+      return sessionStorage.getItem('cebugo_daily_tab') || 'notice';
+    } catch (e) {
+      return 'notice';
+    }
+  });
+
+  const setActiveTab = (tab) => {
+    setActiveTabState(tab);
+    try {
+      sessionStorage.setItem('cebugo_daily_tab', tab);
+    } catch (e) {}
+  };
 
   const [activeCurrency, setActiveCurrency] = useState('USD');
   const [usdVal, setUsdVal] = useState('1');

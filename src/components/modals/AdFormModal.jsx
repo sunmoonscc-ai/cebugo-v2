@@ -226,6 +226,42 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
     }));
   };
 
+  const [draggedImgIndex, setDraggedImgIndex] = useState(null);
+
+  const handleDragStart = (e, index) => {
+    setDraggedImgIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.currentTarget.style.opacity = '0.5';
+  };
+
+  const handleDragEnd = (e) => {
+    setDraggedImgIndex(null);
+    e.currentTarget.style.opacity = '1';
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e, targetIndex) => {
+    e.preventDefault();
+    if (draggedImgIndex === null || draggedImgIndex === targetIndex) return;
+
+    setFormData((prev) => {
+      const currentImgs = [...prev.images];
+      const draggedImg = currentImgs[draggedImgIndex];
+      currentImgs.splice(draggedImgIndex, 1);
+      currentImgs.splice(targetIndex, 0, draggedImg);
+      
+      return {
+        ...prev,
+        images: currentImgs
+      };
+    });
+    setDraggedImgIndex(null);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.title.trim()) {
@@ -416,7 +452,16 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
                 )}
 
                 {formData.images.map((imgUrl, idx) => (
-                  <div key={idx} className="uploaded-img-preview">
+                  <div 
+                    key={idx} 
+                    className="uploaded-img-preview"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, idx)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, idx)}
+                    style={{ cursor: 'grab' }}
+                  >
                     <ZoomableImage
                       src={imgUrl}
                       images={formData.images}
