@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 're
 import L from 'leaflet';
 import { RiNavigationFill, RiStarFill } from 'react-icons/ri';
 import { Link, useNavigate } from 'react-router-dom';
+import { getCategoryColor } from '../../utils/categoryColors';
 
 // Fix default marker icon issues in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -15,9 +16,9 @@ L.Icon.Default.mergeOptions({
 // Custom user location pin icon
 const userIcon = L.divIcon({
   className: 'user-custom-pin',
-  html: `<div style="background:#0284c7; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow:0 0 12px rgba(2,132,199,0.8); animation: pulse 2s infinite;"></div>`,
-  iconSize: [20, 20],
-  iconAnchor: [10, 10]
+  html: `<div style="background:#ef4444; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 0 10px rgba(239,68,68,1); animation: pulse 1.5s infinite;"></div>`,
+  iconSize: [12, 12],
+  iconAnchor: [6, 6]
 });
 
 const isFoodOrCafeOrBar = (place) => {
@@ -44,22 +45,21 @@ const isFoodOrCafeOrBar = (place) => {
 };
 
 const createCustomCircleMarker = (place) => {
-  // Vibrant blue circle marker for clear map location distinction
-  const circleBg = '#2563eb';
-  const circleSize = '12px';
+  const circleBg = getCategoryColor(place.category);
+  const circleSize = '9px'; // 9px로 증가
 
   return L.divIcon({
     className: 'custom-circle-place-marker',
     html: `
       <div style="display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap;">
-        <div style="width: ${circleSize}; height: ${circleSize}; border-radius: 50%; background-color: ${circleBg}; border: 2px solid #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.35); flex-shrink: 0;"></div>
-        <span style="font-size: 11.5px; font-weight: 700; color: #000000; text-shadow: -1.5px -1.5px 0 #ffffff, 1.5px -1.5px 0 #ffffff, -1.5px 1.5px 0 #ffffff, 1.5px 1.5px 0 #ffffff, 0 0 4px #ffffff; line-height: 1;">
+        <div style="width: ${circleSize}; height: ${circleSize}; border-radius: 50%; background-color: ${circleBg}; border: 1.5px solid #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.4); flex-shrink: 0;"></div>
+        <span class="place-name-label" style="font-size: 11.5px; font-weight: 700; color: #000000; text-shadow: -1.5px -1.5px 0 #ffffff, 1.5px -1.5px 0 #ffffff, -1.5px 1.5px 0 #ffffff, 1.5px 1.5px 0 #ffffff, 0 0 4px #ffffff; line-height: 1;">
           ${place.name}
         </span>
       </div>
     `,
     iconSize: [160, 20],
-    iconAnchor: [6, 10]
+    iconAnchor: [4.5, 10]
   });
 };
 
@@ -120,9 +120,9 @@ export default function PlacesMapView({ places, userCoords, selectedCategory }) 
 
   const handleFindLocation = () => {
     setMapCenter(userLocation);
-    setMapZoom(13);
+    setMapZoom(18); // 최대로 확대
     sessionStorage.setItem('cebugo_map_center', JSON.stringify(userLocation));
-    sessionStorage.setItem('cebugo_map_zoom', JSON.stringify(13));
+    sessionStorage.setItem('cebugo_map_zoom', JSON.stringify(18));
   };
 
   return (
@@ -167,7 +167,13 @@ export default function PlacesMapView({ places, userCoords, selectedCategory }) 
         )}
 
         {/* Places Markers */}
-        {places.map((place) => (
+        {places
+          .filter(place => 
+            place.lat && place.lng && 
+            String(place.lat).trim() !== '' && String(place.lng).trim() !== '' &&
+            place.addr && String(place.addr).trim() !== ''
+          )
+          .map((place) => (
           <Marker 
             key={place.id} 
             position={[place.lat, place.lng]}

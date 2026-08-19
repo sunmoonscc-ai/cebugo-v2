@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { CarrierBadge } from '../common/Badge';
 import { classifyPhoneCarrier, parseSnsEntry, getSnsLinkUrl } from '../../utils/phoneSnsClassifier';
 import { getOptimizedImageUrl, getDefaultImageForCategory } from '../../utils/imageHelper';
+import { getCategoryColor } from '../../utils/categoryColors';
 import { useAuth } from '../../context/AuthContext';
 import FullScreenImageModal from '../modals/FullScreenImageModal';
 import { 
@@ -74,7 +75,7 @@ export default function PlaceCard({ place, index, totalCount, selectedCategory, 
           ))}
         </div>
 
-        <span className="category-chip">{place.categoryName}</span>
+        <span className="category-chip" style={{ backgroundColor: getCategoryColor(place.category) }}>{place.categoryName}</span>
         
         <button 
           type="button"

@@ -21,6 +21,7 @@ import {
   RiHeartLine,
   RiMapPinLine
 } from 'react-icons/ri';
+import { getCategoryColor } from '../utils/categoryColors';
 import './ListPage.css';
 
 export default function ListPage() {
@@ -284,6 +285,21 @@ export default function ListPage() {
     setIsReorderModalOpen(false);
   };
 
+  const mapSectionRef = React.useRef(null);
+
+  useEffect(() => {
+    if (viewMode === 'map' && mapSectionRef.current) {
+      setTimeout(() => {
+        const yOffset = -60; // adjust for header
+        const element = mapSectionRef.current;
+        if (element) {
+          const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }, [viewMode]);
+
   return (
     <div className="page-content fade-in">
       <div className="daily-header">
@@ -336,16 +352,21 @@ export default function ListPage() {
             <span>즐겨찾기</span>
           </button>
 
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              ref={(el) => (pillRefs.current[cat.id] = el)}
-              className={`cat-pill ${selectedCategory === cat.id ? 'active' : ''}`}
-              onClick={() => setSelectedCategory(cat.id)}
-            >
-              {cat.name}
-            </button>
-          ))}
+          {categories.map((cat) => {
+            const isActive = selectedCategory === cat.id;
+            const catColor = getCategoryColor(cat.id);
+            return (
+              <button
+                key={cat.id}
+                ref={(el) => (pillRefs.current[cat.id] = el)}
+                className={`cat-pill ${isActive ? 'active' : ''}`}
+                style={isActive ? { backgroundColor: catColor, borderColor: catColor, color: 'white' } : {}}
+                onClick={() => setSelectedCategory(cat.id)}
+              >
+                {cat.name}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -369,9 +390,13 @@ export default function ListPage() {
         </div>
       )}
 
+
+
       {/* Main View: List or Map */}
       {viewMode === 'map' ? (
-        <PlacesMapView places={sortedPlaces} userCoords={userCoords} selectedCategory={selectedCategory} />
+        <div ref={mapSectionRef}>
+          <PlacesMapView places={sortedPlaces} userCoords={userCoords} selectedCategory={selectedCategory} />
+        </div>
       ) : (
         <>
           <div className="list-meta-header">
