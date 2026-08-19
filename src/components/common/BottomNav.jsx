@@ -6,9 +6,12 @@ import {
   RiNewspaperLine, 
   RiMegaphoneLine 
 } from 'react-icons/ri';
+import { useAuth } from '../../context/AuthContext';
 import './BottomNav.css';
 
 export default function BottomNav() {
+  const { userProfile } = useAuth();
+  const isAdmin = userProfile?.isAdmin;
   return (
     <nav className="bottom-nav">
       <div className="bottom-nav-inner">
@@ -17,10 +20,21 @@ export default function BottomNav() {
           <span className="nav-label">News</span>
         </NavLink>
 
-        <NavLink to="/marketplace" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <RiShoppingBag3Line className="nav-icon" />
-          <span className="nav-label">중고거래</span>
-        </NavLink>
+        {isAdmin ? (
+          <NavLink to="/marketplace" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <RiShoppingBag3Line className="nav-icon" />
+            <span className="nav-label">중고거래</span>
+          </NavLink>
+        ) : (
+          <div 
+            className="nav-item" 
+            onClick={() => alert("오픈 준비중입니다.")}
+            style={{ opacity: 0.4, cursor: 'not-allowed' }}
+          >
+            <RiShoppingBag3Line className="nav-icon" />
+            <span className="nav-label">중고거래</span>
+          </div>
+        )}
 
         <NavLink to="/feed" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <RiMegaphoneLine className="nav-icon" />
