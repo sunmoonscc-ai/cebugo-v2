@@ -32,7 +32,7 @@ export default function DetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { places, reviews, addReview, updatePlace, deletePlace, updateReview, deleteReview, hideReview } = usePlaces();
-  const { userProfile, toggleFavorite } = useAuth();
+  const { userProfile, toggleFavorite, userCoords } = useAuth();
 
   const fromView = location.state?.fromView || 'list';
   const fromCategory = location.state?.fromCategory || 'all';
@@ -227,7 +227,7 @@ export default function DetailPage() {
                 <p style={{ margin: 0, flex: 1, minWidth: '180px' }}>{place.addr}</p>
                 {place.addr && (
                   <a
-                    href={`https://www.google.com/maps/dir/?api=1&origin=10.324581378196822,124.01394151354162&destination=${place.lat && place.lng ? `${place.lat},${place.lng}` : encodeURIComponent(place.addr)}`}
+                    href={`https://www.google.com/maps/dir/?api=1&origin=${userCoords?.lat || 10.3156992},${userCoords?.lng || 123.979144}&destination=${place.lat && place.lng ? `${place.lat},${place.lng}` : encodeURIComponent(place.addr)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="nav-directions-btn"

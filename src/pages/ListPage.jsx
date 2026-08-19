@@ -28,7 +28,7 @@ export default function ListPage() {
   const location = useLocation();
   const { places, addPlace, updatePlace, deletePlace, movePlace, reorderPlaces } = usePlaces();
   const { categories } = useCategories();
-  const { userProfile, appConfig } = useAuth();
+  const { userProfile, appConfig, userCoords } = useAuth();
 
   const [viewMode, setViewModeState] = useState(() => {
     try {
@@ -104,37 +104,12 @@ export default function ListPage() {
     } catch (e) {}
   };
 
-  const [userCoords, setUserCoords] = useState({ lat: 10.324581378196822, lng: 124.01394151354162 }); // Default fallback location
-
   // Load default sort option from config
   useEffect(() => {
     if (appConfig?.listSettings?.defaultSortOption && !sessionStorage.getItem('cebugo_list_sort')) {
       setSortOption(appConfig.listSettings.defaultSortOption);
     }
   }, [appConfig?.listSettings?.defaultSortOption]);
-
-  useEffect(() => {
-    const isManual = appConfig?.siteRules?.locationPolicy === 'manual';
-    const defaultLoc = appConfig?.siteRules?.defaultLocation;
-
-    if (isManual && defaultLoc) {
-      setUserCoords({ lat: defaultLoc.lat, lng: defaultLoc.lng });
-    } else {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            setUserCoords({
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            });
-          },
-          (error) => {
-            console.warn("Could not get location, using default:", error);
-          }
-        );
-      }
-    }
-  }, [appConfig?.siteRules]);
 
   // Helper function for matching city locations
   const matchesCityFilter = (place, city) => {
