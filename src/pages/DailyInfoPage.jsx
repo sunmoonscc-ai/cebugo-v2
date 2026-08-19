@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ImageCarousel from '../components/places/ImageCarousel';
 import ZoomableImage from '../components/common/ZoomableImage';
@@ -234,6 +235,7 @@ const getEmergencyTel = (emergencyStr) => {
 };
 
 export default function DailyInfoPage() {
+  const navigate = useNavigate();
   const { userProfile, appConfig } = useAuth();
   const maxImages = userProfile?.isAdmin ? appConfig?.imageUploadLimits?.admin ?? 30 : appConfig?.imageUploadLimits?.user ?? 30;
   const [activeTab, setActiveTab] = useState('notice'); // notice, contacts, info, phnews, exchange
@@ -2855,9 +2857,19 @@ export default function DailyInfoPage() {
               </button>
             </div>
 
-            <div className="card-title-row" style={{ marginTop: '12px' }}>
-              <RiExchangeDollarLine className="calc-icon" />
-              <h3>3대 통화 (달러 / 페소 / 원화) 실시간 환율 계산기</h3>
+            <div className="card-title-row" style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <RiExchangeDollarLine className="calc-icon" />
+                <h3>3대 통화 (달러 / 페소 / 원화) 실시간 환율 계산기</h3>
+              </div>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                style={{ fontSize: '0.8rem', padding: '4px 10px', whiteSpace: 'nowrap' }}
+                onClick={() => navigate('/', { state: { fromCategory: 'exchange' } })}
+              >
+                환전소 바로가기..
+              </button>
             </div>
 
             <p className="currency-click-hint">

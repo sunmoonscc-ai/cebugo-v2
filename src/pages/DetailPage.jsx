@@ -389,6 +389,12 @@ export default function DetailPage() {
           <button
             className="btn btn-secondary suggest-btn"
             onClick={() => {
+              if (!userProfile) {
+                if (window.confirm('회원가입 후 로그인 하시겠습니까?')) {
+                  navigate('/profile');
+                }
+                return;
+              }
               window.scrollTo({ top: 0, behavior: 'smooth' });
               setShowSuggestModal(true);
             }}
