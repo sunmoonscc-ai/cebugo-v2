@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
 import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import ImageCarousel from '../components/places/ImageCarousel';
-import ScrollableImageGallery from '../components/places/ScrollableImageGallery';
+
 import AdFormModal from '../components/modals/AdFormModal';
 import AdReorderModal from '../components/modals/AdReorderModal';
 import { getLocalTodayString } from '../utils/dateHelper';
@@ -82,7 +82,6 @@ export default function PlaceFeedPage() {
       (snapshot) => {
         if (!snapshot.empty) {
           const list = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-          list.sort((a, b) => (a.order !== undefined ? a.order : 0) - (b.order !== undefined ? b.order : 0));
           setPosts(list);
         } else {
           DEFAULT_POSTS.forEach(async (p, idx) => {
@@ -201,12 +200,16 @@ export default function PlaceFeedPage() {
     .filter((p) => isPostActiveInMonth(p, filterMonth))
     .filter((p) => isPostActiveInDate(p, filterDate))
     .sort((a, b) => {
-      const orderA = a.order !== undefined ? a.order : 0;
-      const orderB = b.order !== undefined ? b.order : 0;
-      if (orderA !== orderB) return orderA - orderB;
-      const dateA = a.date || '0000-00-00';
-      const dateB = b.date || '0000-00-00';
-      return dateA > dateB ? -1 : (dateA < dateB ? 1 : 0);
+      const getTime = (p) => {
+        if (p.createdAt) return p.createdAt;
+        if (p.updatedAt) return p.updatedAt;
+        if (p.date) return p.date;
+        if (p.startDate) return p.startDate;
+        return '0000-00-00';
+      };
+      const timeA = getTime(a);
+      const timeB = getTime(b);
+      return timeA > timeB ? -1 : (timeA < timeB ? 1 : 0);
     });
 
   const targetPostId = location.state?.postId;
@@ -426,13 +429,7 @@ export default function PlaceFeedPage() {
       {/* Admin Action Bar */}
       {canPost && (
         <div className="admin-notice-actions" style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-          <button
-            type="button"
-            className="btn btn-secondary add-notice-btn"
-            onClick={() => setIsReorderModalOpen(true)}
-          >
-            <RiDragMove2Line /> 순서 변경
-          </button>
+          
           <button
             type="button"
             className="btn btn-primary add-notice-btn"
@@ -579,24 +576,7 @@ export default function PlaceFeedPage() {
                         >
                           <RiVolumeUpLine /> {isTickerActive ? '전광판 게시중' : '전광판 게시'}
                         </button>
-                        <button
-                          type="button"
-                          className="btn-icon-action move"
-                          onClick={() => handleMovePost(index, 'up')}
-                          disabled={index === 0}
-                          title="위로 이동"
-                        >
-                          <RiArrowUpLine />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-icon-action move"
-                          onClick={() => handleMovePost(index, 'down')}
-                          disabled={index === tabPosts.length - 1}
-                          title="아래로 이동"
-                        >
-                          <RiArrowDownLine />
-                        </button>
+                        
                         <button
                           type="button"
                           className="btn-icon-action edit"
@@ -654,7 +634,7 @@ export default function PlaceFeedPage() {
                 {/* Attached Images Carousel */}
                 {imagesList.length > 0 && (
                     <div className="notice-card-images" style={{ margin: '12px 0' }}>
-                      <ScrollableImageGallery images={imagesList} />
+                      <ImageCarousel images={imagesList} />
                     </div>
                   )}
                   </>
