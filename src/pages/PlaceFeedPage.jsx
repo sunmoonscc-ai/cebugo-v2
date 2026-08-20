@@ -493,7 +493,7 @@ export default function PlaceFeedPage() {
           onClick={() => setActiveTab('ad')}
         >
           <RiMegaphoneLine className="tab-icon" />
-          <span>광고 ({posts.filter((p) => p.category === 'ad' && getPostStatus(p).status !== 'expired').length})</span>
+          <span>광고 ({posts.filter((p) => p.category === 'ad' && getPostStatus(p).status === 'active').length})</span>
         </button>
 
         <button
@@ -501,16 +501,7 @@ export default function PlaceFeedPage() {
           onClick={() => setActiveTab('event')}
         >
           <RiCalendarEventLine className="tab-icon" />
-          <span>이벤트 ({posts.filter((p) => {
-            if (p.category !== 'event') return false;
-            if (getPostStatus(p).status === 'expired') return false;
-            const postTime = p.createdAt || p.updatedAt || (p.date ? `${p.date}T00:00:00Z` : null);
-            if (!postTime) return true;
-            const postDate = new Date(postTime);
-            if (isNaN(postDate.getTime())) return true;
-            const diffHours = (new Date() - postDate) / (1000 * 60 * 60);
-            return diffHours < 24;
-          }).length})</span>
+          <span>이벤트 ({posts.filter((p) => p.category === 'event' && getPostStatus(p).status === 'active').length})</span>
         </button>
       </div>
 
