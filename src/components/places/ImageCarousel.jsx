@@ -1,10 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getOptimizedImageUrl } from '../../utils/imageHelper';
 import { RiArrowLeftSLine, RiArrowRightSLine, RiZoomInLine } from 'react-icons/ri';
 import FullScreenImageModal from '../modals/FullScreenImageModal';
 import './ImageCarousel.css';
 
 export default function ImageCarousel({ images = [], maxWidth = '100%' }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const touchStartRef = useRef(0);
@@ -48,6 +51,27 @@ export default function ImageCarousel({ images = [], maxWidth = '100%' }) {
 
   const currentImgUrl = displayImages[safeIndex];
 
+  // Whenever the location state changes, check if we need to close the modal
+  useEffect(() => {
+    if (isZoomOpen && !location.state?.zoom) {
+      setIsZoomOpen(false);
+    }
+  }, [location.state?.zoom, isZoomOpen]);
+
+  const handleOpenZoom = (e) => {
+    e.stopPropagation();
+    navigate('.', { state: { ...location.state, zoom: true } });
+    setIsZoomOpen(true);
+  };
+
+  const handleCloseZoom = () => {
+    if (location.state?.zoom) {
+      navigate(-1);
+    } else {
+      setIsZoomOpen(false);
+    }
+  };
+
   return (
     <>
       <div 
@@ -59,10 +83,7 @@ export default function ImageCarousel({ images = [], maxWidth = '100%' }) {
       >
         <div 
           className="carousel-img-wrapper" 
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsZoomOpen(true);
-          }} 
+          onClick={handleOpenZoom} 
           title="클릭하여 화면 전체 크기로 확대보기"
         >
           <img
@@ -111,7 +132,7 @@ export default function ImageCarousel({ images = [], maxWidth = '100%' }) {
         <FullScreenImageModal
           images={displayImages}
           initialIndex={safeIndex}
-          onClose={() => setIsZoomOpen(false)}
+          onClose={handleCloseZoom}
         />
       )}
     </>
