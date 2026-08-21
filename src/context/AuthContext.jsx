@@ -192,8 +192,8 @@ export const AuthProvider = ({ children }) => {
             pointLedger,
             phoneVerified: dbData?.phoneVerified ?? false,
             phoneNumber: dbData?.phoneNumber || '',
-            phoneNumberKr: dbData?.phoneNumberKr || '',
-            phoneCarrier: dbData?.phoneCarrier || '',
+            phoneKrVerified: dbData?.phoneKrVerified ?? false,
+            phoneKr: dbData?.phoneKr || '',
             kakaoVerified: dbData?.kakaoVerified ?? false,
             kakaoId: dbData?.kakaoId || '',
             favorites: dbData?.favorites || []

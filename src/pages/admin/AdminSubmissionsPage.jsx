@@ -264,8 +264,44 @@ export default function AdminSubmissionsPage() {
     }
   };
 
-  const pendingSubmissions = submissions.filter((s) => s.status === 'pending');
-  const processedSubmissions = submissions.filter((s) => s.status !== 'pending').sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const allPending = submissions
+    .filter((s) => s.status === 'pending')
+    .sort((a, b) => {
+      let dateA = new Date(a.createdAt);
+      if (isNaN(dateA)) dateA = 0;
+      let dateB = new Date(b.createdAt);
+      if (isNaN(dateB)) dateB = 0;
+      return dateB - dateA;
+    });
+
+  const pendingSubmissions = allPending.filter((s) => s.type !== 'verification');
+  const pendingVerifications = allPending.filter((s) => s.type === 'verification');
+  
+  const allProcessed = submissions
+    .filter((s) => s.status !== 'pending')
+    .sort((a, b) => {
+      let dateA = new Date(a.processedAt || a.createdAt);
+      if (isNaN(dateA)) dateA = 0;
+      let dateB = new Date(b.processedAt || b.createdAt);
+      if (isNaN(dateB)) dateB = 0;
+      return dateB - dateA;
+    });
+
+  const processedSubmissions = allProcessed.filter((s) => s.type !== 'verification');
+  const processedVerifications = allProcessed.filter((s) => s.type === 'verification');
+
+  const groupedProcessedVerifications = processedVerifications.reduce((acc, sub) => {
+    let d = new Date(sub.processedAt || sub.createdAt);
+    if (isNaN(d)) d = new Date(); // fallback to current date if parsing fails
+    const yearMonth = `${d.getFullYear()}년 ${d.getMonth() + 1}월`;
+    const dateKey = `${d.getMonth() + 1}월 ${d.getDate()}일`;
+
+    if (!acc[yearMonth]) acc[yearMonth] = {};
+    if (!acc[yearMonth][dateKey]) acc[yearMonth][dateKey] = [];
+    
+    acc[yearMonth][dateKey].push(sub);
+    return acc;
+  }, {});
 
   const sortedUsers = users.filter(u => !u.deleted).sort((a, b) => {
     if (userSort === 'nameAsc') {
@@ -382,6 +418,15 @@ export default function AdminSubmissionsPage() {
         >
           <RiUser3Line className="tab-icon" />
           <span>사용자 ({users.filter(u => !u.deleted).length})</span>
+        </button>
+
+        <button 
+          type="button"
+          className={`news-tab-btn ${adminTab === 'verification' ? 'active' : ''}`}
+          onClick={() => setAdminTab('verification')}
+        >
+          <RiCheckLine className="tab-icon" />
+          <span>사용자 인증 ({pendingVerifications.length})</span>
         </button>
 
         <button 
@@ -976,6 +1021,152 @@ export default function AdminSubmissionsPage() {
           ))}
         </div>
       )}
+    </div>
+  )}
+
+  {/* TAB: 사용자 인증 */}
+  {adminTab === 'verification' && (
+    <div className="tab-content-section fade-in">
+      <div className="section-title">
+        <h2>인증 승인 대기중 <span>({pendingVerifications.length})</span></h2>
+      </div>
+
+      {pendingVerifications.length === 0 ? (
+        <div className="glass-card empty-state"><p>승인 대기 중인 인증 요청이 없습니다.</p></div>
+      ) : (
+        pendingVerifications.map((sub) => {
+          const matchedUser = users.find(u => u.uid === sub.uid);
+          return (
+            <div key={sub.id} className="glass-card diff-card fade-in">
+              <div className="diff-header">
+                <div>
+                  <strong className="place-tag">[{sub.placeName}]</strong>
+                  <span className="user-tag">요청자: {sub.userName} (Lv.{matchedUser?.level || 1})</span>
+                </div>
+                <span className="diff-date">{sub.createdAt}</span>
+              </div>
+
+              <div style={{ padding: '16px 20px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div><strong style={{ color: '#1e293b' }}>이메일:</strong> {matchedUser?.email || '정보 없음'}</div>
+                  <div><strong style={{ color: '#1e293b' }}>가입일:</strong> {matchedUser?.createdAt ? new Date(matchedUser.createdAt).toLocaleDateString() : '알 수 없음'}</div>
+                  <div><strong style={{ color: '#1e293b' }}>레벨/포인트:</strong> Lv.{matchedUser?.level || 1} ({matchedUser?.points || 0}p)</div>
+                  <div><strong style={{ color: '#1e293b' }}>최근 접속일:</strong> {matchedUser?.lastCheckInDate || '기록 없음'}</div>
+                  <div><strong style={{ color: '#1e293b' }}>연속 출석:</strong> {matchedUser?.consecutiveDays || 0}일</div>
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#64748b', borderTop: '1px solid #e2e8f0', paddingTop: '8px', marginTop: '4px' }}>
+                  <strong style={{ color: '#1e293b' }}>기존 등록된 연락처 정보:</strong><br/>
+                  현지폰: {matchedUser?.phoneNumber || '없음'} | 한국폰: {matchedUser?.phoneKr || '없음'} | 카카오톡: {matchedUser?.kakaoId || '없음'}
+                </div>
+              </div>
+
+              <div className="diff-body" style={{ marginTop: 0 }}>
+                <span className="field-badge">요청 항목: {sub.field}</span>
+                <div className="diff-grid">
+                  <div className="diff-box old-box">
+                    <span className="box-label">기존 데이터 (Current)</span>
+                    <p>{sub.oldValue}</p>
+                  </div>
+                  <div className="diff-arrow">→</div>
+                  <div className="diff-box new-box">
+                    <span className="box-label">제안된 새로운 데이터 (Proposal)</span>
+                    <p>{sub.newValue}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="diff-actions">
+                <button className="btn btn-secondary reject-btn" onClick={() => rejectSubmission(sub.id)}>
+                  <RiCloseLine /> 거절하기
+                </button>
+                <button className="btn btn-primary approve-btn" onClick={() => handleApprove(sub.id)}>
+                  <RiCheckLine /> 승인 (완료 처리)
+                </button>
+              </div>
+            </div>
+          );
+        })
+      )}
+
+      <div className="section-title" style={{ marginTop: '30px' }}>
+        <h2>처리 완료 내역 ({processedVerifications.length})</h2>
+      </div>
+      <div className="processed-list">
+        {Object.keys(groupedProcessedVerifications).length === 0 ? (
+          <div className="glass-card empty-state"><p>처리된 내역이 없습니다.</p></div>
+        ) : (
+          Object.entries(groupedProcessedVerifications).map(([monthStr, daysObj]) => (
+            <div key={monthStr} style={{ marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '1.1rem', color: '#1e293b', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px', marginBottom: '16px' }}>{monthStr}</h3>
+              {Object.entries(daysObj).map(([dateStr, items]) => (
+                <div key={dateStr} style={{ marginBottom: '20px' }}>
+                  <h4 style={{ fontSize: '0.95rem', color: '#64748b', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#94a3b8' }}></span>
+                    {dateStr}
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {items.map((sub) => {
+                      const matchedUser = users.find(u => u.uid === sub.uid);
+                      return (
+                        <div key={sub.id} className="glass-card processed-card" onClick={() => setExpandedSubmissionId(prev => prev === sub.id ? null : sub.id)} style={{ cursor: 'pointer', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <strong>[{sub.placeName}] {sub.field}</strong>
+                              <p className="proc-val">요청자: {sub.userName} | 요청값: {sub.newValue}</p>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                              <span className={`sub-status ${sub.status}`}>
+                                {sub.status === 'approved' ? '승인완료' : '거절됨'}
+                              </span>
+                              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                {(() => {
+                                  if (sub.processedAt) {
+                                    const tDate = new Date(sub.processedAt);
+                                    if (!isNaN(tDate)) return tDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                  }
+                                  if (sub.createdAt) {
+                                    // Parse standard korean locale string (e.g. '2026. 8. 21. 오전 10:26:33')
+                                    const parts = sub.createdAt.split(' ');
+                                    if (parts.length >= 2) {
+                                      const timeStr = parts.slice(-2).join(' '); // '오전 10:26:33'
+                                      const timeParts = timeStr.split(':');
+                                      if (timeParts.length >= 2) return `${timeParts[0]}:${timeParts[1]}`;
+                                    }
+                                  }
+                                  return '';
+                                })()}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {expandedSubmissionId === sub.id && (
+                            <div style={{ padding: '16px 20px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                              <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                <div><strong style={{ color: '#1e293b' }}>이메일:</strong> {matchedUser?.email || '정보 없음'}</div>
+                                <div><strong style={{ color: '#1e293b' }}>가입일:</strong> {matchedUser?.createdAt ? new Date(matchedUser.createdAt).toLocaleDateString() : '알 수 없음'}</div>
+                                <div><strong style={{ color: '#1e293b' }}>레벨/포인트:</strong> Lv.{matchedUser?.level || 1} ({matchedUser?.points || 0}p)</div>
+                                <div><strong style={{ color: '#1e293b' }}>최근 접속일:</strong> {matchedUser?.lastCheckInDate || '기록 없음'}</div>
+                                <div><strong style={{ color: '#1e293b' }}>연속 출석:</strong> {matchedUser?.consecutiveDays || 0}일</div>
+                              </div>
+                              <div style={{ fontSize: '0.85rem', color: '#64748b', borderTop: '1px solid #e2e8f0', paddingTop: '8px', marginTop: '4px' }}>
+                                <strong style={{ color: '#1e293b' }}>현재 등록된 연락처 정보:</strong><br/>
+                                현지폰: {matchedUser?.phoneNumber || '없음'} | 한국폰: {matchedUser?.phoneKr || '없음'} | 카카오톡: {matchedUser?.kakaoId || '없음'}
+                              </div>
+                              <div style={{ fontSize: '0.85rem', color: '#64748b', borderTop: '1px solid #e2e8f0', paddingTop: '8px', marginTop: '4px' }}>
+                                <strong style={{ color: '#1e293b' }}>요청 정보:</strong> {sub.oldValue} → <strong>{sub.newValue}</strong>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))
+        )}
+      </div>
     </div>
   )}
 

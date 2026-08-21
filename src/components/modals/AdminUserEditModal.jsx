@@ -11,8 +11,11 @@ export default function AdminUserEditModal({ user, onClose }) {
     level: user.level || 1,
     points: user.points || 0,
     phoneNumber: user.phoneNumber || '',
-    phoneNumberKr: user.phoneNumberKr || '',
+    phoneVerified: user.phoneVerified || false,
+    phoneKr: user.phoneKr || '',
+    phoneKrVerified: user.phoneKrVerified || false,
     kakaoId: user.kakaoId || '',
+    kakaoVerified: user.kakaoVerified || false,
     pointReason: '',
   });
   
@@ -31,8 +34,11 @@ export default function AdminUserEditModal({ user, onClose }) {
         level: isNaN(parsedLevel) ? user.level : parsedLevel,
         points: isNaN(parsedPoints) ? user.points : parsedPoints,
         phoneNumber: formData.phoneNumber,
-        phoneNumberKr: formData.phoneNumberKr,
-        kakaoId: formData.kakaoId
+        phoneVerified: formData.phoneVerified,
+        phoneKr: formData.phoneKr,
+        phoneKrVerified: formData.phoneKrVerified,
+        kakaoId: formData.kakaoId,
+        kakaoVerified: formData.kakaoVerified
       };
 
       if (updateData.points !== user.points) {
@@ -99,6 +105,15 @@ export default function AdminUserEditModal({ user, onClose }) {
         </div>
         
         <form onSubmit={handleSubmit} style={{ padding: '10px 4px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          
+          <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <div style={{ gridColumn: '1 / -1' }}><strong style={{ color: '#1e293b' }}>UID:</strong> {user.uid}</div>
+            <div style={{ gridColumn: '1 / -1' }}><strong style={{ color: '#1e293b' }}>구글 이메일:</strong> {user.email || '정보 없음'}</div>
+            <div><strong style={{ color: '#1e293b' }}>가입일:</strong> {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '알 수 없음'}</div>
+            <div><strong style={{ color: '#1e293b' }}>최근 접속일:</strong> {user.lastCheckInDate || '알 수 없음'}</div>
+            <div><strong style={{ color: '#1e293b' }}>연속 출석:</strong> {user.consecutiveDays || 0}일</div>
+          </div>
+
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>이름 (닉네임)</label>
             <input 
@@ -158,32 +173,65 @@ export default function AdminUserEditModal({ user, onClose }) {
           
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>한국 전화번호</label>
-            <input 
-              type="text" 
-              className="form-input"
-              value={formData.phoneNumberKr}
-              onChange={(e) => setFormData({...formData, phoneNumberKr: e.target.value})}
-            />
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <input 
+                type="text" 
+                className="form-input"
+                style={{ flex: 1 }}
+                value={formData.phoneKr}
+                onChange={(e) => setFormData({...formData, phoneKr: e.target.value})}
+              />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={formData.phoneKrVerified}
+                  onChange={(e) => setFormData({...formData, phoneKrVerified: e.target.checked})}
+                />
+                인증됨
+              </label>
+            </div>
           </div>
 
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>필리핀 전화번호</label>
-            <input 
-              type="text" 
-              className="form-input"
-              value={formData.phoneNumber}
-              onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
-            />
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <input 
+                type="text" 
+                className="form-input"
+                style={{ flex: 1 }}
+                value={formData.phoneNumber}
+                onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+              />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={formData.phoneVerified}
+                  onChange={(e) => setFormData({...formData, phoneVerified: e.target.checked})}
+                />
+                인증됨
+              </label>
+            </div>
           </div>
           
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>카카오톡 아이디</label>
-            <input 
-              type="text" 
-              className="form-input"
-              value={formData.kakaoId}
-              onChange={(e) => setFormData({...formData, kakaoId: e.target.value})}
-            />
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <input 
+                type="text" 
+                className="form-input"
+                style={{ flex: 1 }}
+                value={formData.kakaoId}
+                onChange={(e) => setFormData({...formData, kakaoId: e.target.value})}
+              />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={formData.kakaoVerified}
+                  onChange={(e) => setFormData({...formData, kakaoVerified: e.target.checked})}
+                />
+                인증됨
+              </label>
+            </div>
           </div>
           
           <div className="modal-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '16px' }}>

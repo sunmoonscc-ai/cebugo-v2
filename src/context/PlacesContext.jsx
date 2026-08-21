@@ -571,9 +571,10 @@ export const PlacesProvider = ({ children }) => {
     // 2-1. Update user verification status if this is a verification request
     if (subToApprove.type === 'verification' && subToApprove.uid) {
       const updateData = {};
-      if (subToApprove.field === 'phone') updateData.phoneVerified = true;
-      if (subToApprove.field === 'phoneKr') updateData.phoneKrVerified = true;
-      if (subToApprove.field === 'kakao') updateData.kakaoVerified = true;
+      const fields = subToApprove.field.split(',');
+      if (fields.includes('phone')) updateData.phoneVerified = true;
+      if (fields.includes('phoneKr')) updateData.phoneKrVerified = true;
+      if (fields.includes('kakao')) updateData.kakaoVerified = true;
       
       if (Object.keys(updateData).length > 0) {
         setDoc(doc(db, 'users', subToApprove.uid), updateData, { merge: true }).catch(e => console.error(e));
@@ -582,7 +583,11 @@ export const PlacesProvider = ({ children }) => {
 
     // 3. Update Submission in Firestore
     try {
-      await setDoc(doc(db, 'cebugo_submissions', subId), { status: 'approved' }, { merge: true });
+      const pAt = new Date().toISOString();
+      setSubmissions((prev) =>
+        prev.map((sub) => (sub.id === subId ? { ...sub, processedAt: pAt } : sub))
+      );
+      await setDoc(doc(db, 'cebugo_submissions', subId), { status: 'approved', processedAt: pAt }, { merge: true });
     } catch (err) {
       console.error('Failed to approve submission in Firestore:', err);
     }

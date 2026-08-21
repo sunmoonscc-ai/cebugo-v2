@@ -75,7 +75,7 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!inputKakaoId.trim()) return;
     
-    await updateUserProfile({ kakaoId: inputKakaoId });
+    await updateUserProfile({ kakaoId: inputKakaoId, kakaoVerified: false });
     
     addSubmission({
       type: 'verification',
@@ -89,13 +89,14 @@ export default function ProfilePage() {
     });
     
     alert('카카오톡 ID 등록 및 관리자 인증 신청이 완료되었습니다.');
+    setInputKakaoId('');
   };
 
   const handleReqPhoneVerif = async (e) => {
     e.preventDefault();
     if (!inputPhone.trim()) return;
     
-    await updateUserProfile({ phoneNumber: inputPhone });
+    await updateUserProfile({ phoneNumber: inputPhone, phoneVerified: false });
     
     addSubmission({
       type: 'verification',
@@ -109,26 +110,73 @@ export default function ProfilePage() {
     });
     
     alert('필리핀 현지폰 번호 등록 및 관리자 인증 신청이 완료되었습니다.');
+    setInputPhone('');
   };
 
   const handleReqPhoneKrVerif = async (e) => {
     e.preventDefault();
     if (!inputPhoneKr.trim()) return;
     
-    await updateUserProfile({ phoneKr: inputPhoneKr });
-    
     addSubmission({
       type: 'verification',
       field: 'phoneKr',
-      oldValue: '미인증',
-      newValue: inputPhoneKr,
+      oldValue: `한국폰: ${userProfile?.phoneKr || '미인증'}`,
+      newValue: `한국폰: ${inputPhoneKr}`,
       uid: userProfile?.uid,
       userName: userProfile?.displayName || '사용자',
       placeId: 'verification',
       placeName: '한국 휴대폰 인증 요청'
     });
     
-    alert('한국 휴대폰 번호 등록 및 관리자 인증 신청이 완료되었습니다.');
+    alert('한국 휴대폰 번호 관리자 인증 신청이 완료되었습니다.');
+    setInputPhoneKr('');
+  };
+
+  const handleBatchVerif = async () => {
+    let requestedFields = [];
+    let fieldLabels = [];
+    let oldValues = [];
+    let newValues = [];
+    
+    if (inputPhone.trim() && inputPhone !== userProfile.phoneNumber) {
+      requestedFields.push('phoneNumber');
+      fieldLabels.push('필리핀 폰');
+      oldValues.push(`현지폰: ${userProfile.phoneNumber || '미인증'}`);
+      newValues.push(`현지폰: ${inputPhone}`);
+    }
+    if (inputPhoneKr.trim() && inputPhoneKr !== userProfile.phoneKr) {
+      requestedFields.push('phoneKr');
+      fieldLabels.push('한국 폰');
+      oldValues.push(`한국폰: ${userProfile.phoneKr || '미인증'}`);
+      newValues.push(`한국폰: ${inputPhoneKr}`);
+    }
+    if (inputKakaoId.trim() && inputKakaoId !== userProfile.kakaoId) {
+      requestedFields.push('kakao');
+      fieldLabels.push('카카오톡');
+      oldValues.push(`카톡: ${userProfile.kakaoId || '미인증'}`);
+      newValues.push(`카톡: ${inputKakaoId}`);
+    }
+
+    if (requestedFields.length === 0) {
+      alert('변경(인증)할 새로운 정보를 입력해주세요.');
+      return;
+    }
+
+    addSubmission({
+      type: 'verification',
+      field: requestedFields.join(','),
+      oldValue: oldValues.join('\n'),
+      newValue: newValues.join('\n'),
+      uid: userProfile?.uid,
+      userName: userProfile?.displayName || '사용자',
+      placeId: 'verification',
+      placeName: '통합 인증 요청'
+    });
+
+    alert('관리자에게 인증 신청이 일괄 접수되었습니다.');
+    setInputPhone('');
+    setInputPhoneKr('');
+    setInputKakaoId('');
   };
 
   const [feedbackCategory, setFeedbackCategory] = useState('일반 건의 / 서비스 의견');
@@ -202,6 +250,7 @@ export default function ProfilePage() {
             <div className="badge-row">
               <LevelBadge level={userProfile.level} />
               <PhoneVerifiedBadge isVerified={userProfile.phoneVerified} />
+              {userProfile.phoneKrVerified && <span className="badge verified-badge" style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px solid #bbf7d0' }}><RiSmartphoneLine />한국폰 인증완료</span>}
               <KakaoVerifiedBadge isVerified={userProfile.kakaoVerified} />
             </div>
             
@@ -253,26 +302,31 @@ export default function ProfilePage() {
             <RiSmartphoneLine className="status-icon" />
             <div>
               <strong>필리핀 현지폰 연동 (+63)</strong>
-              <p>{userProfile.phoneVerified ? `${userProfile.phoneNumber}` : '미인증 상태 (중고거래 제한)'}</p>
+              {(() => {
+                const pending = submissions.find(s => s.type === 'verification' && s.uid === userProfile.uid && s.status === 'pending' && s.field.includes('phone'));
+                if (pending) {
+                  const val = pending.newValue.split('\n').find(l => l.startsWith('현지폰: '))?.replace('현지폰: ', '');
+                  return <p>{val} <span style={{color:'#64748b'}}>(인증 대기중)</span></p>;
+                }
+                return <p>{userProfile.phoneVerified ? `${userProfile.phoneNumber} (인증됨)` : (userProfile.phoneNumber ? `${userProfile.phoneNumber} (미인증)` : '미인증 상태')}</p>;
+              })()}
             </div>
           </div>
 
-          {!userProfile.phoneVerified && (
-            <form onSubmit={handleReqPhoneVerif} className="kakao-verif-form" style={{display:'flex', gap:'8px', marginTop: '10px'}}>
-              <input
-                type="text"
-                placeholder="현지폰 입력 (0917...)"
-                value={inputPhone}
-                onChange={(e) => setInputPhone(e.target.value)}
-                className="form-input"
-                style={{ width: '130px', padding: '4px 8px' }}
-                required
-              />
-              <button type="submit" className="btn btn-secondary phone-auth-trigger" style={{ whiteSpace: 'nowrap' }}>
-                인증 신청
-              </button>
-            </form>
-          )}
+          <form onSubmit={handleReqPhoneVerif} className="kakao-verif-form" style={{display:'flex', gap:'8px', marginTop: '10px'}}>
+            <input
+              type="text"
+              placeholder="현지폰 입력 (0917...)"
+              value={inputPhone}
+              onChange={(e) => setInputPhone(e.target.value)}
+              className="form-input"
+              style={{ width: '130px', padding: '4px 8px' }}
+              required
+            />
+            <button type="submit" className="btn btn-secondary phone-auth-trigger" style={{ whiteSpace: 'nowrap' }}>
+              인증(재)요청
+            </button>
+          </form>
         </div>
 
         {/* Korean Phone Verification Status */}
@@ -281,26 +335,31 @@ export default function ProfilePage() {
             <RiSmartphoneLine className="status-icon" />
             <div>
               <strong>한국 휴대폰 연동 (+82)</strong>
-              <p>{userProfile.phoneKrVerified ? `${userProfile.phoneKr}` : '미인증 상태'}</p>
+              {(() => {
+                const pending = submissions.find(s => s.type === 'verification' && s.uid === userProfile.uid && s.status === 'pending' && s.field.includes('phoneKr'));
+                if (pending) {
+                  const val = pending.newValue.split('\n').find(l => l.startsWith('한국폰: '))?.replace('한국폰: ', '');
+                  return <p>{val} <span style={{color:'#64748b'}}>(인증 대기중)</span></p>;
+                }
+                return <p>{userProfile.phoneKrVerified ? `${userProfile.phoneKr} (인증됨)` : (userProfile.phoneKr ? `${userProfile.phoneKr} (미인증)` : '미인증 상태')}</p>;
+              })()}
             </div>
           </div>
 
-          {!userProfile.phoneKrVerified && (
-            <form onSubmit={handleReqPhoneKrVerif} className="kakao-verif-form" style={{display:'flex', gap:'8px', marginTop: '10px'}}>
-              <input
-                type="text"
-                placeholder="한국폰 입력 (010...)"
-                value={inputPhoneKr}
-                onChange={(e) => setInputPhoneKr(e.target.value)}
-                className="form-input"
-                style={{ width: '130px', padding: '4px 8px' }}
-                required
-              />
-              <button type="submit" className="btn btn-secondary phone-auth-trigger" style={{ whiteSpace: 'nowrap' }}>
-                인증 신청
-              </button>
-            </form>
-          )}
+          <form onSubmit={handleReqPhoneKrVerif} className="kakao-verif-form" style={{display:'flex', gap:'8px', marginTop: '10px'}}>
+            <input
+              type="text"
+              placeholder="한국폰 입력 (010...)"
+              value={inputPhoneKr}
+              onChange={(e) => setInputPhoneKr(e.target.value)}
+              className="form-input"
+              style={{ width: '130px', padding: '4px 8px' }}
+              required
+            />
+            <button type="submit" className="btn btn-secondary phone-auth-trigger" style={{ whiteSpace: 'nowrap' }}>
+              인증(재)요청
+            </button>
+          </form>
         </div>
 
         {/* Kakao Verification Status */}
@@ -309,26 +368,41 @@ export default function ProfilePage() {
             <RiUser3Line className="status-icon" />
             <div>
               <strong>카카오톡 아이디 연동</strong>
-              <p>{userProfile.kakaoVerified ? userProfile.kakaoId : (userProfile.kakaoId ? `${userProfile.kakaoId} (미인증)` : '미인증 상태 (중고거래 제한)')}</p>
+              {(() => {
+                const pending = submissions.find(s => s.type === 'verification' && s.uid === userProfile.uid && s.status === 'pending' && s.field.includes('kakao'));
+                if (pending) {
+                  const val = pending.newValue.split('\n').find(l => l.startsWith('카톡: '))?.replace('카톡: ', '');
+                  return <p>{val} <span style={{color:'#64748b'}}>(인증 대기중)</span></p>;
+                }
+                return <p>{userProfile.kakaoVerified ? `${userProfile.kakaoId} (인증됨)` : (userProfile.kakaoId ? `${userProfile.kakaoId} (미인증)` : '미인증 상태')}</p>;
+              })()}
             </div>
           </div>
 
-          {!userProfile.kakaoVerified && (
-            <form onSubmit={handleReqKakaoVerif} className="kakao-verif-form" style={{display:'flex', gap:'8px', marginTop: '10px'}}>
-              <input
-                type="text"
-                placeholder="카톡 ID 입력"
-                value={inputKakaoId}
-                onChange={(e) => setInputKakaoId(e.target.value)}
-                className="form-input"
-                style={{ width: '130px', padding: '4px 8px' }}
-                required
-              />
-              <button type="submit" className="btn btn-secondary phone-auth-trigger" style={{ whiteSpace: 'nowrap' }}>
-                인증 신청
-              </button>
-            </form>
-          )}
+          <form onSubmit={handleReqKakaoVerif} className="kakao-verif-form" style={{display:'flex', gap:'8px', marginTop: '10px'}}>
+            <input
+              type="text"
+              placeholder="카톡 ID 입력"
+              value={inputKakaoId}
+              onChange={(e) => setInputKakaoId(e.target.value)}
+              className="form-input"
+              style={{ width: '130px', padding: '4px 8px' }}
+              required
+            />
+            <button type="submit" className="btn btn-secondary phone-auth-trigger" style={{ whiteSpace: 'nowrap' }}>
+              인증(재)요청
+            </button>
+          </form>
+        </div>
+
+        <div style={{ marginTop: '16px' }}>
+          <button 
+            className="btn btn-primary" 
+            style={{ width: '100%', padding: '12px' }} 
+            onClick={handleBatchVerif}
+          >
+            입력된 정보 일괄 (재)요청
+          </button>
         </div>
 
         <button className="logout-link-btn" onClick={logout}>
