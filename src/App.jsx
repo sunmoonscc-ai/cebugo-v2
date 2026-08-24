@@ -15,6 +15,13 @@ function ScrollToTop() {
   return null;
 }
 
+import useVisitorLogging from './hooks/useVisitorLogging';
+
+function VisitorLogger() {
+  useVisitorLogging();
+  return null;
+}
+
 // Pages
 import ListPage from './pages/ListPage';
 import DetailPage from './pages/DetailPage';
@@ -31,6 +38,7 @@ export default function App() {
   return (
     <div className="app-container">
       <ScrollToTop />
+      <VisitorLogger />
       <Header />
       <main>
         <Routes>

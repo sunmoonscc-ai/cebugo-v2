@@ -1945,15 +1945,29 @@ export default function DailyInfoPage() {
 
                   {/* Multiple Call Buttons */}
                   <div className="contact-phones-column">
-                    {phonesList.map((ph, pIdx) => (
-                      <a 
-                        key={pIdx}
-                        href={`tel:${ph.replace(/[^0-9+]/g, '')}`} 
-                        className="btn-call-action"
-                      >
-                        <RiPhoneFill /> {ph}
-                      </a>
-                    ))}
+                    {phonesList.map((ph, pIdx) => {
+                      const cleanPh = ph.replace(/[^0-9+]/g, '');
+                      if (!cleanPh) {
+                        return (
+                          <div 
+                            key={pIdx} 
+                            className="btn-call-action" 
+                            style={{ cursor: 'default', opacity: 0.6, pointerEvents: 'none' }}
+                          >
+                            <RiPhoneFill /> {ph}
+                          </div>
+                        );
+                      }
+                      return (
+                        <a 
+                          key={pIdx}
+                          href={`tel:${cleanPh}`} 
+                          className="btn-call-action"
+                        >
+                          <RiPhoneFill /> {ph}
+                        </a>
+                      );
+                    })}
                   </div>
 
                   {/* Business Hours */}
