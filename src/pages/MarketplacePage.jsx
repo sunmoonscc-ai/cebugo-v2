@@ -81,6 +81,22 @@ export default function MarketplacePage() {
   const [category, setCategory] = useState('furniture');
   const [images, setImages] = useState([]);
   const [agreeContact, setAgreeContact] = useState(true);
+  const [contactList, setContactList] = useState([{ type: 'phone', value: '' }]);
+
+  const handleAddContact = () => {
+    setContactList([...contactList, { type: 'phone', value: '' }]);
+  };
+
+  const handleContactChange = (index, field, value) => {
+    const newList = [...contactList];
+    newList[index][field] = value;
+    setContactList(newList);
+  };
+
+  const handleRemoveContact = (index) => {
+    const newList = contactList.filter((_, i) => i !== index);
+    setContactList(newList.length > 0 ? newList : [{ type: 'phone', value: '' }]);
+  };
 
   const [inputKakaoId, setInputKakaoId] = useState('');
   const [inputPhone, setInputPhone] = useState('');
@@ -88,7 +104,8 @@ export default function MarketplacePage() {
 
   const [rules, setRules] = useState({
     readLevel: 1, reqPhoneRead: false, reqKakaoRead: false,
-    writeLevel: 4, reqPhoneWrite: true, reqKakaoWrite: true
+    writeLevel: 4, reqPhoneWrite: true, reqKakaoWrite: true,
+    contactExposureLevel: 1
   });
   
   const [siteRules, setSiteRules] = useState({ locationPolicy: 'manual' });
@@ -123,6 +140,10 @@ export default function MarketplacePage() {
       (!rules.reqPhoneWrite || userProfile.phoneVerified) &&
       (!rules.reqKakaoWrite || userProfile.kakaoVerified)
     )
+  );
+
+  const userCanViewContact = isValidUser && (
+    userProfile.isAdmin || userProfile.level >= (rules.contactExposureLevel || 1)
   );
 
   const checkWriteAccess = () => {
@@ -166,6 +187,17 @@ export default function MarketplacePage() {
     setDescription(item.description);
     setCategory(item.category);
     setImages(item.images || []);
+    
+    if (item.contactList && item.contactList.length > 0) {
+      setContactList(item.contactList);
+    } else {
+      const snsInfo = parseSnsEntry(item.sns);
+      const defaultContacts = [];
+      if (item.phone) defaultContacts.push({ type: 'phone', value: item.phone });
+      if (snsInfo) defaultContacts.push({ type: 'kakao', value: snsInfo.handle });
+      setContactList(defaultContacts.length > 0 ? defaultContacts : [{ type: 'phone', value: '' }]);
+    }
+    
     setShowWriteForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -176,6 +208,7 @@ export default function MarketplacePage() {
     setPrice('');
     setDescription('');
     setImages([]);
+    setContactList([{ type: 'phone', value: '' }]);
     setShowWriteForm(false);
   };
 
@@ -183,24 +216,32 @@ export default function MarketplacePage() {
     e.preventDefault();
     if (!title.trim() || !price.trim()) return;
 
+    const validContacts = contactList.filter(c => c.value.trim());
+
     if (editingListingId) {
       updateMarketplaceListing(editingListingId, {
         title,
         price: `${price} PHP`,
         description,
         category,
-        images
+        images,
+        contactList: validContacts
       });
     } else {
       addMarketplaceListing({
         sellerUid: userProfile.uid,
         sellerName: userProfile.displayName,
+        sellerEmail: userProfile.email || '',
         sellerLevel: userProfile.level,
         title,
         price: `${price} PHP`,
         description,
         category,
         images: images.length > 0 ? images : ['https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&q=80'],
+        contactList: validContacts.length > 0 ? validContacts : [
+          { type: 'phone', value: userProfile.phoneNumber || '09171234567' },
+          { type: 'kakao', value: userProfile.kakaoId || 'cebuseller' }
+        ],
         phone: userProfile.phoneNumber || '09171234567',
         sns: `k_${userProfile.kakaoId || 'cebuseller'}`
       });
@@ -460,6 +501,49 @@ export default function MarketplacePage() {
               required
             />
 
+            <label className="form-label">연락처 및 SNS</label>
+            {contactList.map((contact, idx) => (
+              <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                <select 
+                  value={contact.type} 
+                  onChange={(e) => handleContactChange(idx, 'type', e.target.value)}
+                  className="form-select"
+                  style={{ width: '110px' }}
+                >
+                  <option value="phone">전화번호</option>
+                  <option value="kakao">카카오톡</option>
+                  <option value="line">라인</option>
+                  <option value="facebook">페이스북</option>
+                  <option value="instagram">인스타그램</option>
+                  <option value="other">기타</option>
+                </select>
+                <input
+                  type="text"
+                  value={contact.value}
+                  onChange={(e) => handleContactChange(idx, 'value', e.target.value)}
+                  placeholder="연락처/아이디 입력"
+                  className="form-input"
+                  style={{ flex: 1 }}
+                />
+                <button 
+                  type="button" 
+                  onClick={() => handleRemoveContact(idx)} 
+                  className="btn btn-secondary" 
+                  style={{ padding: '0 12px' }}
+                >
+                  삭제
+                </button>
+              </div>
+            ))}
+            <button 
+              type="button" 
+              onClick={handleAddContact} 
+              className="btn btn-secondary" 
+              style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <RiAddLine /> 연락처 추가
+            </button>
+
             <div className="checkbox-wrap">
               <input
                 type="checkbox"
@@ -534,6 +618,7 @@ export default function MarketplacePage() {
             const isFavorited = item.favoritesUsers?.includes(userProfile?.uid);
             const isSold = item.status === 'sold';
             const isExpanded = expandedListingId === item.id;
+            const maskedName = item.sellerEmail ? (item.sellerEmail.substring(0, 3) + '***') : (item.sellerName ? (item.sellerName.substring(0, 3) + '***') : '익명***');
             
             return (
               <div key={item.id} className="glass-card listing-card fade-in" style={{ opacity: isSold ? 0.7 : 1, cursor: 'pointer', padding: 0 }} onClick={() => setExpandedListingId(isExpanded ? null : item.id)}>
@@ -568,12 +653,26 @@ export default function MarketplacePage() {
                       
                       <div className="seller-info" style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
                         <div className="seller-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 600 }}>판매자: {item.sellerName}</span>
+                          <span style={{ fontWeight: 600 }}>판매자: {maskedName}</span>
                           <LevelBadge level={item.sellerLevel} />
                         </div>
                         <div className="contact-row" style={{ fontSize: '0.9rem', color: '#64748b' }}>
-                          <span>TEL: {item.phone}</span>
-                          {snsInfo && <span style={{ marginLeft: '12px' }}>{snsInfo.name}: {snsInfo.handle}</span>}
+                          {userCanViewContact || isOwner ? (
+                            item.contactList && item.contactList.length > 0 ? (
+                              item.contactList.map((contact, idx) => (
+                                <span key={idx} style={{ marginRight: '12px' }}>
+                                  <strong>{contact.type === 'phone' ? 'TEL' : (contact.type === 'kakao' ? '카카오톡' : contact.type.toUpperCase())}:</strong> {contact.value}
+                                </span>
+                              ))
+                            ) : (
+                              <>
+                                <span>TEL: {item.phone}</span>
+                                {snsInfo && <span style={{ marginLeft: '12px' }}>{snsInfo.name}: {snsInfo.handle}</span>}
+                              </>
+                            )
+                          ) : (
+                            <span style={{ color: '#ef4444' }}>연락처를 보려면 레벨 {rules.contactExposureLevel || 1} 이상이 필요합니다.</span>
+                          )}
                         </div>
                       </div>
 
