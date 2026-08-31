@@ -590,7 +590,6 @@ export default function MarketplacePage() {
             <button className={`btn ${filterCategory === 'vehicles' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('vehicles')}>차량</button>
           </div>
         </>
-      </>
 
       {/* Listings List */}
       <div className="listings-grid">
@@ -604,9 +603,14 @@ export default function MarketplacePage() {
             
             return (
               <div key={item.id} className="glass-card listing-card fade-in" style={{ opacity: isSold ? 0.7 : 1, cursor: 'pointer', padding: 0 }} onClick={() => setExpandedListingId(isExpanded ? null : item.id)}>
-                <div className="listing-top" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isExpanded ? '1px solid #e2e8f0' : 'none' }}>
-                  <h3 className="listing-title" style={{ margin: 0, fontSize: '1.1rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</h3>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                <div className="listing-top" style={{ padding: '16px', display: 'flex', gap: '12px', alignItems: 'center', borderBottom: isExpanded ? '1px solid #e2e8f0' : 'none' }}>
+                  {item.images && item.images.length > 0 && (
+                    <img src={item.images[0]} alt="thumbnail" style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px' }} />
+                  )}
+                  <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <h3 className="listing-title" style={{ margin: 0, fontSize: '1.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</h3>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end', flexShrink: 0 }}>
                     <span className="listing-price" style={{ fontWeight: 'bold', color: '#10b981' }}>{item.price}</span>
                     <span className="listing-status" style={{ background: isSold ? '#64748b' : (item.status === 'reserved' ? '#f59e0b' : '#3b82f6'), color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>
                       {item.status === 'sold' ? '거래완료' : (item.status === 'reserved' ? '예약중' : '판매중')}
