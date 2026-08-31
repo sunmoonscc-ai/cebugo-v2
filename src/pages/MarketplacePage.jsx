@@ -563,8 +563,7 @@ export default function MarketplacePage() {
       )}
 
       {/* Search & Filter Bar */}
-      {userCanRead && (
-        <>
+      <>
           <div className="glass-card" style={{ marginBottom: '12px', padding: '16px', display: 'flex' }}>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '8px', padding: '0 12px' }}>
               <RiSearchLine style={{ color: '#64748b' }} />
@@ -591,27 +590,10 @@ export default function MarketplacePage() {
             <button className={`btn ${filterCategory === 'vehicles' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('vehicles')}>차량</button>
           </div>
         </>
-      )}
+      </>
 
       {/* Listings List */}
-      {!userCanRead ? (
-        <div className="glass-card flex-center" style={{ padding: '60px 20px', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}>
-          <RiLock2Line style={{ fontSize: '4rem', color: '#94a3b8' }} />
-          <h2 style={{ margin: 0, color: '#334155', textAlign: 'center' }}>중고장터 접근 제한</h2>
-          <p style={{ color: '#64748b', textAlign: 'center', lineHeight: '1.6' }}>
-            {!isValidUser && (
-              <>
-                <strong style={{ color: '#ef4444' }}>회원가입 및 로그인이 필요합니다.</strong><br/><br/>
-              </>
-            )}
-            중고장터 매물을 열람하려면 다음 조건이 필요합니다.<br/>
-            <strong>최소 레벨: Lv.{rules.readLevel}</strong>
-            {rules.reqPhoneRead && <span> / <strong>전화번호 인증</strong></span>}
-            {rules.reqKakaoRead && <span> / <strong>카카오톡 인증</strong></span>}
-          </p>
-        </div>
-      ) : (
-        <div className="listings-grid">
+      <div className="listings-grid">
           {filteredMarketplace.map((item) => {
             const snsInfo = parseSnsEntry(item.sns);
             const isOwner = userProfile?.uid === item.sellerUid || userProfile?.isAdmin;
@@ -634,7 +616,30 @@ export default function MarketplacePage() {
 
                 {isExpanded && (
                   <div onClick={(e) => e.stopPropagation()}>
-                    <div style={{ position: 'relative' }}>
+                    {!userCanRead ? (
+                      <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px', background: '#f8fafc' }}>
+                        <RiLock2Line style={{ fontSize: '3rem', color: '#94a3b8' }} />
+                        <h3 style={{ margin: 0, color: '#334155' }}>상세 내용 접근 제한</h3>
+                        <p style={{ color: '#64748b', lineHeight: '1.6', margin: 0 }}>
+                          {!isValidUser && (
+                            <>
+                              <strong style={{ color: '#ef4444' }}>회원가입 및 로그인이 필요합니다.</strong><br/><br/>
+                            </>
+                          )}
+                          상세 내용을 열람하려면 다음 조건이 필요합니다.<br/>
+                          <strong>최소 레벨: Lv.{rules.readLevel}</strong>
+                          {rules.reqPhoneRead && <span> / <strong>전화번호 인증</strong></span>}
+                          {rules.reqKakaoRead && <span> / <strong>카카오톡 인증</strong></span>}
+                        </p>
+                        {!isValidUser && (
+                          <button className="btn btn-primary" onClick={() => window.location.href = '/profile'} style={{ marginTop: '8px' }}>
+                            회원가입 / 로그인 하러가기
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ position: 'relative' }}>
                       <ZoomableImage
                         src={item.images && item.images.length > 0 ? item.images[0] : '/default_cafe.png'}
                         images={item.images || []}
@@ -732,13 +737,14 @@ export default function MarketplacePage() {
                         )}
                       </div>
                     </div>
+                    </>
+                    )}
                   </div>
                 )}
               </div>
             );
           })}
         </div>
-      )}
 
       {showPhoneAuthModal && (
         <PhoneAuthModal onClose={() => setShowPhoneAuthModal(false)} />
