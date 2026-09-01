@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { CarrierBadge } from '../common/Badge';
 import { classifyPhoneCarrier, parseSnsEntry, getSnsLinkUrl } from '../../utils/phoneSnsClassifier';
 import { getOptimizedImageUrl, getDefaultImageForCategory } from '../../utils/imageHelper';
@@ -22,9 +22,31 @@ import './PlaceCard.css';
 
 export default function PlaceCard({ place, index, totalCount, selectedCategory, onMove, onEdit, onDelete }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { userProfile, toggleFavorite } = useAuth();
   const [zoomImgIndex, setZoomImgIndex] = React.useState(null);
   const isFavorite = userProfile?.favorites?.includes(place.id);
+
+  // Close zoom if hash changes (e.g. back button)
+  React.useEffect(() => {
+    if (zoomImgIndex !== null && location.hash !== '#zoom') {
+      setZoomImgIndex(null);
+    }
+  }, [location.hash, zoomImgIndex]);
+
+  const handleOpenZoom = (idx, e) => {
+    e.stopPropagation();
+    navigate(location.pathname + location.search + '#zoom', { replace: false });
+    setZoomImgIndex(idx);
+  };
+
+  const handleCloseZoom = () => {
+    if (location.hash === '#zoom') {
+      navigate(-1);
+    } else {
+      setZoomImgIndex(null);
+    }
+  };
 
   const goToDetail = () => {
     navigate(`/place/${place.id}`, { state: { fromCategory: selectedCategory } });
@@ -59,10 +81,7 @@ export default function PlaceCard({ place, index, totalCount, selectedCategory, 
               src={getOptimizedImageUrl(imgSrc, 500)}
               alt={`${place.name} - ${imgIdx + 1}`}
               className="card-item-img"
-              onClick={(e) => {
-                e.stopPropagation();
-                setZoomImgIndex(imgIdx);
-              }}
+              onClick={(e) => handleOpenZoom(imgIdx, e)}
               title="클릭하여 전체 화면으로 확대보기"
               onError={(e) => {
                 if (e.target.src !== imgSrc) {
@@ -276,7 +295,7 @@ export default function PlaceCard({ place, index, totalCount, selectedCategory, 
         <FullScreenImageModal
           images={imagesToDisplay}
           initialIndex={zoomImgIndex}
-          onClose={() => setZoomImgIndex(null)}
+          onClose={handleCloseZoom}
         />
       )}
     </div>

@@ -51,21 +51,21 @@ export default function ImageCarousel({ images = [], maxWidth = '100%' }) {
 
   const currentImgUrl = displayImages[safeIndex];
 
-  // Whenever the location state changes, check if we need to close the modal
+  // Whenever the hash changes, check if we need to close the modal
   useEffect(() => {
-    if (isZoomOpen && !location.state?.zoom) {
+    if (isZoomOpen && location.hash !== '#zoom') {
       setIsZoomOpen(false);
     }
-  }, [location.state?.zoom, isZoomOpen]);
+  }, [location.hash, isZoomOpen]);
 
   const handleOpenZoom = (e) => {
     e.stopPropagation();
-    navigate('.', { state: { ...location.state, zoom: true } });
+    navigate(location.pathname + location.search + '#zoom', { replace: false });
     setIsZoomOpen(true);
   };
 
   const handleCloseZoom = () => {
-    if (location.state?.zoom) {
+    if (location.hash === '#zoom') {
       navigate(-1);
     } else {
       setIsZoomOpen(false);
