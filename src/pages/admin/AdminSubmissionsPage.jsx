@@ -63,8 +63,6 @@ export default function AdminSubmissionsPage() {
   const [editingCatId, setEditingCatId] = useState(null);
   const [editingCatName, setEditingCatName] = useState('');
 
-  const [visitorLogs, setVisitorLogs] = useState([]);
-  const [selectedLog, setSelectedLog] = useState(null);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'cebugo_config', 'ticker_speed'), (docSnap) => {
@@ -111,18 +109,6 @@ export default function AdminSubmissionsPage() {
     return () => unsubUsers();
   }, []);
 
-  useEffect(() => {
-    const q = query(
-      collection(db, 'cebugo_visitor_logs'),
-      orderBy('timestamp', 'desc'),
-      limit(500)
-    );
-    const unsub = onSnapshot(q, (snapshot) => {
-      const logs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
-      setVisitorLogs(logs);
-    });
-    return () => unsub();
-  }, []);
 
   useEffect(() => {
     const unsubAdv = onSnapshot(collection(db, 'cebugo_advertisers'), (snapshot) => {
@@ -396,22 +382,6 @@ export default function AdminSubmissionsPage() {
     approveSubmission(subId, parsed);
   };
 
-  const formatLogTime = (dateObj) => {
-    if (!dateObj) return '';
-    const d = new Date(dateObj);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    return `${year}${month}${day}_${hours}${minutes}`;
-  };
-
-  const getLogUserName = (uid) => {
-    if (!uid || uid === 'guest') return '(비회원)';
-    const user = users.find(u => u.uid === uid);
-    return user && user.displayName ? user.displayName : `회원 (${uid.substring(0, 6)})`;
-  };
 
   return (
     <div className="page-content fade-in">
@@ -644,41 +614,6 @@ export default function AdminSubmissionsPage() {
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '20px' }}>
-              {/* 위치 기반 서비스 정책 */}
-              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                <h4 style={{ margin: '0 0 12px 0', color: '#1e293b' }}>📍 위치 기반 서비스 정책</h4>
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>설정 방식</label>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <select 
-                      className="form-input" 
-                      style={{ flex: 1 }}
-                      value={siteRules.locationPolicy || 'manual'} 
-                      onChange={e => setSiteRules({...siteRules, locationPolicy: e.target.value})}
-                    >
-                      <option value="manual">지도에서 직접 위치 지정 (수동)</option>
-                      <option value="gps">사용자 동의 후 실제 기기 위치 기반 (GPS)</option>
-                    </select>
-                    
-                    {siteRules.locationPolicy === 'manual' && (
-                      <button 
-                        type="button"
-                        className="btn btn-secondary" 
-                        onClick={() => setShowAdminLocationModal(true)}
-                        style={{ whiteSpace: 'nowrap', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                      >
-                        <RiMapPinLine /> 
-                        {siteRules.defaultLocation ? '기본 위치 변경' : '기본 위치 설정'}
-                      </button>
-                    )}
-                  </div>
-                  {siteRules.locationPolicy === 'manual' && siteRules.defaultLocation && (
-                    <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <RiCheckLine /> 공통 기본 위치가 지도에 지정되었습니다.
-                    </div>
-                  )}
-                </div>
-              </div>
 
               {/* 댓글 작성 권한 */}
               <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
@@ -769,156 +704,30 @@ export default function AdminSubmissionsPage() {
         <div className="tab-content-section fade-in">
           <div className="section-title">
             <h2>접속 통계 (Visitors)</h2>
-            <p>사이트에 접속한 사용자 및 비회원의 페이지 뷰 통계를 확인합니다.</p>
+            <p>전문적인 앱 트래픽 및 접속 통계는 구글 애널리틱스(GA4)를 통해 제공됩니다.</p>
           </div>
           
-          <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-            <div className="glass-card" style={{ flex: 1, padding: '22px', textAlign: 'center' }}>
-              <h3 style={{ margin: 0, color: '#64748b', fontSize: '1rem' }}>오늘 페이지 뷰</h3>
-              <p style={{ margin: '10px 0 0', fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
-                {visitorLogs.filter(log => {
-                  if (!log.clientTime) return false;
-                  const today = new Date().toISOString().split('T')[0];
-                  return log.clientTime.startsWith(today);
-                }).length}
-              </p>
-            </div>
-            <div className="glass-card" style={{ flex: 1, padding: '22px', textAlign: 'center' }}>
-              <h3 style={{ margin: 0, color: '#64748b', fontSize: '1rem' }}>총 누적 뷰</h3>
-              <p style={{ margin: '10px 0 0', fontSize: '2rem', fontWeight: 'bold', color: '#1e293b' }}>
-                {visitorLogs.length}
-              </p>
-            </div>
-          </div>
-
-          <div className="glass-card" style={{ padding: '22px' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '16px' }}>최근 접속 기록 (최대 500건) - 클릭 시 상세 보기</h3>
-            <div className="table-responsive">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>시간</th>
-                    <th>사용자 ID</th>
-                    <th>기기/브라우저</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visitorLogs.map(log => {
-                    const logTime = log.clientTime || (log.timestamp && log.timestamp.toDate ? log.timestamp.toDate() : Date.now());
-                    return (
-                      <tr 
-                        key={log.id} 
-                        onClick={() => setSelectedLog(log)} 
-                        style={{ cursor: 'pointer' }} 
-                        className="hoverable-row"
-                        title="클릭하여 상세 정보 보기"
-                      >
-                        <td style={{ whiteSpace: 'nowrap', fontFamily: 'monospace', fontSize: '0.9rem' }}>
-                          {formatLogTime(logTime)}
-                        </td>
-                        <td style={{ fontWeight: log.uid !== 'guest' ? 'bold' : 'normal', color: log.uid !== 'guest' ? 'var(--primary)' : '#64748b' }}>
-                          {getLogUserName(log.uid)}
-                        </td>
-                        <td style={{ fontSize: '0.85rem', color: '#64748b', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {log.userAgent}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {visitorLogs.length === 0 && (
-                    <tr>
-                      <td colSpan="3" style={{ textAlign: 'center', padding: '20px' }}>접속 기록이 없습니다.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+          <div className="glass-card" style={{ padding: '40px', textAlign: 'center', margin: '20px 0', border: '2px dashed #cbd5e1' }}>
+            <h3 style={{ margin: '0 0 10px 0', color: '#1e293b', fontSize: '1.4rem' }}>📊 구글 애널리틱스(GA4) 연동 완료</h3>
+            <p style={{ color: '#64748b', marginBottom: '24px', lineHeight: '1.6', fontSize: '1rem' }}>
+              이제 접속자의 순수 방문(UV), 체류 시간, 유입 경로, 기기 등 상세한 통계가<br/>
+              구글 애널리틱스로 자동 전송되고 있습니다.
+            </p>
+            <a 
+              href="https://analytics.google.com/" 
+              target="_blank" 
+              rel="noreferrer"
+              className="btn btn-primary"
+              style={{ display: 'inline-flex', padding: '14px 28px', fontSize: '1.1rem', fontWeight: 'bold', borderRadius: '30px' }}
+            >
+              👉 구글 애널리틱스 대시보드 열기
+            </a>
+            <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '20px' }}>
+              * 데이터베이스(Firestore) 비용 최적화를 위해 기존의 무조건적인 직접 로깅 방식(페이지뷰)은 제거되었습니다.
+            </p>
           </div>
         </div>
       )}
-
-      {/* Visitor Details Modal */}
-      {selectedLog && (
-        <div className="modal-overlay" onClick={() => setSelectedLog(null)}>
-          <div className="modal-content glass-card fade-in" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', padding: '16px', maxHeight: '85vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h2 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <RiBarChartBoxLine color="var(--primary)" /> 접속 상세 정보
-              </h2>
-              <button className="btn-close" onClick={() => setSelectedLog(null)}><RiCloseLine size={24} /></button>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '4px' }}>접속 시간</div>
-                <div style={{ fontWeight: 'bold', fontFamily: 'monospace', fontSize: '0.9rem' }}>
-                  {formatLogTime(selectedLog.clientTime || (selectedLog.timestamp && selectedLog.timestamp.toDate ? selectedLog.timestamp.toDate() : Date.now()))}
-                  <span style={{ marginLeft: '8px', fontSize: '0.8rem', color: '#94a3b8', fontWeight: 'normal' }}>
-                    ({new Date(selectedLog.clientTime || Date.now()).toLocaleString()})
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '4px' }}>사용자</div>
-                <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: selectedLog.uid !== 'guest' ? 'var(--primary)' : '#333' }}>
-                  {getLogUserName(selectedLog.uid)}
-                </div>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '2px' }}>UID: {selectedLog.uid}</div>
-                {selectedLog.uid !== 'guest' && (
-                  <div style={{ fontSize: '0.8rem', color: '#10b981', marginTop: '2px' }}>
-                    <strong>Email:</strong> {users.find(u => u.uid === selectedLog.uid)?.email || '이메일 정보 없음'}
-                  </div>
-                )}
-              </div>
-
-              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '4px' }}>접속 경로 (Path)</div>
-                <div>
-                  <span className="badge badge-primary" style={{ fontSize: '0.85rem', padding: '4px 8px' }}>{selectedLog.path}</span>
-                </div>
-                {selectedLog.search && (
-                  <div style={{ marginTop: '6px', fontSize: '0.8rem', color: '#64748b' }}>
-                    <strong>검색 파라미터:</strong> {selectedLog.search}
-                  </div>
-                )}
-              </div>
-
-              {selectedLog.referrer && (
-                <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '4px' }}>유입 경로 (Referrer)</div>
-                  <div style={{ fontSize: '0.8rem', color: '#334155', wordBreak: 'break-all' }}>
-                    {selectedLog.referrer}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '4px' }}>기기 및 브라우저 (User Agent)</div>
-                <div style={{ fontSize: '0.8rem', lineHeight: '1.4', wordBreak: 'break-all', color: '#334155' }}>
-                  {selectedLog.userAgent}
-                </div>
-                <div style={{ display: 'flex', gap: '16px', marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #cbd5e1', fontSize: '0.8rem', color: '#475569' }}>
-                  <div><strong>언어:</strong> {selectedLog.language || '정보 없음'}</div>
-                  <div><strong>해상도:</strong> {selectedLog.screenResolution || '정보 없음'}</div>
-                </div>
-              </div>
-
-              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '4px' }}>세션 ID</div>
-                <div style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: '#64748b' }}>
-                  {selectedLog.sessionId}
-                </div>
-              </div>
-            </div>
-
-            <button type="button" className="btn btn-secondary" style={{ width: '100%', marginTop: '16px', padding: '10px' }} onClick={() => setSelectedLog(null)}>
-              닫기
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* TAB: 업체분류 관리 */}
       {adminTab === 'categories' && (
         <div className="tab-content-section fade-in">
