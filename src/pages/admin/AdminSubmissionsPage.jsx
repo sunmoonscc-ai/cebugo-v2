@@ -22,7 +22,6 @@ import {
 import ZoomableImage from '../../components/common/ZoomableImage';
 import AdminUserEditModal from '../../components/modals/AdminUserEditModal';
 import AdvertiserFormModal from '../../components/modals/AdvertiserFormModal';
-import MapLocationModal from '../../components/modals/MapLocationModal';
 import './AdminSubmissionsPage.css';
 
 export default function AdminSubmissionsPage() {
@@ -30,7 +29,6 @@ export default function AdminSubmissionsPage() {
   const { categories, addCategory, updateCategory, deleteCategory, reorderCategories } = useCategories();
 
   const [adminTab, setAdminTab] = useState('notice'); // 'notice' (공지/속도) or 'submission' (제보)
-  const [showAdminLocationModal, setShowAdminLocationModal] = useState(false);
   const [noticeSpeedMultiplier, setNoticeSpeedMultiplier] = useState(1);
   const [adSpeedMultiplier, setAdSpeedMultiplier] = useState(1);
   const [expandedSubmissionId, setExpandedSubmissionId] = useState(null);
@@ -49,7 +47,6 @@ export default function AdminSubmissionsPage() {
   });
 
   const [siteRules, setSiteRules] = useState({
-    locationPolicy: 'manual',
     reviewWriteLevel: 1
   });
 
@@ -156,8 +153,6 @@ export default function AdminSubmissionsPage() {
   const handleSaveMarketplaceRules = async () => {
     try {
       // Remove locationPolicy if it exists from marketplaceRules before saving (cleanup)
-      const dataToSave = { ...marketplaceRules, updatedAt: new Date().toISOString() };
-      delete dataToSave.locationPolicy;
       await setDoc(doc(db, 'cebugo_config', 'marketplace_rules'), dataToSave, { merge: true });
       alert('중고거래 설정이 성공적으로 저장되었습니다.');
     } catch (e) {
@@ -1536,16 +1531,6 @@ export default function AdminSubmissionsPage() {
     )}
 
     {/* 공통 기본 위치 설정 모달 */}
-    {showAdminLocationModal && (
-      <MapLocationModal 
-        onClose={() => setShowAdminLocationModal(false)}
-        onSave={(position) => {
-          setSiteRules({ ...siteRules, defaultLocation: position });
-          setShowAdminLocationModal(false);
-        }}
-        initialLocation={siteRules.defaultLocation}
-      />
-    )}
 
   </div>
   );

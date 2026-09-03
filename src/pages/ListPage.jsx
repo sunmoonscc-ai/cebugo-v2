@@ -28,7 +28,7 @@ export default function ListPage() {
   const location = useLocation();
   const { places, addPlace, updatePlace, deletePlace, movePlace, reorderPlaces } = usePlaces();
   const { categories } = useCategories();
-  const { userProfile, appConfig, userCoords } = useAuth();
+  const { userProfile, appConfig, userCoords, requestLocationPermission } = useAuth();
 
   const [viewMode, setViewModeState] = useState(() => {
     try {
@@ -225,8 +225,10 @@ export default function ListPage() {
       return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     }
     // Default is distance sort ('distance' or 'open')
-    const distA = calculateDistanceKm(userCoords.lat, userCoords.lng, a.lat, a.lng);
-    const distB = calculateDistanceKm(userCoords.lat, userCoords.lng, b.lat, b.lng);
+    const fallbackCoords = { lat: 10.3156992, lng: 123.979144 };
+    const baseCoords = userCoords || fallbackCoords;
+    const distA = calculateDistanceKm(baseCoords.lat, baseCoords.lng, a.lat, a.lng);
+    const distB = calculateDistanceKm(baseCoords.lat, baseCoords.lng, b.lat, b.lng);
     return distA - distB;
   });
 
@@ -296,7 +298,12 @@ export default function ListPage() {
           </button>
           <button
             className={`view-tab ${viewMode === 'map' ? 'active' : ''}`}
-            onClick={() => setViewMode('map')}
+            onClick={() => {
+              if (viewMode !== 'map') {
+                requestLocationPermission();
+              }
+              setViewMode('map');
+            }}
           >
             <RiMap2Line /> 지도보기
           </button>

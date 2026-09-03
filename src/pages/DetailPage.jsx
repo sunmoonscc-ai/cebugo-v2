@@ -32,7 +32,7 @@ export default function DetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { places, reviews, addReview, updatePlace, deletePlace, updateReview, deleteReview, hideReview } = usePlaces();
-  const { userProfile, toggleFavorite, userCoords } = useAuth();
+  const { userProfile, toggleFavorite, userCoords, requestLocationPermission } = useAuth();
 
   const fromView = location.state?.fromView || 'list';
   const fromCategory = location.state?.fromCategory || 'all';
@@ -226,10 +226,8 @@ export default function DetailPage() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginTop: '2px' }}>
                 <p style={{ margin: 0, flex: 1, minWidth: '180px' }}>{place.addr}</p>
                 {place.addr && (
-                  <a
-                    href={`https://www.google.com/maps/dir/?api=1&origin=${userCoords?.lat || 10.3156992},${userCoords?.lng || 123.979144}&destination=${place.lat && place.lng ? `${place.lat},${place.lng}` : encodeURIComponent(place.addr)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={handleDirectionsClick}
                     className="nav-directions-btn"
                     style={{
                       display: 'inline-flex',
@@ -243,11 +241,12 @@ export default function DetailPage() {
                       color: '#0284c7',
                       border: '1px solid #bae6fd',
                       textDecoration: 'none',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      cursor: 'pointer'
                     }}
                   >
                     <RiNavigationFill /> 길찾기
-                  </a>
+                  </button>
                 )}
               </div>
             </div>

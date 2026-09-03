@@ -19,7 +19,30 @@ export const AuthProvider = ({ children }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [appConfig, setAppConfig] = useState({ imageUploadLimits: { user: 30, admin: 30 } });
-  const [userCoords, setUserCoords] = useState({ lat: 10.3156992, lng: 123.979144 }); // Default fallback to Mactan Airport
+  const [userCoords, setUserCoords] = useState(null);
+
+  useEffect(() => {
+    const hasAsked = sessionStorage.getItem('cebugo_location_consent_asked');
+    if (hasAsked) {
+      const consent = sessionStorage.getItem('cebugo_location_consent') === 'true';
+      if (consent && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setUserCoords({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            });
+          },
+          (error) => {
+            console.warn("Could not get location, using default:", error);
+            setUserCoords({ lat: 10.3156992, lng: 123.979144 });
+          }
+        );
+      } else {
+        setUserCoords({ lat: 10.3156992, lng: 123.979144 });
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const unsubImages = onSnapshot(doc(db, 'cebugo_config', 'image_upload'), (docSnap) => {
@@ -44,64 +67,52 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  useEffect(() => {
-    if (!appConfig?.siteRules) return;
-
-    const isManual = appConfig.siteRules.locationPolicy === 'manual';
-    const defaultLoc = appConfig.siteRules.defaultLocation;
-
-    if (isManual && defaultLoc) {
-      setUserCoords({ lat: defaultLoc.lat, lng: defaultLoc.lng });
-    } else {
+  const requestLocationPermission = () => {
+    return new Promise((resolve) => {
       const hasAsked = sessionStorage.getItem('cebugo_location_consent_asked');
       
+      const handleSuccess = (position) => {
+        const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
+        setUserCoords(coords);
+        resolve(coords);
+      };
+
+      const handleFail = (showWarning = false) => {
+        if (showWarning) {
+          window.alert('위치 정보를 가져올 수 없어 기본 위치(막탄공항)로 설정됩니다.');
+        }
+        const fallback = { lat: 10.3156992, lng: 123.979144 };
+        setUserCoords(fallback);
+        resolve(fallback);
+      };
+
       if (!hasAsked) {
-        // We defer asking until slightly later to ensure UI is ready, but for now prompt immediately
-        const consent = window.confirm('현재 위치 정보 사용에 동의하십니까?\n동의하시면 내 위치 기반으로 거리 정보와 길찾기가 제공됩니다.\n취소 시 기본 위치(막탄공항)로 안내됩니다.');
+        const consent = window.confirm('현재 위치 정보 사용에 동의하십니까?\n동의하시면 내 위치 기반으로 거리 정보와 지도가 제공됩니다.\n취소 시 기본 위치(막탄공항)로 안내됩니다.');
         sessionStorage.setItem('cebugo_location_consent_asked', 'true');
         sessionStorage.setItem('cebugo_location_consent', consent ? 'true' : 'false');
         
-        if (consent) {
-          if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-              (position) => {
-                setUserCoords({
-                  lat: position.coords.latitude,
-                  lng: position.coords.longitude
-                });
-              },
-              (error) => {
-                console.warn("Could not get location, using default:", error);
-                window.alert('위치 정보를 가져올 수 없어 기본 위치(막탄공항)로 설정됩니다.');
-                setUserCoords({ lat: 10.3156992, lng: 123.979144 });
-              }
-            );
-          }
+        if (consent && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(handleSuccess, (error) => {
+            console.warn("Could not get location, using default:", error);
+            handleFail(true);
+          });
         } else {
-          window.alert('위치 정보 제공에 동의하지 않아 기본 위치(막탄공항)로 설정됩니다.');
-          setUserCoords({ lat: 10.3156992, lng: 123.979144 });
+          if (!consent) window.alert('위치 정보 제공에 동의하지 않아 기본 위치(막탄공항)로 설정됩니다.');
+          handleFail(false);
         }
       } else {
         const consent = sessionStorage.getItem('cebugo_location_consent') === 'true';
         if (consent && navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              setUserCoords({
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-              });
-            },
-            (error) => {
-              console.warn("Could not get location, using default:", error);
-              setUserCoords({ lat: 10.3156992, lng: 123.979144 });
-            }
-          );
+          navigator.geolocation.getCurrentPosition(handleSuccess, (error) => {
+            console.warn("Could not get location, using default:", error);
+            handleFail(false);
+          });
         } else {
-          setUserCoords({ lat: 10.3156992, lng: 123.979144 });
+          handleFail(false);
         }
       }
-    }
-  }, [appConfig?.siteRules]);
+    });
+  };
 
   useEffect(() => {
     let unsubUserDoc = null;
@@ -317,7 +328,8 @@ export const AuthProvider = ({ children }) => {
         toggleUserVerificationByAdmin,
         toggleFavorite,
         appConfig,
-        userCoords
+        userCoords,
+        requestLocationPermission
       }}
     >
       {!loading && children}

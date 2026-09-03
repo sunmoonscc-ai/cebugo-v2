@@ -137,12 +137,25 @@ export default function PlacesMapView({ places, userCoords, selectedCategory }) 
   const defaultCenter = userCoords ? [userCoords.lat, userCoords.lng] : FIXED_USER_LOCATION;
   const [mapCenter, setMapCenter] = useState(() => getSavedMapCenter(defaultCenter));
   const [mapZoom, setMapZoom] = useState(getSavedMapZoom);
-  const userLocation = userCoords ? [userCoords.lat, userCoords.lng] : FIXED_USER_LOCATION;
+  const userLocation = userCoords ? [userCoords.lat, userCoords.lng] : null;
+  const isInitialMount = React.useRef(true);
+
+  useEffect(() => {
+    // If userCoords just resolved (e.g., GPS returned), recenter map to their location
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (userCoords) {
+      setMapCenter([userCoords.lat, userCoords.lng]);
+    }
+  }, [userCoords]);
 
   const handleFindLocation = () => {
-    setMapCenter(userLocation);
+    const targetLoc = userLocation || FIXED_USER_LOCATION;
+    setMapCenter(targetLoc);
     setMapZoom(18); // 최대로 확대
-    sessionStorage.setItem('cebugo_map_center', JSON.stringify(userLocation));
+    sessionStorage.setItem('cebugo_map_center', JSON.stringify(targetLoc));
     sessionStorage.setItem('cebugo_map_zoom', JSON.stringify(18));
   };
 
