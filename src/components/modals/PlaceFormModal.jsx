@@ -577,7 +577,17 @@ const compressImageFile = (file) => {
 
             {/* 상세 소개글 */}
             <div className="form-group">
-              <label className="form-label">업체 상세 소개글 *</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label className="form-label" style={{ marginBottom: 0 }}>업체 상세 소개글 *</label>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setFormData({ ...formData, explaination: '' })}
+                  style={{ fontSize: '0.78rem', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '3px' }}
+                >
+                  <RiDeleteBinLine /> 내용삭제
+                </button>
+              </div>
               <textarea
                 rows="4"
                 placeholder="업체에 대한 상세한 안내 및 주요 서비스 내용을 입력하세요."
