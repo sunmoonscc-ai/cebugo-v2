@@ -72,7 +72,7 @@ export default function PlaceCard({ place, index, totalCount, selectedCategory, 
   else if (count === 2) layoutClass = 'dual';
 
   return (
-    <div className="glass-card place-card fade-in">
+    <div className="glass-card place-card">
       <div className="card-image-wrap" onClick={goToDetail} style={{ cursor: 'pointer' }} title="클릭하여 업체 세부 페이지로 이동">
         <div className={`card-image-scroll-container ${layoutClass}`}>
           {imagesToDisplay.map((imgSrc, imgIdx) => (

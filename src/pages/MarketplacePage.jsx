@@ -344,7 +344,7 @@ export default function MarketplacePage() {
   };
 
   return (
-    <div className="page-content fade-in">
+    <div className="page-content">
       <div className="marketplace-header glass-card">
         <div className="header-info">
           <h2>
@@ -436,7 +436,7 @@ export default function MarketplacePage() {
 
       {/* Write Listing Form */}
       {showWriteForm && (
-        <div className="glass-card write-form-card fade-in">
+        <div className="glass-card write-form-card">
           <h3>신규 중고 매물 등록</h3>
           <form onSubmit={handleCreateListing} className="modal-form">
             <label className="form-label">매물 제목</label>
@@ -602,7 +602,7 @@ export default function MarketplacePage() {
             const maskedName = item.sellerEmail ? (item.sellerEmail.substring(0, 3) + '***') : (item.sellerName ? (item.sellerName.substring(0, 3) + '***') : '익명***');
             
             return (
-              <div key={item.id} className="glass-card listing-card fade-in" style={{ opacity: isSold ? 0.7 : 1, cursor: 'pointer', padding: 0 }} onClick={() => setExpandedListingId(isExpanded ? null : item.id)}>
+              <div key={item.id} className="glass-card listing-card" style={{ opacity: isSold ? 0.7 : 1, cursor: 'pointer', padding: 0 }} onClick={() => setExpandedListingId(isExpanded ? null : item.id)}>
                 <div className="listing-top" style={{ padding: '16px', display: 'flex', gap: '12px', alignItems: 'center', borderBottom: isExpanded ? '1px solid #e2e8f0' : 'none' }}>
                   {item.images && item.images.length > 0 && (
                     <img src={item.images[0]} alt="thumbnail" style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px' }} />

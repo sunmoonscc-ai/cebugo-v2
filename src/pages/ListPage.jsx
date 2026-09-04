@@ -278,7 +278,7 @@ export default function ListPage() {
   }, [viewMode]);
 
   return (
-    <div className="page-content fade-in">
+    <div className="page-content">
       <div className="daily-header">
         <h1>
           <RiStore2Line style={{ color: '#2563eb' }} /> 업체정보

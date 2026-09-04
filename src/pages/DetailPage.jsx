@@ -68,7 +68,7 @@ export default function DetailPage() {
 
   if (!place) {
     return (
-      <div className="page-content fade-in" style={{ padding: '40px 20px', textAlign: 'center' }}>
+      <div className="page-content" style={{ padding: '40px 20px', textAlign: 'center' }}>
         <h2 style={{ fontSize: '1.2rem', marginBottom: '12px' }}>업체 정보를 읽어오는 중이거나 찾을 수 없습니다.</h2>
         <a href="/" onClick={(e) => { e.preventDefault(); navigate('/', { state: { fromView } }); }} className="btn btn-primary" style={{ marginTop: '12px', display: 'inline-block' }}>
           ← 목록으로 돌아가기
@@ -127,8 +127,23 @@ export default function DetailPage() {
 
   const hasBreakTime = place.breakTime && place.breakTime.trim() !== '' && place.breakTime !== '없음';
 
+  const handleDirectionsClick = async (e) => {
+    e.preventDefault();
+    if (!place.addr) return;
+    
+    const coords = await requestLocationPermission();
+    
+    if (coords && coords.lat && coords.lng) {
+      const url = `https://www.google.com/maps/dir/?api=1&origin=${coords.lat},${coords.lng}&destination=${encodeURIComponent(place.addr)}`;
+      window.open(url, '_blank');
+    } else {
+      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.addr)}`;
+      window.open(url, '_blank');
+    }
+  };
+
   return (
-    <div className="page-content fade-in">
+    <div className="page-content">
       <a href="/" onClick={handleBack} className="back-link">
         ← {fromView === 'map' ? '지도로 돌아가기' : '목록으로 돌아가기'}
       </a>
