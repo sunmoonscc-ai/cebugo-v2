@@ -517,6 +517,7 @@ export default function DailyInfoPage() {
     title: '',
     category: '세부소식 / 현지',
     date: getLocalTodayString(),
+    endDate: getLocalTodayString(),
     summary: '',
     url: '',
     moreUrl: '',
@@ -529,6 +530,7 @@ export default function DailyInfoPage() {
       title: '',
       category: '세부소식 / 현지',
       date: getLocalTodayString(),
+      endDate: getLocalTodayString(),
       summary: '',
       url: '',
       moreUrl: '',
@@ -544,6 +546,7 @@ export default function DailyInfoPage() {
       title: item.title,
       category: item.category || '세부소식 / 현지',
       date: item.date || getLocalTodayString(),
+      endDate: item.endDate || '',
       summary: item.summary,
       url: item.url || '',
       moreUrl: item.moreUrl || '',
@@ -1216,7 +1219,7 @@ export default function DailyInfoPage() {
     badge: tags[0] || '중요공지',
     date: getLocalTodayString(),
     startDate: getLocalTodayString(),
-    endDate: '',
+    endDate: getLocalTodayString(),
     content: '',
     images: [],
     isTicker: true
@@ -1229,7 +1232,7 @@ export default function DailyInfoPage() {
       badge: tags[0] || '중요공지',
       date: getLocalTodayString(),
       startDate: getLocalTodayString(),
-      endDate: '',
+      endDate: getLocalTodayString(),
       content: '',
       images: [],
       isTicker: true
@@ -2640,6 +2643,10 @@ export default function DailyInfoPage() {
           <div className="news-list">
             {phNews
               .filter((item) => {
+                const todayStr = getLocalTodayString();
+                const isExpired = item.endDate && todayStr > item.endDate;
+                if (!userProfile?.isAdmin && isExpired) return false;
+
                 if (newsCategoryFilter === 'cebu') return item.category.includes('세부');
                 if (newsCategoryFilter === 'ph') return item.category.includes('필리핀');
                 return true;
@@ -2649,12 +2656,20 @@ export default function DailyInfoPage() {
                 const timeB = b.pubTimestamp || (b.date ? new Date(b.date).getTime() : 0);
                 return timeB - timeA;
               })
-              .map((item) => (
-                <div key={item.id} id={`daily-item-${item.id}`} className="glass-card news-card fade-in">
+              .map((item) => {
+                const todayStr = getLocalTodayString();
+                const isExpired = item.endDate && todayStr > item.endDate;
+                return (
+                <div key={item.id} id={`daily-item-${item.id}`} className="glass-card news-card fade-in" style={{ color: isExpired ? 'rgba(30, 41, 59, 0.5)' : undefined }}>
                   <div className="news-top">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span className="news-cat">{item.category}</span>
                       <span className="news-date">{item.date}</span>
+                      {isExpired && (
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ef4444', border: '1px solid #fca5a5', padding: '2px 6px', borderRadius: '4px', background: '#fef2f2' }}>
+                          🔴 게시 종료 (~{item.endDate})
+                        </span>
+                      )}
                     </div>
 
                     {userProfile?.isAdmin && (
@@ -2730,7 +2745,8 @@ export default function DailyInfoPage() {
                     </div>
                   )}
                 </div>
-              ))}
+              );
+            })}
           </div>
 
           {/* Admin PH News Create / Edit Modal */}
@@ -2762,15 +2778,26 @@ export default function DailyInfoPage() {
                     </select>
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label">보도일자 *</label>
-                    <input
-                      type="date"
-                      value={newsFormData.date}
-                      onChange={(e) => setNewsFormData({ ...newsFormData, date: e.target.value })}
-                      className="form-input"
-                      required
-                    />
+                  <div className="form-group-row" style={{ display: 'flex', gap: '10px' }}>
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label className="form-label">보도일자 (게시 시작일) *</label>
+                      <input
+                        type="date"
+                        value={newsFormData.date}
+                        onChange={(e) => setNewsFormData({ ...newsFormData, date: e.target.value })}
+                        className="form-input"
+                        required
+                      />
+                    </div>
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label className="form-label">게시 종료일 (선택)</label>
+                      <input
+                        type="date"
+                        value={newsFormData.endDate || ''}
+                        onChange={(e) => setNewsFormData({ ...newsFormData, endDate: e.target.value })}
+                        className="form-input"
+                      />
+                    </div>
                   </div>
 
                   <div className="form-group">

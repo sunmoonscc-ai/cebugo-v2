@@ -69,7 +69,14 @@ export default function TopNoticeTickerBanner() {
         if (!snapshot.empty) {
           newsItems = snapshot.docs
             .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-            .filter((item) => item.isTicker === true || item.isTicker === 'true')
+            .filter((item) => {
+              const isTicker = item.isTicker === true || item.isTicker === 'true';
+              if (!isTicker) return false;
+              const todayStr = getLocalTodayString();
+              if (item.startDate && todayStr < item.startDate) return false;
+              if (item.endDate && todayStr > item.endDate) return false;
+              return true;
+            })
             .map((item) => ({
               id: item.id,
               type: 'news',
