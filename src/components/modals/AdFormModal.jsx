@@ -77,7 +77,7 @@ export default function AdFormModal({ editingPost, initialCategory, onClose, onS
     placeId: '',
     date: getLocalTodayString(),
     startDate: getLocalTodayString(),
-    endDate: '',
+    endDate: getLocalTodayString(),
     location: '전체',
     content: '',
     images: [],
