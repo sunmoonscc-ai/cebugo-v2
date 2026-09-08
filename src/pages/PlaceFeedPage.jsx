@@ -274,7 +274,11 @@ export default function PlaceFeedPage() {
 
   const rawTabPosts = posts
     .filter((p) => p.category === activeTab)
-    .filter((p) => canPost || getPostStatus(p).status !== 'scheduled')
+    .filter((p) => {
+      const status = getPostStatus(p).status;
+      if (canPost) return true; // 관리자 및 광고주는 예약/종료된 게시물도 볼 수 있음
+      return status === 'active'; // 일반 사용자는 현재 진행 중인 게시물만 볼 수 있음
+    })
     .filter((p) => !selectedAdvertiserId || p.advertiserId === selectedAdvertiserId)
     .filter((p) => isPostActiveInMonth(p, filterMonth))
     .filter((p) => isPostActiveInDate(p, filterDate))
