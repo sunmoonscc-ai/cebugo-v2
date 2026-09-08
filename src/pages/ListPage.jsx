@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { usePlaces } from '../context/PlacesContext';
 import { useAuth } from '../context/AuthContext';
 import PlaceCard from '../components/places/PlaceCard';
@@ -26,6 +26,7 @@ import './ListPage.css';
 
 export default function ListPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { places, addPlace, updatePlace, deletePlace, movePlace, reorderPlaces } = usePlaces();
   const { categories } = useCategories();
   const { userProfile, appConfig, userCoords, requestLocationPermission } = useAuth();
@@ -175,6 +176,14 @@ export default function ListPage() {
   const [editingPlace, setEditingPlace] = useState(null);
   const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
 
+  const prevHash = useRef(location.hash);
+  useEffect(() => {
+    if (prevHash.current === '#edit' && location.hash !== '#edit') {
+      setIsFormModalOpen(false);
+    }
+    prevHash.current = location.hash;
+  }, [location.hash]);
+
   // Auto-scroll selected category pill to center of scroll container
   const categoryScrollRef = React.useRef(null);
   const pillRefs = React.useRef({});
@@ -235,11 +244,21 @@ export default function ListPage() {
   const handleOpenCreatePlace = () => {
     setEditingPlace(null);
     setIsFormModalOpen(true);
+    navigate(location.pathname + location.search + '#edit', { replace: false });
   };
 
   const handleOpenEditPlace = (place) => {
     setEditingPlace(place);
     setIsFormModalOpen(true);
+    navigate(location.pathname + location.search + '#edit', { replace: false });
+  };
+
+  const handleCloseFormModal = () => {
+    if (location.hash === '#edit') {
+      navigate(-1);
+    } else {
+      setIsFormModalOpen(false);
+    }
   };
 
   const handleSavePlace = (formData) => {
@@ -248,7 +267,7 @@ export default function ListPage() {
     } else {
       addPlace(formData);
     }
-    setIsFormModalOpen(false);
+    handleCloseFormModal();
   };
 
   const handleDeletePlace = (id) => {
@@ -456,7 +475,7 @@ export default function ListPage() {
         <PlaceFormModal
           defaultCategory={selectedCategory}
           editingPlace={editingPlace}
-          onClose={() => setIsFormModalOpen(false)}
+          onClose={handleCloseFormModal}
           onSave={handleSavePlace}
         />
       )}

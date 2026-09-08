@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { usePlaces } from '../context/PlacesContext';
 import { useAuth } from '../context/AuthContext';
@@ -58,6 +58,27 @@ export default function DetailPage() {
   const [activeTab, setActiveTab] = useState('cover'); // cover, facility, product, menu
   const [showSuggestModal, setShowSuggestModal] = useState(false);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+
+  const prevHash = useRef(location.hash);
+  useEffect(() => {
+    if (prevHash.current === '#edit' && location.hash !== '#edit') {
+      setIsFormModalOpen(false);
+    }
+    prevHash.current = location.hash;
+  }, [location.hash]);
+
+  const handleOpenEditPlace = () => {
+    setIsFormModalOpen(true);
+    navigate(location.pathname + location.search + '#edit', { replace: false });
+  };
+
+  const handleCloseFormModal = () => {
+    if (location.hash === '#edit') {
+      navigate(-1);
+    } else {
+      setIsFormModalOpen(false);
+    }
+  };
 
   // Review Form state
   const [rating, setRating] = useState(5);
@@ -182,7 +203,7 @@ export default function DetailPage() {
                   type="button"
                   className="btn btn-secondary"
                   style={{ padding: '3px 9px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px', borderRadius: '6px' }}
-                  onClick={() => setIsFormModalOpen(true)}
+                  onClick={handleOpenEditPlace}
                   title="업체 정보 수정"
                 >
                   <RiEditLine /> 수정
@@ -555,10 +576,10 @@ export default function DetailPage() {
       {isFormModalOpen && (
         <PlaceFormModal
           editingPlace={place}
-          onClose={() => setIsFormModalOpen(false)}
+          onClose={handleCloseFormModal}
           onSave={(formData) => {
             updatePlace(place.id, formData);
-            setIsFormModalOpen(false);
+            handleCloseFormModal();
           }}
         />
       )}
