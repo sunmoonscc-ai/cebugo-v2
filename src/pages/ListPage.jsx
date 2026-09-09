@@ -334,18 +334,7 @@ export default function ListPage() {
           </button>
         </div>
 
-        <div className="search-input-wrap">
-          <RiSearchLine className="search-icon" />
-          <input
-            type="text"
-            placeholder="업체명, 지역, 키워드로 검색 (예: 막탄, 마사지, 병원)"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
-        </div>
-
-        <div className="category-scroll" ref={categoryScrollRef}>
+        <div className="category-scroll" ref={categoryScrollRef} style={{ marginBottom: '0' }}>
           <button
             ref={(el) => (pillRefs.current['favorite'] = el)}
             className={`cat-pill cat-pill-fav ${selectedCategory === 'favorite' ? 'active' : ''}`}
@@ -406,40 +395,53 @@ export default function ListPage() {
         </div>
       ) : (
         <>
-          <div className="list-meta-header">
-            <h2>업체 목록 <span>({sortedPlaces.length})</span></h2>
-            <div className="list-meta-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <div className="sort-filter-select-wrap">
-                <RiMapPinLine className="filter-icon" />
-                <select
-                  value={selectedCity}
-                  onChange={(e) => setSelectedCity(e.target.value)}
-                  className="sort-select"
-                  title="지역 선택"
-                >
-                  <option value="all">전체 지역</option>
-                  <option value="Cebu">Cebu</option>
-                  <option value="Cordova">Cordova</option>
-                  <option value="Lapu-Lapu">Lapu-Lapu</option>
-                  <option value="Mandaue">Mandaue</option>
-                  <option value="Other">그 외</option>
-                </select>
-              </div>
+          <div className="list-meta-container">
+            <div className="list-meta-header">
+              <h2>업체 목록 <span>({sortedPlaces.length})</span></h2>
+              <div className="list-meta-actions">
+                <div className="sort-filter-select-wrap">
+                  <RiMapPinLine className="filter-icon" />
+                  <select
+                    value={selectedCity}
+                    onChange={(e) => setSelectedCity(e.target.value)}
+                    className="sort-select"
+                    title="지역 선택"
+                  >
+                    <option value="all">전체 지역</option>
+                    <option value="Cebu">Cebu</option>
+                    <option value="Cordova">Cordova</option>
+                    <option value="Lapu-Lapu">Lapu-Lapu</option>
+                    <option value="Mandaue">Mandaue</option>
+                    <option value="Other">그 외</option>
+                  </select>
+                </div>
 
-              <div className="sort-filter-select-wrap">
-                <RiFilter3Line className="filter-icon" />
-                <select
-                  value={sortOption}
-                  onChange={(e) => setSortOption(e.target.value)}
-                  className="sort-select"
-                  title="정렬 기준"
-                >
-                  <option value="name">이름순 (가나다, 기본)</option>
-                  <option value="distance">거리순</option>
-                  <option value="latest">최신순</option>
-                  <option value="open">영업중만 보기</option>
-                </select>
+                <div className="sort-filter-select-wrap">
+                  <RiFilter3Line className="filter-icon" />
+                  <select
+                    value={sortOption}
+                    onChange={(e) => setSortOption(e.target.value)}
+                    className="sort-select"
+                    title="정렬 기준"
+                  >
+                    <option value="name">이름순 (기본)</option>
+                    <option value="distance">거리순</option>
+                    <option value="latest">최신순</option>
+                    <option value="open">영업중</option>
+                  </select>
+                </div>
               </div>
+            </div>
+
+            <div className="search-input-wrap list-search-wrap">
+              <RiSearchLine className="search-icon" />
+              <input
+                type="text"
+                placeholder="업체명, 지역, 키워드로 검색 (예: 막탄, 마사지, 병원)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+              />
             </div>
           </div>
 
