@@ -603,19 +603,25 @@ export default function MarketplacePage() {
             
             return (
               <div key={item.id} className="glass-card listing-card" style={{ opacity: isSold ? 0.7 : 1, cursor: 'pointer', padding: 0 }} onClick={() => setExpandedListingId(isExpanded ? null : item.id)}>
-                <div className="listing-top" style={{ padding: '16px', display: 'flex', gap: '12px', alignItems: 'center', borderBottom: isExpanded ? '1px solid #e2e8f0' : 'none' }}>
+                <div className="listing-top" style={{ padding: '16px', display: 'flex', gap: '12px', alignItems: 'flex-start', borderBottom: isExpanded ? '1px solid #e2e8f0' : 'none' }}>
                   {item.images && item.images.length > 0 && (
-                    <img src={item.images[0]} alt="thumbnail" style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px' }} />
+                    <img src={item.images[0]} alt="thumbnail" style={{ flexShrink: 0, width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px' }} />
                   )}
-                  <h3 className="listing-title" style={{ margin: 0, fontSize: '1.1rem', flexShrink: 0, maxWidth: '35%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</h3>
-                  <div style={{ flex: 1, fontSize: '0.75rem', color: '#64748b', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '1.4' }}>
-                    {item.description}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end', flexShrink: 0 }}>
-                    <span className="listing-price" style={{ fontWeight: 'bold', color: '#10b981' }}>{item.price}</span>
-                    <span className="listing-status" style={{ background: isSold ? '#64748b' : (item.status === 'reserved' ? '#f59e0b' : '#3b82f6'), color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>
-                      {item.status === 'sold' ? '거래완료' : (item.status === 'reserved' ? '예약중' : '판매중')}
-                    </span>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                      <h3 className="listing-title" style={{ margin: 0, fontSize: '1.1rem', flexShrink: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {item.title}
+                      </h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                        <span className="listing-price" style={{ fontWeight: 'bold', color: '#10b981', fontSize: '0.75rem' }}>{item.price}</span>
+                        <span className="listing-status" style={{ background: isSold ? '#64748b' : (item.status === 'reserved' ? '#f59e0b' : '#3b82f6'), color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem' }}>
+                          {item.status === 'sold' ? '거래완료' : (item.status === 'reserved' ? '예약중' : '판매중')}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '1.4' }}>
+                      {item.description}
+                    </div>
                   </div>
                 </div>
 
