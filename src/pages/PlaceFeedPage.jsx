@@ -283,6 +283,11 @@ export default function PlaceFeedPage() {
     .filter((p) => isPostActiveInMonth(p, filterMonth))
     .filter((p) => isPostActiveInDate(p, filterDate))
     .sort((a, b) => {
+      const activeA = getPostStatus(a).active ? 1 : 0;
+      const activeB = getPostStatus(b).active ? 1 : 0;
+      if (activeA !== activeB) {
+        return activeB - activeA; // Active ones on top
+      }
       const getTime = (p) => {
         if (p.createdAt) return p.createdAt;
         if (p.updatedAt) return p.updatedAt;

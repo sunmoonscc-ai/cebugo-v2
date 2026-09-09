@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../firebase/config';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { CATEGORIES as INITIAL_CATEGORIES } from '../constants/categories';
 
 const CategoriesContext = createContext();
@@ -71,10 +71,26 @@ export const CategoriesProvider = ({ children }) => {
     saveCategories(newList);
   };
 
-  const updateCategory = (id, newName) => {
+  const updateCategory = async (id, newName) => {
     if (id === 'all') return; // Cannot edit 'all'
     const newList = categories.map(c => c.id === id ? { ...c, name: newName } : c);
-    saveCategories(newList);
+    await saveCategories(newList);
+
+    // Update categoryName in existing places
+    try {
+      const q = query(collection(db, 'cebugo_places'), where('category', '==', id));
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        const batch = writeBatch(db);
+        snapshot.forEach((placeDoc) => {
+          batch.update(placeDoc.ref, { categoryName: newName });
+        });
+        await batch.commit();
+        console.log(`Updated ${snapshot.size} places with new category name: ${newName}`);
+      }
+    } catch (e) {
+      console.error("Failed to update places with new category name", e);
+    }
   };
 
   const deleteCategory = (id) => {

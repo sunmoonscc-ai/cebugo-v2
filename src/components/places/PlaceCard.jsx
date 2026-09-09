@@ -16,7 +16,8 @@ import {
   RiDeleteBinLine,
   RiArrowUpLine,
   RiArrowDownLine,
-  RiFileCopyLine
+  RiFileCopyLine,
+  RiShareForwardLine
 } from 'react-icons/ri';
 import './PlaceCard.css';
 
@@ -50,6 +51,30 @@ export default function PlaceCard({ place, index, totalCount, selectedCategory, 
 
   const goToDetail = () => {
     navigate(`/place/${place.id}`, { state: { fromCategory: selectedCategory } });
+  };
+
+  const handleShare = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const shareUrl = `${window.location.origin}/place/${place.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: place.name,
+          text: `${place.name} - 세부고에서 확인해보세요!`,
+          url: shareUrl,
+        });
+      } catch (err) {
+        console.log('Error sharing', err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        alert('업체 링크가 클립보드에 복사되었습니다.');
+      } catch (err) {
+        alert('링크 복사에 실패했습니다.');
+      }
+    }
   };
 
   // Gather all images from cover, facility, product, menu
@@ -112,8 +137,16 @@ export default function PlaceCard({ place, index, totalCount, selectedCategory, 
 
       <div className="card-body">
         <div className="card-header-row">
-          <h3 className="place-title" style={{ flex: 1, minWidth: 0 }}>
-            <Link to={`/place/${place.id}`}>{place.name}</Link>
+          <h3 className="place-title" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Link to={`/place/${place.id}`} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{place.name}</Link>
+            <button 
+              type="button" 
+              onClick={handleShare}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center', padding: '4px' }}
+              title="공유하기"
+            >
+              <RiShareForwardLine size={18} />
+            </button>
           </h3>
           <div className="rating-badge" onClick={goToDetail} style={{ cursor: 'pointer' }}>
             <RiStarFill className="star-icon" />

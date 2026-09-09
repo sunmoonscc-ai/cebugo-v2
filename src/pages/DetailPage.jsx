@@ -22,7 +22,8 @@ import {
   RiDeleteBinLine,
   RiFileCopyLine,
   RiHeartFill,
-  RiHeartLine
+  RiHeartLine,
+  RiShareForwardLine
 } from 'react-icons/ri';
 import { getDefaultImageForCategory, formatBreakAndOffTime } from '../utils/imageHelper';
 import './DetailPage.css';
@@ -163,6 +164,29 @@ export default function DetailPage() {
     }
   };
 
+  const handleShare = async (e) => {
+    e.preventDefault();
+    const shareUrl = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: place.name,
+          text: `${place.name} - 세부고에서 확인해보세요!`,
+          url: shareUrl,
+        });
+      } catch (err) {
+        console.log('Error sharing', err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        alert('업체 링크가 클립보드에 복사되었습니다.');
+      } catch (err) {
+        alert('링크 복사에 실패했습니다.');
+      }
+    }
+  };
+
   return (
     <div className="page-content">
       <a href="/" onClick={handleBack} className="back-link">
@@ -195,6 +219,24 @@ export default function DetailPage() {
                 }}
               >
                 {userProfile?.favorites?.includes(place.id) ? <RiHeartFill /> : <RiHeartLine />}
+              </button>
+              <button 
+                type="button"
+                onClick={handleShare}
+                title="공유하기"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  fontSize: '1.4rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '2px',
+                  transition: 'color 0.2s'
+                }}
+              >
+                <RiShareForwardLine />
               </button>
             </div>
             {userProfile?.isAdmin && (
