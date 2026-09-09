@@ -197,7 +197,7 @@ export default function PlacesMapView({ places, userCoords, selectedCategory }) 
   }, [validPlaces]);
 
   return (
-    <div className="map-container-wrapper" style={{ position: 'relative', width: '100%', height: 'calc(100vh - 180px)', minHeight: '400px', borderRadius: '16px', overflow: 'hidden' }}>
+    <div className="map-container-wrapper" style={{ position: 'relative', width: '100%', height: 'calc(100dvh - 350px)', minHeight: '300px', borderRadius: '16px', overflow: 'hidden' }}>
       {/* Current Location Button */}
       <button 
         type="button"
