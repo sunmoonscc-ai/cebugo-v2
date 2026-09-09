@@ -300,10 +300,11 @@ export const AuthProvider = ({ children }) => {
     let updatedFavorites = [];
     setUserProfile((prev) => {
       if (!prev) return null;
-      const exists = prev.favorites.includes(placeId);
+      const favs = prev.favorites || [];
+      const exists = favs.includes(placeId);
       updatedFavorites = exists
-        ? prev.favorites.filter((id) => id !== placeId)
-        : [...prev.favorites, placeId];
+        ? favs.filter((id) => id !== placeId)
+        : [...favs, placeId];
       return { ...prev, favorites: updatedFavorites };
     });
 

@@ -213,6 +213,12 @@ export default function ListPage() {
       ? userFavs.includes(place.id)
       : (selectedCategory === 'all' || place.category === selectedCategory);
 
+    // If viewing favorites, ignore city and search filters
+    if (selectedCategory === 'favorite') {
+      if (sortOption === 'open') return matchesCat && isOpenNow(place.open);
+      return matchesCat;
+    }
+
     const matchesCity = matchesCityFilter(place, selectedCity);
 
     const matchesSearch =

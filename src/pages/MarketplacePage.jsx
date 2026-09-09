@@ -607,8 +607,9 @@ export default function MarketplacePage() {
                   {item.images && item.images.length > 0 && (
                     <img src={item.images[0]} alt="thumbnail" style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px' }} />
                   )}
-                  <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <h3 className="listing-title" style={{ margin: 0, fontSize: '1.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</h3>
+                  <h3 className="listing-title" style={{ margin: 0, fontSize: '1.1rem', flexShrink: 0, maxWidth: '35%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</h3>
+                  <div style={{ flex: 1, fontSize: '0.75rem', color: '#64748b', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '1.4' }}>
+                    {item.description}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end', flexShrink: 0 }}>
                     <span className="listing-price" style={{ fontWeight: 'bold', color: '#10b981' }}>{item.price}</span>
