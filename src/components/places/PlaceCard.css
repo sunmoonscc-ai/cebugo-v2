@@ -18,9 +18,7 @@
   transition: transform 0.4s ease;
 }
 
-.place-card:hover .card-cover-img {
-  transform: scale(1.05);
-}
+/* Removed scale transform on hover to prevent double-tap issues on touch laptops */
 
 /* Image Carousel Layout */
 .card-image-scroll-container {

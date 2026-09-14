@@ -38,15 +38,16 @@ export default function PlaceCard({ place, index, totalCount, selectedCategory, 
   const handleOpenZoom = (idx, e) => {
     e.stopPropagation();
     navigate(location.pathname + location.search + '#zoom', { replace: false });
-    setZoomImgIndex(idx);
+    setTimeout(() => {
+      setZoomImgIndex(idx);
+    }, 10);
   };
 
   const handleCloseZoom = () => {
     if (location.hash === '#zoom') {
       navigate(-1);
-    } else {
-      setZoomImgIndex(null);
     }
+    setZoomImgIndex(null);
   };
 
   const goToDetail = () => {

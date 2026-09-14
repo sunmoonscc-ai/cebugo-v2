@@ -61,15 +61,16 @@ export default function ImageCarousel({ images = [], maxWidth = '100%' }) {
   const handleOpenZoom = (e) => {
     e.stopPropagation();
     navigate(location.pathname + location.search + '#zoom', { replace: false });
-    setIsZoomOpen(true);
+    setTimeout(() => {
+      setIsZoomOpen(true);
+    }, 10);
   };
 
   const handleCloseZoom = () => {
     if (location.hash === '#zoom') {
       navigate(-1);
-    } else {
-      setIsZoomOpen(false);
     }
+    setIsZoomOpen(false);
   };
 
   return (
