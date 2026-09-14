@@ -43,6 +43,29 @@ export default function MarketplacePage() {
   const [editingListingId, setEditingListingId] = useState(null);
   const [selectedListing, setSelectedListing] = useState(null);
 
+  // Handle browser back button for modal
+  React.useEffect(() => {
+    const handlePopState = (e) => {
+      if (selectedListing) {
+        setSelectedListing(null);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [selectedListing]);
+
+  const handleOpenListing = (item) => {
+    setSelectedListing(item);
+    window.history.pushState({ modal: 'marketplace_detail' }, '');
+  };
+
+  const handleCloseListing = () => {
+    setSelectedListing(null);
+    if (window.history.state?.modal === 'marketplace_detail') {
+      window.history.back();
+    }
+  };
+
   // Search & Filter
   // Search & Filter
   const [searchKeyword, setSearchKeywordState] = useState(() => {
@@ -617,7 +640,7 @@ export default function MarketplacePage() {
             displayPrice = displayPrice.replace('원', ' PHP');
             
             return (
-              <div key={item.id} className="listing-card" style={{ opacity: isSold ? 0.7 : 1 }} onClick={() => setSelectedListing(item)}>
+              <div key={item.id} className="listing-card" style={{ opacity: isSold ? 0.7 : 1 }} onClick={() => handleOpenListing(item)}>
                 {item.images && item.images.length > 0 ? (
                   <img src={item.images[0]} alt="thumbnail" className="listing-img-thumb" style={{ filter: isSold ? 'grayscale(100%) brightness(80%)' : 'none' }} />
                 ) : (
@@ -697,11 +720,11 @@ export default function MarketplacePage() {
         }
 
         return (
-          <div className="detail-modal-overlay" onClick={() => setSelectedListing(null)}>
+          <div className="detail-modal-overlay" onClick={handleCloseListing}>
             <div className="detail-modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="detail-modal-header">
                 <h3>매물 상세정보</h3>
-                <button className="close-modal-btn" onClick={() => setSelectedListing(null)}>
+                <button className="close-modal-btn" onClick={handleCloseListing}>
                   <RiCloseCircleLine />
                 </button>
               </div>
@@ -830,10 +853,10 @@ export default function MarketplacePage() {
                         <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleBump(item); }} title="끌어올리기">
                           <RiArrowUpCircleLine />
                         </button>
-                        <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); setSelectedListing(null); openEditForm(item); }}>
+                        <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleCloseListing(); openEditForm(item); }}>
                           <RiEditLine />
                         </button>
-                        <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); setSelectedListing(null); handleDelete(item.id); }} style={{ color: '#ef4444' }}>
+                        <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleCloseListing(); handleDelete(item.id); }} style={{ color: '#ef4444' }}>
                           <RiDeleteBinLine />
                         </button>
                       </>
