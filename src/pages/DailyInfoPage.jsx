@@ -1492,17 +1492,17 @@ export default function DailyInfoPage() {
                     <div className="admin-card-actions">
                       <button
                         type="button"
-                        className={`btn-icon-action move ${item.isTicker ? 'active' : ''}`}
+                        className={`btn-icon-action move ${(item.isTicker === true || item.isTicker === 'true') && !isExpired ? 'active' : ''}`}
                         onClick={() => handleToggleNoticeTicker(item)}
-                        title={item.isTicker ? '상단 전광판 게시 해제' : '상단 전광판에 게시하기'}
+                        title={(item.isTicker === true || item.isTicker === 'true') && !isExpired ? '상단 전광판 게시 해제' : '상단 전광판에 게시하기'}
                         style={{
-                          background: (item.isTicker === true || item.isTicker === 'true') ? '#dbeafe' : '#f1f5f9',
-                          color: (item.isTicker === true || item.isTicker === 'true') ? '#1d4ed8' : '#64748b',
-                          borderColor: (item.isTicker === true || item.isTicker === 'true') ? '#93c5fd' : '#cbd5e1',
+                          background: ((item.isTicker === true || item.isTicker === 'true') && !isExpired) ? '#dbeafe' : '#f1f5f9',
+                          color: ((item.isTicker === true || item.isTicker === 'true') && !isExpired) ? '#1d4ed8' : '#64748b',
+                          borderColor: ((item.isTicker === true || item.isTicker === 'true') && !isExpired) ? '#93c5fd' : '#cbd5e1',
                           fontWeight: 700
                         }}
                       >
-                        <RiVolumeUpLine /> {(item.isTicker === true || item.isTicker === 'true') ? '상단전광판 게시중' : '상단전광판 게시'}
+                        <RiVolumeUpLine /> {((item.isTicker === true || item.isTicker === 'true') && !isExpired) ? '상단전광판 게시중' : '상단전광판 게시'}
                       </button>
                       <button 
                         type="button" 
@@ -2676,17 +2676,17 @@ export default function DailyInfoPage() {
                       <div className="admin-card-actions">
                         <button
                           type="button"
-                          className={`btn-icon-action move ${(item.isTicker === true || item.isTicker === 'true') ? 'active' : ''}`}
+                          className={`btn-icon-action move ${(item.isTicker === true || item.isTicker === 'true') && !isExpired ? 'active' : ''}`}
                           onClick={() => handleToggleNewsTicker(item)}
-                          title={(item.isTicker === true || item.isTicker === 'true') ? '상단 전광판 게시 해제' : '상단 전광판에 게시하기'}
+                          title={(item.isTicker === true || item.isTicker === 'true') && !isExpired ? '상단 전광판 게시 해제' : '상단 전광판에 게시하기'}
                           style={{
-                            background: (item.isTicker === true || item.isTicker === 'true') ? '#dbeafe' : '#f1f5f9',
-                            color: (item.isTicker === true || item.isTicker === 'true') ? '#1d4ed8' : '#64748b',
-                            borderColor: (item.isTicker === true || item.isTicker === 'true') ? '#93c5fd' : '#cbd5e1',
+                            background: ((item.isTicker === true || item.isTicker === 'true') && !isExpired) ? '#dbeafe' : '#f1f5f9',
+                            color: ((item.isTicker === true || item.isTicker === 'true') && !isExpired) ? '#1d4ed8' : '#64748b',
+                            borderColor: ((item.isTicker === true || item.isTicker === 'true') && !isExpired) ? '#93c5fd' : '#cbd5e1',
                             fontWeight: 700
                           }}
                         >
-                          <RiVolumeUpLine /> {(item.isTicker === true || item.isTicker === 'true') ? '상단전광판 게시중' : '상단전광판 게시'}
+                          <RiVolumeUpLine /> {((item.isTicker === true || item.isTicker === 'true') && !isExpired) ? '상단전광판 게시중' : '상단전광판 게시'}
                         </button>
                         <button 
                           type="button" 
