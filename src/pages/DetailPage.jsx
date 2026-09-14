@@ -460,6 +460,20 @@ export default function DetailPage() {
 
           <div className="desc-box">
             <h4>업체 소개</h4>
+            {(() => {
+              const dateStr = place.updatedAt || place.createdAt;
+              if (dateStr) {
+                const d = new Date(dateStr);
+                if (!isNaN(d.getTime())) {
+                  return (
+                    <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '10px', textAlign: 'left' }}>
+                      ({d.getFullYear()}년 {d.getMonth() + 1}월 {d.getDate()}일 갱신)
+                    </div>
+                  );
+                }
+              }
+              return null;
+            })()}
             <p>{place.explaination}</p>
           </div>
 
