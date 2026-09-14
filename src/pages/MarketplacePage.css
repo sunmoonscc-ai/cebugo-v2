@@ -83,91 +83,273 @@
 .listings-grid {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  background: transparent;
 }
 
+/* Karrot style list card */
 .listing-card {
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.listing-img {
-  width: 100%;
-  height: 180px;
-  object-fit: cover;
-}
-
-.listing-body {
-  padding: 16px;
-}
-
-.listing-top {
-  display: flex;
+  flex-direction: row;
   align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.listing-card:active {
+  background: #f8fafc;
+}
+
+.listing-card:last-child {
+  border-bottom: none;
+}
+
+.listing-img-thumb {
+  width: 110px;
+  height: 110px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid #e2e8f0;
+}
+
+.listing-card-body {
+  display: flex;
+  flex-direction: column;
   justify-content: space-between;
-  margin-bottom: 6px;
-}
-
-.listing-price {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: var(--primary);
-}
-
-.listing-status {
-  background: #dcfce7;
-  color: #15803d;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
+  margin-left: 14px;
+  flex: 1;
+  height: 110px;
+  min-width: 0;
 }
 
 .listing-title {
-  font-size: 1.1rem;
-  margin-bottom: 6px;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #1e293b;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.listing-desc {
-  font-size: 0.88rem;
-  color: #475569;
-  margin-bottom: 12px;
-}
-
-.seller-info {
-  background: #f8fafc;
-  padding: 10px 12px;
-  border-radius: var(--border-radius-sm);
+.listing-meta {
   font-size: 0.8rem;
   color: #64748b;
-
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  margin-top: 4px;
 }
 
-.seller-row {
+.listing-price-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
 }
 
-.contact-row {
-  display: flex;
-  gap: 12px;
+.listing-price {
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #3b82f6;
+}
+
+.listing-status {
+  background: #10b981;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: #334155;
 }
 
-.listing-actions {
+.listing-status.reserved {
+  background: #10b981; /* Karrot uses green for reserved usually */
+}
+
+.listing-status.sold {
+  background: #475569;
+}
+
+.listing-actions-bottom {
   display: flex;
   justify-content: flex-end;
-  margin-top: 10px;
+  gap: 4px;
+  color: #64748b;
+  font-size: 0.85rem;
+  align-items: center;
+  margin-top: -10px;
 }
 
-.report-btn {
-  font-size: 0.75rem;
-  padding: 4px 10px;
-  color: #94a3b8;
+/* Detail Modal Styles */
+.detail-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+@media (min-width: 768px) {
+  .detail-modal-overlay {
+    align-items: center;
+  }
+}
+
+.detail-modal-content {
+  background: #ffffff;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out;
+}
+
+@media (min-width: 768px) {
+  .detail-modal-content {
+    border-radius: 16px;
+    height: auto;
+  }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.detail-modal-header {
+  padding: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.detail-modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.close-modal-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.detail-modal-body {
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+
+.detail-image-wrap {
+  width: 100%;
+  height: 300px;
+  background: #f1f5f9;
+}
+
+.detail-image-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detail-info {
+  padding: 20px;
+}
+
+.detail-seller-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 16px;
+}
+
+.seller-avatar-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+}
+
+.detail-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+}
+
+.detail-meta {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+.detail-desc {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #1e293b;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 24px;
+}
+
+.detail-contact-box {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.detail-contact-box h4 {
+  margin: 0 0 10px 0;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.detail-footer {
+  padding: 16px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.detail-footer-price {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.restricted-notice {
+  text-align: center;
+  padding: 40px 20px;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }

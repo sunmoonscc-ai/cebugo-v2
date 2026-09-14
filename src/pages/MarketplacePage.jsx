@@ -22,6 +22,7 @@ import {
   RiCloseCircleLine
 } from 'react-icons/ri';
 import ZoomableImage from '../components/common/ZoomableImage';
+import { getRelativeTimeString } from '../utils/dateHelper';
 import './MarketplacePage.css';
 
 export default function MarketplacePage() {
@@ -40,7 +41,7 @@ export default function MarketplacePage() {
   const [showPhoneAuthModal, setShowPhoneAuthModal] = useState(false);
   const [showWriteForm, setShowWriteForm] = useState(false);
   const [editingListingId, setEditingListingId] = useState(null);
-  const [expandedListingId, setExpandedListingId] = useState(null);
+  const [selectedListing, setSelectedListing] = useState(null);
 
   // Search & Filter
   // Search & Filter
@@ -214,14 +215,17 @@ export default function MarketplacePage() {
 
   const handleCreateListing = (e) => {
     e.preventDefault();
-    if (!title.trim() || !price.trim()) return;
+    if (!title.trim()) return;
 
     const validContacts = contactList.filter(c => c.value.trim());
+    
+    const cleanPrice = price.replace(/[^0-9.]/g, '');
+    const priceToSave = cleanPrice ? `${cleanPrice} PHP` : '';
 
     if (editingListingId) {
       updateMarketplaceListing(editingListingId, {
         title,
-        price: `${price} PHP`,
+        price: priceToSave,
         description,
         category,
         images,
@@ -234,7 +238,7 @@ export default function MarketplacePage() {
         sellerEmail: userProfile.email || '',
         sellerLevel: userProfile.level,
         title,
-        price: `${price} PHP`,
+        price: priceToSave,
         description,
         category,
         images: images.length > 0 ? images : ['https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&q=80'],
@@ -454,9 +458,8 @@ export default function MarketplacePage() {
               type="text"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
-              placeholder="예: 1500"
+              placeholder="예: 1500 (비워두면 '내용확인'으로 표시)"
               className="form-input"
-              required
             />
 
             <label className="form-label">카테고리</label>
@@ -469,6 +472,7 @@ export default function MarketplacePage() {
               <option value="life">생활용품</option>
               <option value="kids">유아</option>
               <option value="vehicles">차량</option>
+              <option value="share">나눔</option>
             </select>
 
             <label className="form-label">이미지 첨부 (최대 {maxImages}장)</label>
@@ -588,91 +592,183 @@ export default function MarketplacePage() {
             <button className={`btn ${filterCategory === 'life' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('life')}>생활용품</button>
             <button className={`btn ${filterCategory === 'kids' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('kids')}>유아</button>
             <button className={`btn ${filterCategory === 'vehicles' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('vehicles')}>차량</button>
+            <button className={`btn ${filterCategory === 'share' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('share')}>나눔</button>
           </div>
         </>
 
       {/* Listings List */}
       <div className="listings-grid">
           {filteredMarketplace.map((item) => {
-            const snsInfo = parseSnsEntry(item.sns);
-            const isOwner = userProfile?.uid === item.sellerUid || userProfile?.isAdmin;
-            const isFavorited = item.favoritesUsers?.includes(userProfile?.uid);
             const isSold = item.status === 'sold';
-            const isExpanded = expandedListingId === item.id;
-            const maskedName = item.sellerEmail ? (item.sellerEmail.substring(0, 3) + '***') : (item.sellerName ? (item.sellerName.substring(0, 3) + '***') : '익명***');
+            const isFavorited = item.favoritesUsers?.includes(userProfile?.uid);
+            const timeAgo = item.createdAt ? getRelativeTimeString(item.createdAt) : (item.updatedAt ? getRelativeTimeString(item.updatedAt) : '');
+            
+            let displayPrice = '';
+            if (item.category === 'share') {
+              displayPrice = '공짜(무료)';
+            } else {
+              const numPrice = (item.price || '').replace(/[^0-9.]/g, '');
+              if (!numPrice) {
+                displayPrice = 'PHP (내용확인)';
+              } else {
+                displayPrice = Number(numPrice).toLocaleString() + '원'; // Changed to '원' or keeping 'PHP'? Let's keep PHP or what was there. Wait, earlier it was ' PHP'. I'll stick to ' PHP' or '원' based on requirement. Let's use ' PHP' as it's Cebu.
+              }
+            }
+            displayPrice = displayPrice.replace('원', ' PHP');
             
             return (
-              <div key={item.id} className="glass-card listing-card" style={{ opacity: isSold ? 0.7 : 1, cursor: 'pointer', padding: 0 }} onClick={() => setExpandedListingId(isExpanded ? null : item.id)}>
-                <div className="listing-top" style={{ padding: '16px', display: 'flex', gap: '12px', alignItems: 'flex-start', borderBottom: isExpanded ? '1px solid #e2e8f0' : 'none' }}>
-                  {item.images && item.images.length > 0 && (
-                    <img src={item.images[0]} alt="thumbnail" style={{ flexShrink: 0, width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px' }} />
-                  )}
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                      <h3 className="listing-title" style={{ margin: 0, fontSize: '1.1rem', flexShrink: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {item.title}
-                      </h3>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                        <span className="listing-price" style={{ fontWeight: 'bold', color: '#10b981', fontSize: '0.75rem' }}>{item.price}</span>
-                        <span className="listing-status" style={{ background: isSold ? '#64748b' : (item.status === 'reserved' ? '#f59e0b' : '#3b82f6'), color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem' }}>
-                          {item.status === 'sold' ? '거래완료' : (item.status === 'reserved' ? '예약중' : '판매중')}
-                        </span>
-                      </div>
+              <div key={item.id} className="listing-card" style={{ opacity: isSold ? 0.7 : 1 }} onClick={() => setSelectedListing(item)}>
+                {item.images && item.images.length > 0 ? (
+                  <img src={item.images[0]} alt="thumbnail" className="listing-img-thumb" style={{ filter: isSold ? 'grayscale(100%) brightness(80%)' : 'none' }} />
+                ) : (
+                  <div className="listing-img-thumb" style={{ background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                    <RiImageAddLine size={32} />
+                  </div>
+                )}
+                
+                <div className="listing-card-body">
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <h3 className="listing-title">{item.title}</h3>
+                    <div className="listing-meta">
+                      {item.category === 'furniture' ? '가구' : 
+                       item.category === 'etc' ? '기타' :
+                       item.category === 'books' ? '도서' :
+                       item.category === 'electronics' ? '디지털·가전' :
+                       item.category === 'leisure' ? '레저' :
+                       item.category === 'life' ? '생활용품' :
+                       item.category === 'kids' ? '유아' :
+                       item.category === 'vehicles' ? '차량' :
+                       item.category === 'share' ? '나눔' : item.category} 
+                      {timeAgo ? ` · ${timeAgo}` : ''}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '1.4' }}>
+                    <div style={{
+                      fontSize: '0.85rem',
+                      color: '#475569',
+                      marginTop: '6px',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      lineHeight: '1.4'
+                    }}>
                       {item.description}
                     </div>
                   </div>
+                  
+                  <div className="listing-price-row">
+                    {item.status && item.status !== 'available' && (
+                      <span className={`listing-status ${item.status}`}>
+                        {item.status === 'sold' ? '거래완료' : '예약중'}
+                      </span>
+                    )}
+                    <span className="listing-price">{displayPrice}</span>
+                  </div>
+                  
+                  <div className="listing-actions-bottom">
+                    {item.favoritesCount > 0 && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <RiHeart3Line /> {item.favoritesCount}
+                      </span>
+                    )}
+                  </div>
                 </div>
+              </div>
+            );
+          })}
+        </div>
 
-                {isExpanded && (
-                  <div onClick={(e) => e.stopPropagation()}>
-                    {!userCanRead ? (
-                      <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px', background: '#f8fafc' }}>
-                        <RiLock2Line style={{ fontSize: '3rem', color: '#94a3b8' }} />
-                        <h3 style={{ margin: 0, color: '#334155' }}>상세 내용 접근 제한</h3>
-                        <p style={{ color: '#64748b', lineHeight: '1.6', margin: 0 }}>
-                          {!isValidUser && (
-                            <>
-                              <strong style={{ color: '#ef4444' }}>회원가입 및 로그인이 필요합니다.</strong><br/><br/>
-                            </>
-                          )}
-                          상세 내용을 열람하려면 다음 조건이 필요합니다.<br/>
-                          <strong>최소 레벨: Lv.{rules.readLevel}</strong>
-                          {rules.reqPhoneRead && <span> / <strong>전화번호 인증</strong></span>}
-                          {rules.reqKakaoRead && <span> / <strong>카카오톡 인증</strong></span>}
-                        </p>
-                        {!isValidUser && (
-                          <button className="btn btn-primary" onClick={() => window.location.href = '/profile'} style={{ marginTop: '8px' }}>
-                            회원가입 / 로그인 하러가기
-                          </button>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        <div style={{ position: 'relative' }}>
+      {/* Detail Modal */}
+      {selectedListing && (() => {
+        const item = selectedListing;
+        const snsInfo = parseSnsEntry(item.sns);
+        const isOwner = userProfile?.uid === item.sellerUid || userProfile?.isAdmin;
+        const isFavorited = item.favoritesUsers?.includes(userProfile?.uid);
+        const isSold = item.status === 'sold';
+        const maskedName = item.sellerEmail ? (item.sellerEmail.substring(0, 3) + '***') : (item.sellerName ? (item.sellerName.substring(0, 3) + '***') : '익명***');
+        const timeAgo = item.createdAt ? getRelativeTimeString(item.createdAt) : '';
+
+        let displayPrice = '';
+        if (item.category === 'share') {
+          displayPrice = '공짜(무료)';
+        } else {
+          const numPrice = (item.price || '').replace(/[^0-9.]/g, '');
+          displayPrice = numPrice ? Number(numPrice).toLocaleString() + ' PHP' : '(내용확인)';
+        }
+
+        return (
+          <div className="detail-modal-overlay" onClick={() => setSelectedListing(null)}>
+            <div className="detail-modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="detail-modal-header">
+                <h3>매물 상세정보</h3>
+                <button className="close-modal-btn" onClick={() => setSelectedListing(null)}>
+                  <RiCloseCircleLine />
+                </button>
+              </div>
+              
+              <div className="detail-modal-body">
+                {!userCanRead ? (
+                  <div className="restricted-notice">
+                    <RiLock2Line style={{ fontSize: '3rem', color: '#94a3b8' }} />
+                    <h3 style={{ margin: 0, color: '#334155' }}>상세 내용 접근 제한</h3>
+                    <p style={{ lineHeight: '1.6', margin: 0 }}>
+                      {!isValidUser && (
+                        <><strong style={{ color: '#ef4444' }}>회원가입 및 로그인이 필요합니다.</strong><br/><br/></>
+                      )}
+                      상세 내용을 열람하려면 다음 조건이 필요합니다.<br/>
+                      <strong>최소 레벨: Lv.{rules.readLevel}</strong>
+                      {rules.reqPhoneRead && <span> / <strong>전화번호 인증</strong></span>}
+                      {rules.reqKakaoRead && <span> / <strong>카카오톡 인증</strong></span>}
+                    </p>
+                    {!isValidUser && (
+                      <button className="btn btn-primary" onClick={() => window.location.href = '/profile'} style={{ marginTop: '8px' }}>
+                        회원가입 / 로그인 하러가기
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="detail-image-wrap">
                       <ZoomableImage
                         src={item.images && item.images.length > 0 ? item.images[0] : '/default_cafe.png'}
                         images={item.images || []}
                         alt={item.title}
-                        className="listing-img"
-                        style={{ filter: isSold ? 'grayscale(100%) brightness(50%)' : 'none', borderRadius: 0, height: '200px', objectFit: 'cover' }}
+                        style={{ filter: isSold ? 'grayscale(100%) brightness(50%)' : 'none' }}
                       />
-                      {isSold && (
-                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'white', fontSize: '1.5rem', fontWeight: 'bold', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                          거래 완료
-                        </div>
-                      )}
                     </div>
-                    <div className="listing-body" style={{ padding: '16px' }}>
-                      <p className="listing-desc" style={{ marginTop: 0 }}>{item.description}</p>
-                      
-                      <div className="seller-info" style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
-                        <div className="seller-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 600 }}>판매자: {maskedName}</span>
-                          <LevelBadge level={item.sellerLevel} />
+                    
+                    <div className="detail-info">
+                      <div className="detail-seller-row">
+                        <div className="seller-avatar-placeholder">
+                          <RiShieldUserLine size={20} />
                         </div>
-                        <div className="contact-row" style={{ fontSize: '0.9rem', color: '#64748b' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{maskedName}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <LevelBadge level={item.sellerLevel} />
+                          </div>
+                        </div>
+                      </div>
+
+                      <h2 className="detail-title">{item.title}</h2>
+                      <div className="detail-meta">
+                        {item.category === 'furniture' ? '가구' : 
+                         item.category === 'etc' ? '기타' :
+                         item.category === 'books' ? '도서' :
+                         item.category === 'electronics' ? '디지털·가전' :
+                         item.category === 'leisure' ? '레저' :
+                         item.category === 'life' ? '생활용품' :
+                         item.category === 'kids' ? '유아' :
+                         item.category === 'vehicles' ? '차량' :
+                         item.category === 'share' ? '나눔' : item.category} 
+                        {timeAgo ? ` · ${timeAgo}` : ''}
+                      </div>
+
+                      <div className="detail-desc">{item.description}</div>
+
+                      <div className="detail-contact-box">
+                        <h4>거래 희망 장소 및 연락처</h4>
+                        <div className="contact-row">
                           {userCanViewContact || isOwner ? (
                             item.contactList && item.contactList.length > 0 ? (
                               item.contactList.map((contact, idx) => (
@@ -691,71 +787,83 @@ export default function MarketplacePage() {
                           )}
                         </div>
                       </div>
-
-                      <div className="listing-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button 
-                            className="btn btn-secondary" 
-                            onClick={(e) => { e.stopPropagation(); toggleMarketplaceFavorite(item.id, userProfile?.uid); }}
-                            style={{ padding: '6px', color: isFavorited ? '#ef4444' : '#64748b' }}
-                          >
-                            {isFavorited ? <RiHeart3Fill size={20} /> : <RiHeart3Line size={20} />}
-                            <span style={{ marginLeft: '4px' }}>{item.favoritesCount || 0}</span>
-                          </button>
-                        </div>
-
-                        {isOwner ? (
-                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                            <select 
-                              className="form-select" 
-                              value={item.status || 'available'} 
-                              onChange={(e) => { e.stopPropagation(); updateMarketplaceStatus(item.id, e.target.value); }}
-                              style={{ padding: '4px 8px', fontSize: '0.8rem', width: 'auto' }}
-                            >
-                              <option value="available">판매중</option>
-                              <option value="reserved">예약중</option>
-                              <option value="sold">거래완료</option>
-                            </select>
-                            <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleBump(item); }} style={{ padding: '4px 8px', fontSize: '0.8rem' }} title="끌어올리기 (1일 1회)">
-                              <RiArrowUpCircleLine />
-                            </button>
-                            <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); openEditForm(item); }} style={{ padding: '4px 8px', fontSize: '0.8rem' }}>
-                              <RiEditLine />
-                            </button>
-                            <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }} style={{ padding: '4px 8px', fontSize: '0.8rem', color: '#ef4444' }}>
-                              <RiDeleteBinLine />
-                            </button>
-                          </div>
-                        ) : (
-                          <button className="btn btn-secondary report-btn" onClick={(e) => { 
-                            e.stopPropagation(); 
-                            if (window.confirm('이 게시물을 신고하시겠습니까?')) {
-                              addSubmission({
-                                type: 'report',
-                                field: '게시물 신고',
-                                oldValue: item.title,
-                                newValue: '신고 접수',
-                                uid: userProfile?.uid || 'guest',
-                                userName: userProfile?.displayName || '방문자',
-                                placeId: item.id,
-                                placeName: '중고거래 게시물'
-                              });
-                              alert('신고가 접수되었습니다.'); 
-                            }
-                          }}>
-                            <RiFlag2Line /> 신고
-                          </button>
-                        )}
-                      </div>
                     </div>
-                    </>
-                    )}
-                  </div>
+                  </>
                 )}
               </div>
-            );
-          })}
-        </div>
+              
+              {userCanRead && (
+                <div className="detail-footer">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <button 
+                      className="btn" 
+                      onClick={(e) => { e.stopPropagation(); toggleMarketplaceFavorite(item.id, userProfile?.uid); }}
+                      style={{ padding: '8px', background: 'transparent', border: 'none', color: isFavorited ? '#ef4444' : '#94a3b8', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}
+                    >
+                      {isFavorited ? <RiHeart3Fill size={24} /> : <RiHeart3Line size={24} />}
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{item.favoritesCount || 0}</span>
+                    </button>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      {item.status && item.status !== 'available' && (
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: item.status === 'sold' ? '#64748b' : '#10b981' }}>
+                          {item.status === 'sold' ? '거래완료' : '예약중'}
+                        </span>
+                      )}
+                      <span className="detail-footer-price">{displayPrice}</span>
+                    </div>
+                  </div>
+
+                  <div className="detail-actions">
+                    {isOwner ? (
+                      <>
+                        <select 
+                          className="form-select" 
+                          value={item.status || 'available'} 
+                          onChange={(e) => { e.stopPropagation(); updateMarketplaceStatus(item.id, e.target.value); setSelectedListing({...item, status: e.target.value}); }}
+                          style={{ padding: '6px 10px', fontSize: '0.85rem', width: 'auto', background: '#f8fafc' }}
+                        >
+                          <option value="available">판매중</option>
+                          <option value="reserved">예약중</option>
+                          <option value="sold">거래완료</option>
+                        </select>
+                        <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleBump(item); }} title="끌어올리기">
+                          <RiArrowUpCircleLine />
+                        </button>
+                        <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); setSelectedListing(null); openEditForm(item); }}>
+                          <RiEditLine />
+                        </button>
+                        <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); setSelectedListing(null); handleDelete(item.id); }} style={{ color: '#ef4444' }}>
+                          <RiDeleteBinLine />
+                        </button>
+                      </>
+                    ) : (
+                      <button className="btn btn-primary" onClick={(e) => { 
+                        e.stopPropagation(); 
+                        if (window.confirm('이 게시물을 신고하시겠습니까?')) {
+                          addSubmission({
+                            type: 'report',
+                            field: '게시물 신고',
+                            oldValue: item.title,
+                            newValue: '신고 접수',
+                            uid: userProfile?.uid || 'guest',
+                            userName: userProfile?.displayName || '방문자',
+                            placeId: item.id,
+                            placeName: '중고거래 게시물'
+                          });
+                          alert('신고가 접수되었습니다.'); 
+                        }
+                      }}>
+                        <RiFlag2Line /> 신고
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {showPhoneAuthModal && (
         <PhoneAuthModal onClose={() => setShowPhoneAuthModal(false)} />
