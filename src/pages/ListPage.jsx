@@ -439,7 +439,13 @@ export default function ListPage() {
                 type="text"
                 placeholder="업체명, 지역, 키워드로 검색 (예: 막탄, 마사지, 병원)"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSearchQuery(val);
+                  if (val.trim() !== '') {
+                    setSelectedCategory('all');
+                  }
+                }}
                 className="search-input"
               />
             </div>
