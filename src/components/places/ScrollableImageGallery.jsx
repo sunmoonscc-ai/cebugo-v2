@@ -10,7 +10,7 @@ export default function ScrollableImageGallery({ images = [], maxWidth = '100%' 
   const safeImagesArray = Array.isArray(images)
     ? images.filter(Boolean)
     : (typeof images === 'string' && images.trim() ? [images.trim()] : []);
-  const displayImages = safeImagesArray.length > 0 ? safeImagesArray : [];
+  const displayImages = safeImagesArray.length > 0 ? [...new Set(safeImagesArray)] : [];
 
   if (displayImages.length === 0) return null;
 

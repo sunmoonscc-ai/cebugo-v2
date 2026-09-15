@@ -291,11 +291,11 @@ const getInitialPlaces = () => {
     if (cached) {
       const parsed = JSON.parse(cached);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return sortPlaces(parsed);
+        return deduplicateAndSortPlaces(parsed);
       }
     }
   } catch (e) {}
-  return sortPlaces([...INITIAL_PLACES]);
+  return deduplicateAndSortPlaces([...INITIAL_PLACES]);
 };
 
 export const PlacesProvider = ({ children }) => {
@@ -328,7 +328,7 @@ export const PlacesProvider = ({ children }) => {
           });
         }
 
-        const sorted = sortPlaces(list);
+        const sorted = deduplicateAndSortPlaces(list);
         setPlaces(sorted);
 
         // Save synced Firestore snapshot to offline cache
@@ -343,12 +343,12 @@ export const PlacesProvider = ({ children }) => {
           if (cached) {
             const parsed = JSON.parse(cached);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setPlaces(sortPlaces(parsed));
+              setPlaces(deduplicateAndSortPlaces(parsed));
               return;
             }
           }
         } catch (e) {}
-        setPlaces(sortPlaces([...INITIAL_PLACES]));
+        setPlaces(deduplicateAndSortPlaces([...INITIAL_PLACES]));
       }
     );
 
