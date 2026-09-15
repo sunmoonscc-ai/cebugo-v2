@@ -213,7 +213,7 @@ export default function AdminSubmissionsPage() {
 
   const handleApproveAdvertiser = async (id, placeId) => {
     try {
-      const placeRef = doc(db, 'cebugo_places', placeId);
+      const placeRef = doc(db, 'places', placeId);
       const placeSnap = await getDoc(placeRef);
       if (placeSnap.exists()) {
         const placeData = placeSnap.data();

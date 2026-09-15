@@ -78,7 +78,7 @@ export const CategoriesProvider = ({ children }) => {
 
     // Update categoryName in existing places
     try {
-      const q = query(collection(db, 'cebugo_places'), where('category', '==', id));
+      const q = query(collection(db, 'places'), where('category', '==', id));
       const snapshot = await getDocs(q);
       if (!snapshot.empty) {
         const batch = writeBatch(db);
