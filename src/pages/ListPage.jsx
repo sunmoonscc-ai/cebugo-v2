@@ -19,7 +19,8 @@ import {
   RiStore2Line,
   RiHeartFill,
   RiHeartLine,
-  RiMapPinLine
+  RiMapPinLine,
+  RiCloseLine
 } from 'react-icons/ri';
 import { getCategoryColor } from '../utils/categoryColors';
 import './ListPage.css';
@@ -448,6 +449,15 @@ export default function ListPage() {
                 }}
                 className="search-input"
               />
+              {searchQuery && (
+                <button 
+                  className="search-clear-btn" 
+                  onClick={() => setSearchQuery('')}
+                  aria-label="검색어 지우기"
+                >
+                  <RiCloseLine />
+                </button>
+              )}
             </div>
           </div>
 
