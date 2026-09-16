@@ -448,12 +448,27 @@ export const PlacesProvider = ({ children }) => {
 
   const updatePlace = async (id, placeData) => {
     const targetId = id || placeData.id || `p_${Date.now()}`;
+    const existingPlace = places.find((p) => p.id === targetId);
+
+    let isTextChanged = true;
+    if (existingPlace) {
+      const basicFields = ['name', 'category', 'addr', 'lat', 'lng', 'open', 'breakTime', 'phone', 'phoneType', 'sns', 'explaination'];
+      const hasBasicFieldChanged = basicFields.some(
+        (field) => JSON.stringify(existingPlace[field] || '') !== JSON.stringify(placeData[field] || '')
+      );
+      const hasPhonesChanged = JSON.stringify(existingPlace.phones || []) !== JSON.stringify(placeData.phones || []);
+      const hasSnsListChanged = JSON.stringify(existingPlace.snsList || []) !== JSON.stringify(placeData.snsList || []);
+
+      isTextChanged = hasBasicFieldChanged || hasPhonesChanged || hasSnsListChanged;
+    }
+
     const categoryName = categoryMap[placeData.category] || placeData.categoryName || '기타';
+    
     let placeToSave = {
       ...placeData,
       id: targetId,
       categoryName,
-      updatedAt: new Date().toISOString()
+      updatedAt: isTextChanged ? new Date().toISOString() : (existingPlace?.updatedAt || existingPlace?.createdAt || new Date().toISOString())
     };
 
     placeToSave = await sanitizePlaceForFirestore(placeToSave);

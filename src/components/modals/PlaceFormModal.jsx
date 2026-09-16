@@ -128,10 +128,10 @@ export default function PlaceFormModal({ editingPlace, defaultCategory = 'restau
         sns: editingPlace.sns || '',
         explaination: editingPlace.explaination || '',
         images: {
-          cover: editingPlace.images?.cover || [],
-          facility: editingPlace.images?.facility || [],
-          product: editingPlace.images?.product || [],
-          menu: editingPlace.images?.menu || []
+          cover: Array.isArray(editingPlace.images) ? editingPlace.images : (Array.isArray(editingPlace.images?.cover) ? editingPlace.images.cover : (editingPlace.images?.cover ? [editingPlace.images.cover] : [])),
+          facility: Array.isArray(editingPlace.images) ? [] : (Array.isArray(editingPlace.images?.facility) ? editingPlace.images.facility : (editingPlace.images?.facility ? [editingPlace.images.facility] : [])),
+          product: Array.isArray(editingPlace.images) ? [] : (Array.isArray(editingPlace.images?.product) ? editingPlace.images.product : (editingPlace.images?.product ? [editingPlace.images.product] : [])),
+          menu: Array.isArray(editingPlace.images) ? [] : (Array.isArray(editingPlace.images?.menu) ? editingPlace.images.menu : (editingPlace.images?.menu ? [editingPlace.images.menu] : []))
         }
       });
       setCoordInput(`${lat}, ${lng}`);
