@@ -32,6 +32,8 @@ export default function ListPage() {
   const { categories } = useCategories();
   const { userProfile, appConfig, userCoords, requestLocationPermission } = useAuth();
 
+  const searchInputRef = useRef(null);
+
   const [viewMode, setViewModeState] = useState(() => {
     try {
       return sessionStorage.getItem('cebugo_view_mode') || location.state?.fromView || 'list';
@@ -437,6 +439,7 @@ export default function ListPage() {
             <div className="search-input-wrap list-search-wrap">
               <RiSearchLine className="search-icon" />
               <input
+                ref={searchInputRef}
                 type="text"
                 placeholder="업체명, 지역, 키워드로 검색 (예: 막탄, 마사지, 병원)"
                 value={searchQuery}
@@ -452,7 +455,10 @@ export default function ListPage() {
               {searchQuery && (
                 <button 
                   className="search-clear-btn" 
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => {
+                    setSearchQuery('');
+                    searchInputRef.current?.focus();
+                  }}
                   aria-label="검색어 지우기"
                 >
                   <RiCloseLine />
