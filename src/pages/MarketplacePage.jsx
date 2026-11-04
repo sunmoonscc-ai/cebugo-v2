@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePlaces } from '../context/PlacesContext';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
@@ -19,11 +19,38 @@ import {
   RiEditLine,
   RiArrowUpCircleLine,
   RiImageAddLine,
-  RiCloseCircleLine
+  RiCloseCircleLine,
+  RiChat1Line,
+  RiMapPinLine,
+  RiGiftLine
 } from 'react-icons/ri';
 import ZoomableImage from '../components/common/ZoomableImage';
 import { getRelativeTimeString } from '../utils/dateHelper';
+import { 
+  getOrCreateChatRoom, 
+  subscribeUserChatRooms 
+} from '../services/chatService';
+import MarketChatModal from '../components/marketplace/MarketChatModal';
+import MarketChatListModal from '../components/marketplace/MarketChatListModal';
 import './MarketplacePage.css';
+
+// 5 Regions
+export const MARKET_REGIONS = [
+  { id: 'all', label: '전체 지역' },
+  { id: 'Cebu City', label: 'Cebu City' },
+  { id: 'Mandaue City', label: 'Mandaue City' },
+  { id: 'Lapu-Lapu City', label: 'Lapu-Lapu City' },
+  { id: 'Cordova City', label: 'Cordova City' },
+  { id: 'etc', label: 'etc (기타)' }
+];
+
+// Product conditions
+export const ITEM_CONDITIONS = [
+  { id: 'new', label: '새상품 (미개봉)' },
+  { id: 'like_new', label: '거의 새것 (사용감 없음)' },
+  { id: 'used_good', label: '사용감 적음 (양호)' },
+  { id: 'used_fair', label: '사용감 많음' }
+];
 
 export default function MarketplacePage() {
   const { 
@@ -38,21 +65,48 @@ export default function MarketplacePage() {
   } = usePlaces();
   const { userProfile, updateUserProfile, appConfig } = useAuth();
   const maxImages = userProfile?.isAdmin ? appConfig?.imageUploadLimits?.admin ?? 30 : appConfig?.imageUploadLimits?.user ?? 30;
+  
   const [showPhoneAuthModal, setShowPhoneAuthModal] = useState(false);
   const [showWriteForm, setShowWriteForm] = useState(false);
   const [editingListingId, setEditingListingId] = useState(null);
   const [selectedListing, setSelectedListing] = useState(null);
 
+  // Chat States
+  const [chatRooms, setChatRooms] = useState([]);
+  const [activeChatRoom, setActiveChatRoom] = useState(null);
+  const [showChatListModal, setShowChatListModal] = useState(false);
+
+  // Subscribe to user chat rooms for unread counts
+  useEffect(() => {
+    if (!userProfile?.uid) return;
+    const unsubscribe = subscribeUserChatRooms(userProfile.uid, (rooms) => {
+      setChatRooms(rooms);
+    });
+    return () => unsubscribe();
+  }, [userProfile?.uid]);
+
+  const totalUnreadCount = chatRooms.reduce((acc, room) => {
+    return acc + (room.unreadCount?.[userProfile?.uid] || 0);
+  }, 0);
+
   // Handle browser back button for modal
-  React.useEffect(() => {
-    const handlePopState = (e) => {
+  useEffect(() => {
+    const handlePopState = () => {
+      if (activeChatRoom) {
+        setActiveChatRoom(null);
+        return;
+      }
+      if (showChatListModal) {
+        setShowChatListModal(false);
+        return;
+      }
       if (selectedListing) {
         setSelectedListing(null);
       }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [selectedListing]);
+  }, [selectedListing, activeChatRoom, showChatListModal]);
 
   const handleOpenListing = (item) => {
     setSelectedListing(item);
@@ -67,7 +121,6 @@ export default function MarketplacePage() {
   };
 
   // Search & Filter
-  // Search & Filter
   const [searchKeyword, setSearchKeywordState] = useState(() => {
     try {
       return sessionStorage.getItem('cebugo_market_search') || '';
@@ -80,6 +133,21 @@ export default function MarketplacePage() {
     setSearchKeywordState(keyword);
     try {
       sessionStorage.setItem('cebugo_market_search', keyword);
+    } catch (e) {}
+  };
+
+  const [filterRegion, setFilterRegionState] = useState(() => {
+    try {
+      return sessionStorage.getItem('cebugo_market_region') || 'all';
+    } catch (e) {
+      return 'all';
+    }
+  });
+
+  const setFilterRegion = (region) => {
+    setFilterRegionState(region);
+    try {
+      sessionStorage.setItem('cebugo_market_region', region);
     } catch (e) {}
   };
 
@@ -101,6 +169,10 @@ export default function MarketplacePage() {
   // New Listing Form State
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
+  const [isNegotiable, setIsNegotiable] = useState(false);
+  const [isGiveaway, setIsGiveaway] = useState(false);
+  const [region, setRegion] = useState('Cebu City');
+  const [condition, setCondition] = useState('used_good');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('furniture');
   const [images, setImages] = useState([]);
@@ -134,7 +206,7 @@ export default function MarketplacePage() {
   
   const [siteRules, setSiteRules] = useState({ locationPolicy: 'manual' });
 
-  React.useEffect(() => {
+  useEffect(() => {
     const unsub = onSnapshot(doc(db, 'cebugo_config', 'marketplace_rules'), (docSnap) => {
       if (docSnap.exists()) {
         setRules(docSnap.data());
@@ -207,7 +279,11 @@ export default function MarketplacePage() {
   const openEditForm = (item) => {
     setEditingListingId(item.id);
     setTitle(item.title);
-    setPrice(item.price.replace(/[^0-9.]/g, ''));
+    setPrice(item.price ? item.price.replace(/[^0-9.]/g, '') : '');
+    setIsNegotiable(!!item.isNegotiable);
+    setIsGiveaway(item.isGiveaway || item.category === 'share');
+    setRegion(item.region || 'Cebu City');
+    setCondition(item.condition || 'used_good');
     setDescription(item.description);
     setCategory(item.category);
     setImages(item.images || []);
@@ -230,6 +306,10 @@ export default function MarketplacePage() {
     setEditingListingId(null);
     setTitle('');
     setPrice('');
+    setIsNegotiable(false);
+    setIsGiveaway(false);
+    setRegion('Cebu City');
+    setCondition('used_good');
     setDescription('');
     setImages([]);
     setContactList([{ type: 'phone', value: '' }]);
@@ -242,28 +322,36 @@ export default function MarketplacePage() {
 
     const validContacts = contactList.filter(c => c.value.trim());
     
-    const cleanPrice = price.replace(/[^0-9.]/g, '');
-    const priceToSave = cleanPrice ? `${cleanPrice} PHP` : '';
+    let priceToSave = '';
+    if (isGiveaway || category === 'share') {
+      priceToSave = '0 PHP';
+    } else {
+      const cleanPrice = price.replace(/[^0-9.]/g, '');
+      priceToSave = cleanPrice ? `${cleanPrice} PHP` : '';
+    }
+
+    const listingPayload = {
+      title,
+      price: priceToSave,
+      isNegotiable: isGiveaway ? false : isNegotiable,
+      isGiveaway: isGiveaway || category === 'share',
+      region: region || 'Cebu City',
+      condition: condition || 'used_good',
+      description,
+      category: isGiveaway ? 'share' : category,
+      images,
+      contactList: validContacts
+    };
 
     if (editingListingId) {
-      updateMarketplaceListing(editingListingId, {
-        title,
-        price: priceToSave,
-        description,
-        category,
-        images,
-        contactList: validContacts
-      });
+      updateMarketplaceListing(editingListingId, listingPayload);
     } else {
       addMarketplaceListing({
+        ...listingPayload,
         sellerUid: userProfile.uid,
         sellerName: userProfile.displayName,
         sellerEmail: userProfile.email || '',
         sellerLevel: userProfile.level,
-        title,
-        price: priceToSave,
-        description,
-        category,
         images: images.length > 0 ? images : ['https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&q=80'],
         contactList: validContacts.length > 0 ? validContacts : [
           { type: 'phone', value: userProfile.phoneNumber || '09171234567' },
@@ -294,7 +382,47 @@ export default function MarketplacePage() {
     alert('끌어올리기가 완료되었습니다!');
   };
 
+  // Start chat with seller
+  const handleStartChat = async (item) => {
+    if (!isValidUser) {
+      alert('채팅을 이용하시려면 로그인이 필요합니다.');
+      return;
+    }
+    if (userProfile.uid === item.sellerUid) {
+      alert('자신이 등록한 물품입니다.');
+      return;
+    }
+
+    try {
+      const roomId = await getOrCreateChatRoom({
+        listing: item,
+        currentUser: userProfile
+      });
+
+      const existing = chatRooms.find(r => r.id === roomId);
+      const targetRoom = existing || {
+        id: roomId,
+        listingId: item.id,
+        listingTitle: item.title,
+        listingPrice: item.price,
+        listingImage: item.images?.[0] || '',
+        sellerUid: item.sellerUid,
+        sellerName: item.sellerName,
+        buyerUid: userProfile.uid,
+        buyerName: userProfile.displayName
+      };
+
+      setActiveChatRoom(targetRoom);
+      handleCloseListing();
+    } catch (err) {
+      console.error('Chat error:', err);
+      alert(err.message || '채팅방을 여는 중 오류가 발생했습니다.');
+    }
+  };
+
+  // Filter listings
   const filteredMarketplace = marketplace.filter(item => {
+    // 1. Favorites tab
     if (filterCategory === 'favorites') {
       const isFavorited = item.favoritesUsers?.includes(userProfile?.uid);
       if (!isFavorited) return false;
@@ -303,6 +431,13 @@ export default function MarketplacePage() {
       if (!matchCategory) return false;
     }
 
+    // 2. Region filter
+    if (filterRegion !== 'all') {
+      const itemRegion = item.region || 'Cebu City';
+      if (itemRegion !== filterRegion) return false;
+    }
+
+    // 3. Search keyword
     const matchSearch = item.title.toLowerCase().includes(searchKeyword.toLowerCase()) || 
                         item.description.toLowerCase().includes(searchKeyword.toLowerCase());
     return matchSearch;
@@ -311,11 +446,7 @@ export default function MarketplacePage() {
   const handleReqKakaoVerif = async (e) => {
     e.preventDefault();
     if (!inputKakaoId.trim()) return;
-    
-    // 1. Save unverified kakaoId to profile
     await updateUserProfile({ kakaoId: inputKakaoId });
-    
-    // 2. Submit verification request to admin
     addSubmission({
       type: 'verification',
       field: 'kakao',
@@ -326,16 +457,13 @@ export default function MarketplacePage() {
       placeId: 'verification',
       placeName: '카카오톡 인증 요청'
     });
-    
     alert('카카오톡 ID 등록 및 관리자 인증 신청이 완료되었습니다.');
   };
 
   const handleReqPhoneVerif = async (e) => {
     e.preventDefault();
     if (!inputPhone.trim()) return;
-    
     await updateUserProfile({ phoneNumber: inputPhone });
-    
     addSubmission({
       type: 'verification',
       field: 'phone',
@@ -346,16 +474,13 @@ export default function MarketplacePage() {
       placeId: 'verification',
       placeName: '현지 휴대폰 인증 요청'
     });
-    
     alert('필리핀 현지폰 번호 등록 및 관리자 인증 신청이 완료되었습니다.');
   };
 
   const handleReqPhoneKrVerif = async (e) => {
     e.preventDefault();
     if (!inputPhoneKr.trim()) return;
-    
     await updateUserProfile({ phoneKr: inputPhoneKr });
-    
     addSubmission({
       type: 'verification',
       field: 'phoneKr',
@@ -366,24 +491,38 @@ export default function MarketplacePage() {
       placeId: 'verification',
       placeName: '한국 휴대폰 인증 요청'
     });
-    
     alert('한국 휴대폰 번호 등록 및 관리자 인증 신청이 완료되었습니다.');
   };
 
   return (
     <div className="page-content">
+      {/* Top Header Bar */}
       <div className="marketplace-header glass-card">
         <div className="header-info">
           <h2>
-            <RiShoppingBagLine /> 중고거래
-            <span className="header-info-sub"> - 세부 현지 중고물품 거래 (열람은 Lv.{rules.readLevel} 이상, 작성은 Lv.{rules.writeLevel} 이상 및 설정된 필수인증 필요)</span>
+            <RiShoppingBagLine /> 세부 중고거래
+            <span className="header-info-sub"> - 당근처럼 쉽고 빠른 세부 한인 이웃 직거래</span>
           </h2>
+          {isValidUser && (
+            <button 
+              className="chat-list-trigger-btn"
+              onClick={() => setShowChatListModal(true)}
+              title="내 당근채팅 목록"
+            >
+              <RiChat1Line size={20} />
+              <span>채팅</span>
+              {totalUnreadCount > 0 && (
+                <span className="chat-badge-count">{totalUnreadCount}</span>
+              )}
+            </button>
+          )}
         </div>
 
+        {/* Verification status box for authenticated users */}
         {isValidUser && (
           <div className="user-eligibility-box">
             <div className="eligibility-status">
-              <span>내 인증 상태:</span>
+              <span>내 인증:</span>
               <LevelBadge level={userProfile.level || 1} />
               <PhoneVerifiedBadge isVerified={userProfile.phoneVerified} />
               <KakaoVerifiedBadge isVerified={userProfile.kakaoVerified} />
@@ -398,11 +537,11 @@ export default function MarketplacePage() {
                     value={inputPhone}
                     onChange={(e) => setInputPhone(e.target.value)}
                     className="form-input"
-                    style={{ width: '120px', padding: '4px 8px', fontSize: '0.8rem' }}
+                    style={{ width: '110px', padding: '4px 8px', fontSize: '0.8rem' }}
                     required
                   />
                   <button type="submit" className="btn btn-secondary phone-auth-btn">
-                    현지폰 인증 신청
+                    현지폰 인증
                   </button>
                 </form>
               )}
@@ -415,11 +554,11 @@ export default function MarketplacePage() {
                     value={inputPhoneKr}
                     onChange={(e) => setInputPhoneKr(e.target.value)}
                     className="form-input"
-                    style={{ width: '120px', padding: '4px 8px', fontSize: '0.8rem' }}
+                    style={{ width: '110px', padding: '4px 8px', fontSize: '0.8rem' }}
                     required
                   />
                   <button type="submit" className="btn btn-secondary phone-auth-btn">
-                    한국폰 인증 신청
+                    한국폰 인증
                   </button>
                 </form>
               )}
@@ -432,11 +571,11 @@ export default function MarketplacePage() {
                     value={inputKakaoId}
                     onChange={(e) => setInputKakaoId(e.target.value)}
                     className="form-input"
-                    style={{ width: '120px', padding: '4px 8px', fontSize: '0.8rem' }}
+                    style={{ width: '110px', padding: '4px 8px', fontSize: '0.8rem' }}
                     required
                   />
                   <button type="submit" className="btn btn-secondary phone-auth-btn">
-                    카톡 인증 신청
+                    카톡 인증
                   </button>
                 </form>
               )}
@@ -444,119 +583,188 @@ export default function MarketplacePage() {
           </div>
         )}
 
-        {isValidUser && (
-          userCanWrite ? (
-            <button className="btn btn-primary create-listing-btn" onClick={() => {
-              if (showWriteForm) cancelEdit();
-              else setShowWriteForm(true);
-            }}>
-              <RiAddLine /> {showWriteForm ? '작성 취소' : '중고 물품 등록하기'}
-            </button>
-          ) : (
-            <div className="lock-notice" onClick={checkWriteAccess} style={{ cursor: 'pointer' }}>
-              <RiLock2Line />
-              <span>등록 조건 미충족 (클릭하여 조건 확인)</span>
-            </div>
-          )
+        {/* Lock notice if cannot write */}
+        {isValidUser && !userCanWrite && (
+          <div className="lock-notice" onClick={checkWriteAccess} style={{ cursor: 'pointer' }}>
+            <RiLock2Line />
+            <span>등록 조건 미충족 (클릭하여 조건 확인 - Lv.{rules.writeLevel} 이상 필요)</span>
+          </div>
         )}
       </div>
 
-      {/* Write Listing Form */}
+      {/* Write Listing Form (Collapse / Expand) */}
       {showWriteForm && (
         <div className="glass-card write-form-card">
-          <h3>신규 중고 매물 등록</h3>
+          <div className="form-card-header">
+            <h3>{editingListingId ? '중고 매물 수정' : '신규 중고 매물 등록'}</h3>
+            <button className="btn-text-close" onClick={cancelEdit}>취소</button>
+          </div>
+
           <form onSubmit={handleCreateListing} className="modal-form">
+            {/* Title */}
             <label className="form-label">매물 제목</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="예: 스노클링 장비 세트"
+              placeholder="예: 스노클링 장비 세트, 아이키아 서랍장"
               className="form-input"
               required
             />
 
-            <label className="form-label">판매 가격 (PHP)</label>
-            <input
-              type="text"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="예: 1500 (비워두면 '내용확인'으로 표시)"
-              className="form-input"
-            />
+            {/* Region selection */}
+            <label className="form-label">거래 지역 (세부 5개 지역)</label>
+            <div className="region-selector-grid">
+              {MARKET_REGIONS.filter(r => r.id !== 'all').map((reg) => (
+                <button
+                  type="button"
+                  key={reg.id}
+                  className={`region-chip ${region === reg.id ? 'active' : ''}`}
+                  onClick={() => setRegion(reg.id)}
+                >
+                  <RiMapPinLine size={14} />
+                  {reg.label}
+                </button>
+              ))}
+            </div>
 
-            <label className="form-label">카테고리</label>
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className="form-select">
-              <option value="furniture">가구</option>
-              <option value="etc">기타</option>
-              <option value="books">도서</option>
-              <option value="electronics">디지털·가전</option>
-              <option value="leisure">레저</option>
-              <option value="life">생활용품</option>
-              <option value="kids">유아</option>
-              <option value="vehicles">차량</option>
-              <option value="share">나눔</option>
-            </select>
+            {/* Category & Condition */}
+            <div className="form-row-2">
+              <div>
+                <label className="form-label">카테고리</label>
+                <select 
+                  value={category} 
+                  onChange={(e) => {
+                    setCategory(e.target.value);
+                    if (e.target.value === 'share') setIsGiveaway(true);
+                  }} 
+                  className="form-select"
+                >
+                  <option value="furniture">가구</option>
+                  <option value="electronics">디지털·가전</option>
+                  <option value="life">생활용품</option>
+                  <option value="leisure">레저·스포츠</option>
+                  <option value="kids">유아·아동</option>
+                  <option value="books">도서</option>
+                  <option value="vehicles">차량·오토바이</option>
+                  <option value="share">나눔 (무료)</option>
+                  <option value="etc">기타</option>
+                </select>
+              </div>
 
+              <div>
+                <label className="form-label">상품 상태 (컨디션)</label>
+                <select 
+                  value={condition} 
+                  onChange={(e) => setCondition(e.target.value)} 
+                  className="form-select"
+                >
+                  {ITEM_CONDITIONS.map(c => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Price & Giveaway Toggle */}
+            <div className="price-input-section">
+              <label className="form-label">판매 가격 (PHP)</label>
+              <div className="price-input-row">
+                <input
+                  type="text"
+                  value={isGiveaway ? '0' : price}
+                  disabled={isGiveaway}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder={isGiveaway ? '무료 나눔' : '예: 1500 (숫자만)'}
+                  className="form-input"
+                />
+                <button
+                  type="button"
+                  className={`giveaway-toggle-btn ${isGiveaway ? 'active' : ''}`}
+                  onClick={() => {
+                    const next = !isGiveaway;
+                    setIsGiveaway(next);
+                    if (next) {
+                      setCategory('share');
+                    }
+                  }}
+                >
+                  <RiGiftLine size={16} />
+                  <span>나눔🧡</span>
+                </button>
+              </div>
+
+              {!isGiveaway && (
+                <label className="negotiable-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={isNegotiable}
+                    onChange={(e) => setIsNegotiable(e.target.checked)}
+                  />
+                  <span>가격 제안(네고) 받기</span>
+                </label>
+              )}
+            </div>
+
+            {/* Images */}
             <label className="form-label">이미지 첨부 (최대 {maxImages}장)</label>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+            <div className="image-upload-wrapper">
               {images.map((img, idx) => (
-                <div key={idx} style={{ position: 'relative', width: '80px', height: '80px' }}>
-                  <img src={img} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
-                  <button type="button" onClick={() => removeImage(idx)} style={{ position: 'absolute', top: '-6px', right: '-6px', background: 'white', borderRadius: '50%', border: 'none', color: '#ef4444', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                    <RiCloseCircleLine size={20} />
+                <div key={idx} className="image-preview-box">
+                  <img src={img} alt="preview" />
+                  <button type="button" onClick={() => removeImage(idx)} className="btn-remove-img">
+                    <RiCloseCircleLine size={18} />
                   </button>
-                  {idx === 0 && <span style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: '0.6rem', padding: '2px 4px', borderRadius: '4px' }}>대표</span>}
+                  {idx === 0 && <span className="badge-thumb">대표</span>}
                 </div>
               ))}
               {images.length < maxImages && (
                 <label className="image-upload-dropzone">
                   <RiImageAddLine className="upload-icon" />
-                  <span style={{ fontSize: '0.7rem', marginTop: '4px' }}>{images.length}/{maxImages}</span>
+                  <span className="upload-counter">{images.length}/{maxImages}</span>
                   <input type="file" multiple accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
                 </label>
               )}
             </div>
 
+            {/* Description */}
             <label className="form-label">상세 설명</label>
             <textarea
               rows="4"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="제품 상태, 거래 희망 장소(예: 막탄 제이파크 정문) 등을 작성해주세요."
+              placeholder="제품의 구매 시기, 상태, 직거래 희망 장소(예: 막탄 제이파크 정문, 아얄라몰 등)를 자세히 적어주세요."
               className="form-textarea"
               required
             />
 
-            <label className="form-label">연락처 및 SNS</label>
+            {/* Contacts & SNS */}
+            <label className="form-label">연락처 및 외부 메신저 (선택)</label>
             {contactList.map((contact, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <div key={idx} className="contact-input-row">
                 <select 
                   value={contact.type} 
                   onChange={(e) => handleContactChange(idx, 'type', e.target.value)}
-                  className="form-select"
-                  style={{ width: '110px' }}
+                  className="form-select contact-type-select"
                 >
                   <option value="phone">전화번호</option>
                   <option value="kakao">카카오톡</option>
                   <option value="line">라인</option>
                   <option value="facebook">페이스북</option>
-                  <option value="instagram">인스타그램</option>
+                  <option value="instagram">인스타</option>
                   <option value="other">기타</option>
                 </select>
                 <input
                   type="text"
                   value={contact.value}
                   onChange={(e) => handleContactChange(idx, 'value', e.target.value)}
-                  placeholder="연락처/아이디 입력"
+                  placeholder="연락처/ID 입력"
                   className="form-input"
-                  style={{ flex: 1 }}
                 />
                 <button 
                   type="button" 
                   onClick={() => handleRemoveContact(idx)} 
-                  className="btn btn-secondary" 
-                  style={{ padding: '0 12px' }}
+                  className="btn btn-secondary btn-del-contact"
                 >
                   삭제
                 </button>
@@ -565,8 +773,7 @@ export default function MarketplacePage() {
             <button 
               type="button" 
               onClick={handleAddContact} 
-              className="btn btn-secondary" 
-              style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              className="btn btn-secondary btn-add-contact"
             >
               <RiAddLine /> 연락처 추가
             </button>
@@ -579,127 +786,191 @@ export default function MarketplacePage() {
                 onChange={(e) => setAgreeContact(e.target.checked)}
                 required
               />
-              <label htmlFor="agree">프로필에 등록된 연락처(전화번호/카톡 ID) 공개에 동의합니다.</label>
+              <label htmlFor="agree">프로필에 등록된 기본 연락처 공개에 동의합니다.</label>
             </div>
 
             <button type="submit" className="btn btn-primary form-submit-btn">
-              매물 등록 완료
+              {editingListingId ? '수정 완료' : '매물 등록 완료'}
             </button>
           </form>
         </div>
       )}
 
-      {/* Search & Filter Bar */}
-      <>
-          <div className="glass-card" style={{ marginBottom: '12px', padding: '16px', display: 'flex' }}>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '8px', padding: '0 12px' }}>
-              <RiSearchLine style={{ color: '#64748b' }} />
-              <input 
-                type="text" 
-                placeholder="매물 검색..." 
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-                style={{ border: 'none', background: 'transparent', padding: '10px', width: '100%', outline: 'none' }}
-              />
-            </div>
-          </div>
-          
-          <div className="category-tabs glass-card" style={{ marginBottom: '20px', display: 'flex', overflowX: 'auto', gap: '8px', padding: '8px 16px', whiteSpace: 'nowrap' }}>
-            <button className={`btn ${filterCategory === 'favorites' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('favorites')}>관심상품</button>
-            <button className={`btn ${filterCategory === 'all' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('all')}>전체</button>
-            <button className={`btn ${filterCategory === 'furniture' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('furniture')}>가구</button>
-            <button className={`btn ${filterCategory === 'etc' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('etc')}>기타</button>
-            <button className={`btn ${filterCategory === 'books' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('books')}>도서</button>
-            <button className={`btn ${filterCategory === 'electronics' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('electronics')}>디지털·가전</button>
-            <button className={`btn ${filterCategory === 'leisure' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('leisure')}>레저</button>
-            <button className={`btn ${filterCategory === 'life' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('life')}>생활용품</button>
-            <button className={`btn ${filterCategory === 'kids' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('kids')}>유아</button>
-            <button className={`btn ${filterCategory === 'vehicles' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('vehicles')}>차량</button>
-            <button className={`btn ${filterCategory === 'share' ? 'btn-primary' : 'btn-secondary'}`} style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '20px' }} onClick={() => setFilterCategory('share')}>나눔</button>
-          </div>
-        </>
+      {/* Region Selector Bar */}
+      <div className="market-region-bar glass-card">
+        <div className="region-bar-title">
+          <RiMapPinLine size={18} color="#ea580c" />
+          <span>지역 선택</span>
+        </div>
+        <div className="region-tabs-scroll">
+          {MARKET_REGIONS.map((reg) => (
+            <button
+              key={reg.id}
+              className={`region-pill-btn ${filterRegion === reg.id ? 'active' : ''}`}
+              onClick={() => setFilterRegion(reg.id)}
+            >
+              {reg.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Search & Category Filter */}
+      <div className="glass-card search-card">
+        <div className="market-search-box">
+          <RiSearchLine className="search-icon" />
+          <input 
+            type="text" 
+            placeholder="어떤 중고물품을 찾고 계신가요?" 
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+          />
+        </div>
+      </div>
+      
+      {/* Category Tabs */}
+      <div className="category-tabs glass-card">
+        <button className={`category-tab-btn ${filterCategory === 'all' ? 'active' : ''}`} onClick={() => setFilterCategory('all')}>전체</button>
+        <button className={`category-tab-btn ${filterCategory === 'share' ? 'active share-tab' : ''}`} onClick={() => setFilterCategory('share')}>🧡 나눔</button>
+        <button className={`category-tab-btn ${filterCategory === 'favorites' ? 'active' : ''}`} onClick={() => setFilterCategory('favorites')}>관심상품</button>
+        <button className={`category-tab-btn ${filterCategory === 'furniture' ? 'active' : ''}`} onClick={() => setFilterCategory('furniture')}>가구</button>
+        <button className={`category-tab-btn ${filterCategory === 'electronics' ? 'active' : ''}`} onClick={() => setFilterCategory('electronics')}>디지털·가전</button>
+        <button className={`category-tab-btn ${filterCategory === 'life' ? 'active' : ''}`} onClick={() => setFilterCategory('life')}>생활용품</button>
+        <button className={`category-tab-btn ${filterCategory === 'leisure' ? 'active' : ''}`} onClick={() => setFilterCategory('leisure')}>레저</button>
+        <button className={`category-tab-btn ${filterCategory === 'kids' ? 'active' : ''}`} onClick={() => setFilterCategory('kids')}>유아</button>
+        <button className={`category-tab-btn ${filterCategory === 'vehicles' ? 'active' : ''}`} onClick={() => setFilterCategory('vehicles')}>차량</button>
+        <button className={`category-tab-btn ${filterCategory === 'books' ? 'active' : ''}`} onClick={() => setFilterCategory('books')}>도서</button>
+        <button className={`category-tab-btn ${filterCategory === 'etc' ? 'active' : ''}`} onClick={() => setFilterCategory('etc')}>기타</button>
+      </div>
+
+      {/* Listings Count Bar */}
+      <div className="listings-count-bar">
+        <span>총 <strong>{filteredMarketplace.length}</strong>개의 매물</span>
+        {filterRegion !== 'all' && <span className="active-region-tag">📍 {filterRegion}</span>}
+      </div>
 
       {/* Listings List */}
       <div className="listings-grid">
-          {filteredMarketplace.map((item) => {
+        {filteredMarketplace.length === 0 ? (
+          <div className="no-listings-card glass-card">
+            <RiShoppingBagLine size={48} color="#cbd5e1" />
+            <p>등록된 중고 매물이 없습니다.</p>
+            <span>가장 먼저 이웃에게 필요한 물품을 올려보세요!</span>
+          </div>
+        ) : (
+          filteredMarketplace.map((item) => {
             const isSold = item.status === 'sold';
-            const isFavorited = item.favoritesUsers?.includes(userProfile?.uid);
             const timeAgo = item.createdAt ? getRelativeTimeString(item.createdAt) : (item.updatedAt ? getRelativeTimeString(item.updatedAt) : '');
             
             let displayPrice = '';
-            if (item.category === 'share') {
-              displayPrice = '공짜(무료)';
+            const isGiveawayItem = item.isGiveaway || item.category === 'share';
+            if (isGiveawayItem) {
+              displayPrice = '나눔🧡';
             } else {
               const numPrice = (item.price || '').replace(/[^0-9.]/g, '');
-              if (!numPrice) {
-                displayPrice = 'PHP (내용확인)';
-              } else {
-                displayPrice = Number(numPrice).toLocaleString() + '원'; // Changed to '원' or keeping 'PHP'? Let's keep PHP or what was there. Wait, earlier it was ' PHP'. I'll stick to ' PHP' or '원' based on requirement. Let's use ' PHP' as it's Cebu.
-              }
+              displayPrice = numPrice ? `${Number(numPrice).toLocaleString()} PHP` : '가격협의';
             }
-            displayPrice = displayPrice.replace('원', ' PHP');
+
+            const itemRegion = item.region || 'Cebu City';
+            const conditionLabel = ITEM_CONDITIONS.find(c => c.id === item.condition)?.label;
             
             return (
-              <div key={item.id} className="listing-card" style={{ opacity: isSold ? 0.7 : 1 }} onClick={() => handleOpenListing(item)}>
+              <div key={item.id} className="listing-card" style={{ opacity: isSold ? 0.75 : 1 }} onClick={() => handleOpenListing(item)}>
                 {item.images && item.images.length > 0 ? (
-                  <img src={item.images[0]} alt="thumbnail" className="listing-img-thumb" style={{ filter: isSold ? 'grayscale(100%) brightness(80%)' : 'none' }} />
+                  <div className="listing-img-thumb-wrap">
+                    <img src={item.images[0]} alt="thumbnail" className="listing-img-thumb" style={{ filter: isSold ? 'grayscale(80%)' : 'none' }} />
+                    {isSold && <span className="thumb-status-overlay">거래완료</span>}
+                    {item.images.length > 1 && <span className="multi-img-count">+{item.images.length - 1}</span>}
+                  </div>
                 ) : (
-                  <div className="listing-img-thumb" style={{ background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                  <div className="listing-img-thumb no-image">
                     <RiImageAddLine size={32} />
                   </div>
                 )}
                 
                 <div className="listing-card-body">
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <h3 className="listing-title">{item.title}</h3>
-                    <div className="listing-meta">
-                      {item.category === 'furniture' ? '가구' : 
-                       item.category === 'etc' ? '기타' :
-                       item.category === 'books' ? '도서' :
-                       item.category === 'electronics' ? '디지털·가전' :
-                       item.category === 'leisure' ? '레저' :
-                       item.category === 'life' ? '생활용품' :
-                       item.category === 'kids' ? '유아' :
-                       item.category === 'vehicles' ? '차량' :
-                       item.category === 'share' ? '나눔' : item.category} 
-                      {timeAgo ? ` · ${timeAgo}` : ''}
+                  <div className="listing-main-content">
+                    <div className="listing-title-row">
+                      <h3 className="listing-title">{item.title}</h3>
                     </div>
-                    <div style={{
-                      fontSize: '0.85rem',
-                      color: '#475569',
-                      marginTop: '6px',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      lineHeight: '1.4'
-                    }}>
-                      {item.description}
+
+                    <div className="listing-meta-row">
+                      <span className="listing-region-badge">{itemRegion}</span>
+                      <span className="listing-dot">·</span>
+                      <span className="listing-category-text">
+                        {item.category === 'furniture' ? '가구' : 
+                         item.category === 'etc' ? '기타' :
+                         item.category === 'books' ? '도서' :
+                         item.category === 'electronics' ? '디지털·가전' :
+                         item.category === 'leisure' ? '레저' :
+                         item.category === 'life' ? '생활용품' :
+                         item.category === 'kids' ? '유아' :
+                         item.category === 'vehicles' ? '차량' :
+                         item.category === 'share' ? '나눔' : item.category}
+                      </span>
+                      {timeAgo && (
+                        <>
+                          <span className="listing-dot">·</span>
+                          <span className="listing-time">{timeAgo}</span>
+                        </>
+                      )}
                     </div>
+
+                    {conditionLabel && (
+                      <div className="listing-condition-tag">
+                        {conditionLabel}
+                      </div>
+                    )}
                   </div>
                   
                   <div className="listing-price-row">
-                    {item.status && item.status !== 'available' && (
-                      <span className={`listing-status ${item.status}`}>
-                        {item.status === 'sold' ? '거래완료' : '예약중'}
+                    <div className="price-wrap">
+                      {item.status && item.status !== 'available' && (
+                        <span className={`listing-status ${item.status}`}>
+                          {item.status === 'sold' ? '거래완료' : '예약중'}
+                        </span>
+                      )}
+                      <span className={`listing-price ${isGiveawayItem ? 'giveaway' : ''}`}>
+                        {displayPrice}
                       </span>
-                    )}
-                    <span className="listing-price">{displayPrice}</span>
-                  </div>
-                  
-                  <div className="listing-actions-bottom">
-                    {item.favoritesCount > 0 && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                        <RiHeart3Line /> {item.favoritesCount}
-                      </span>
-                    )}
+                      {item.isNegotiable && !isGiveawayItem && (
+                        <span className="negotiable-pill">제안가능</span>
+                      )}
+                    </div>
+
+                    <div className="listing-icons-stats">
+                      {item.favoritesCount > 0 && (
+                        <span className="stat-item">
+                          <RiHeart3Line size={15} /> {item.favoritesCount}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             );
-          })}
-        </div>
+          })
+        )}
+      </div>
+
+      {/* Floating Action Button (FAB) for Creating Listing */}
+      {isValidUser && userCanWrite && (
+        <button 
+          className="floating-write-fab"
+          onClick={() => {
+            if (showWriteForm) {
+              cancelEdit();
+            } else {
+              setShowWriteForm(true);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }}
+          title="중고물품 등록"
+        >
+          <RiAddLine size={24} />
+          <span>글쓰기</span>
+        </button>
+      )}
 
       {/* Detail Modal */}
       {selectedListing && (() => {
@@ -708,24 +979,28 @@ export default function MarketplacePage() {
         const isOwner = userProfile?.uid === item.sellerUid || userProfile?.isAdmin;
         const isFavorited = item.favoritesUsers?.includes(userProfile?.uid);
         const isSold = item.status === 'sold';
-        const maskedName = item.sellerEmail ? (item.sellerEmail.substring(0, 3) + '***') : (item.sellerName ? (item.sellerName.substring(0, 3) + '***') : '익명***');
+        const maskedName = item.sellerEmail ? (item.sellerEmail.substring(0, 3) + '***') : (item.sellerName ? (item.sellerName.substring(0, 3) + '***') : '이웃***');
         const timeAgo = item.createdAt ? getRelativeTimeString(item.createdAt) : '';
 
+        const isGiveawayItem = item.isGiveaway || item.category === 'share';
         let displayPrice = '';
-        if (item.category === 'share') {
-          displayPrice = '공짜(무료)';
+        if (isGiveawayItem) {
+          displayPrice = '나눔🧡';
         } else {
           const numPrice = (item.price || '').replace(/[^0-9.]/g, '');
-          displayPrice = numPrice ? Number(numPrice).toLocaleString() + ' PHP' : '(내용확인)';
+          displayPrice = numPrice ? `${Number(numPrice).toLocaleString()} PHP` : '가격협의';
         }
+
+        const conditionLabel = ITEM_CONDITIONS.find(c => c.id === item.condition)?.label;
+        const itemRegion = item.region || 'Cebu City';
 
         return (
           <div className="detail-modal-overlay" onClick={handleCloseListing}>
             <div className="detail-modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="detail-modal-header">
-                <h3>매물 상세정보</h3>
+                <h3>매물 상세</h3>
                 <button className="close-modal-btn" onClick={handleCloseListing}>
-                  <RiCloseCircleLine />
+                  <RiCloseCircleLine size={24} />
                 </button>
               </div>
               
@@ -756,53 +1031,69 @@ export default function MarketplacePage() {
                         src={item.images && item.images.length > 0 ? item.images[0] : '/default_cafe.png'}
                         images={item.images || []}
                         alt={item.title}
-                        style={{ filter: isSold ? 'grayscale(100%) brightness(50%)' : 'none' }}
+                        style={{ filter: isSold ? 'grayscale(80%)' : 'none' }}
                       />
                     </div>
                     
                     <div className="detail-info">
+                      {/* Seller Profile row (Karrot style) */}
                       <div className="detail-seller-row">
                         <div className="seller-avatar-placeholder">
-                          <RiShieldUserLine size={20} />
+                          <RiShieldUserLine size={24} color="#ea580c" />
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{maskedName}</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <LevelBadge level={item.sellerLevel} />
+                        <div className="seller-meta-details">
+                          <div className="seller-name-line">
+                            <span className="seller-name">{maskedName}</span>
+                            <LevelBadge level={item.sellerLevel || 1} />
                           </div>
+                          <span className="seller-region-text">📍 {itemRegion} 이웃</span>
+                        </div>
+                        
+                        {/* Karrot style manner temperature badge */}
+                        <div className="manner-temp-box">
+                          <span className="temp-val">36.5℃</span>
+                          <span className="temp-label">매너온도</span>
                         </div>
                       </div>
 
                       <h2 className="detail-title">{item.title}</h2>
+                      
                       <div className="detail-meta">
-                        {item.category === 'furniture' ? '가구' : 
-                         item.category === 'etc' ? '기타' :
-                         item.category === 'books' ? '도서' :
-                         item.category === 'electronics' ? '디지털·가전' :
-                         item.category === 'leisure' ? '레저' :
-                         item.category === 'life' ? '생활용품' :
-                         item.category === 'kids' ? '유아' :
-                         item.category === 'vehicles' ? '차량' :
-                         item.category === 'share' ? '나눔' : item.category} 
-                        {timeAgo ? ` · ${timeAgo}` : ''}
+                        <span className="meta-category">
+                          {item.category === 'furniture' ? '가구' : 
+                           item.category === 'etc' ? '기타' :
+                           item.category === 'books' ? '도서' :
+                           item.category === 'electronics' ? '디지털·가전' :
+                           item.category === 'leisure' ? '레저' :
+                           item.category === 'life' ? '생활용품' :
+                           item.category === 'kids' ? '유아' :
+                           item.category === 'vehicles' ? '차량' :
+                           item.category === 'share' ? '나눔' : item.category}
+                        </span>
+                        {conditionLabel && <span className="meta-condition">· 상태: {conditionLabel}</span>}
+                        {timeAgo && <span className="meta-time">· {timeAgo}</span>}
                       </div>
 
                       <div className="detail-desc">{item.description}</div>
 
+                      {/* Trade location & Contact Box */}
                       <div className="detail-contact-box">
-                        <h4>거래 희망 장소 및 연락처</h4>
+                        <h4>📍 직거래 희망 지역 & 판매자 연락처</h4>
+                        <div className="trade-region-banner">
+                          <strong>거래 지역:</strong> {itemRegion}
+                        </div>
                         <div className="contact-row">
                           {userCanViewContact || isOwner ? (
                             item.contactList && item.contactList.length > 0 ? (
                               item.contactList.map((contact, idx) => (
-                                <span key={idx} style={{ marginRight: '12px' }}>
-                                  <strong>{contact.type === 'phone' ? 'TEL' : (contact.type === 'kakao' ? '카카오톡' : contact.type.toUpperCase())}:</strong> {contact.value}
+                                <span key={idx} className="contact-chip">
+                                  <strong>{contact.type === 'phone' ? 'TEL' : (contact.type === 'kakao' ? '카톡' : contact.type.toUpperCase())}:</strong> {contact.value}
                                 </span>
                               ))
                             ) : (
                               <>
-                                <span>TEL: {item.phone}</span>
-                                {snsInfo && <span style={{ marginLeft: '12px' }}>{snsInfo.name}: {snsInfo.handle}</span>}
+                                <span className="contact-chip"><strong>TEL:</strong> {item.phone}</span>
+                                {snsInfo && <span className="contact-chip"><strong>{snsInfo.name}:</strong> {snsInfo.handle}</span>}
                               </>
                             )
                           ) : (
@@ -817,68 +1108,91 @@ export default function MarketplacePage() {
               
               {userCanRead && (
                 <div className="detail-footer">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div className="footer-left-wrap">
                     <button 
-                      className="btn" 
+                      className="btn-detail-fav" 
                       onClick={(e) => { e.stopPropagation(); toggleMarketplaceFavorite(item.id, userProfile?.uid); }}
-                      style={{ padding: '8px', background: 'transparent', border: 'none', color: isFavorited ? '#ef4444' : '#94a3b8', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}
                     >
-                      {isFavorited ? <RiHeart3Fill size={24} /> : <RiHeart3Line size={24} />}
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{item.favoritesCount || 0}</span>
+                      {isFavorited ? <RiHeart3Fill size={26} color="#ef4444" /> : <RiHeart3Line size={26} color="#94a3b8" />}
+                      <span className="fav-count">{item.favoritesCount || 0}</span>
                     </button>
                     
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div className="footer-price-col">
+                      <div className="footer-price-main">
+                        <span className={`detail-footer-price ${isGiveawayItem ? 'giveaway' : ''}`}>
+                          {displayPrice}
+                        </span>
+                        {item.isNegotiable && !isGiveawayItem && (
+                          <span className="negotiable-pill">제안가능</span>
+                        )}
+                      </div>
                       {item.status && item.status !== 'available' && (
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: item.status === 'sold' ? '#64748b' : '#10b981' }}>
+                        <span className={`status-badge-footer ${item.status}`}>
                           {item.status === 'sold' ? '거래완료' : '예약중'}
                         </span>
                       )}
-                      <span className="detail-footer-price">{displayPrice}</span>
                     </div>
                   </div>
 
                   <div className="detail-actions">
                     {isOwner ? (
-                      <>
+                      <div className="owner-action-group">
                         <select 
-                          className="form-select" 
+                          className="form-select status-select-footer" 
                           value={item.status || 'available'} 
-                          onChange={(e) => { e.stopPropagation(); updateMarketplaceStatus(item.id, e.target.value); setSelectedListing({...item, status: e.target.value}); }}
-                          style={{ padding: '6px 10px', fontSize: '0.85rem', width: 'auto', background: '#f8fafc' }}
+                          onChange={(e) => { 
+                            e.stopPropagation(); 
+                            updateMarketplaceStatus(item.id, e.target.value); 
+                            setSelectedListing({...item, status: e.target.value}); 
+                          }}
                         >
                           <option value="available">판매중</option>
                           <option value="reserved">예약중</option>
                           <option value="sold">거래완료</option>
                         </select>
-                        <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleBump(item); }} title="끌어올리기">
-                          <RiArrowUpCircleLine />
+                        <button className="btn btn-secondary icon-btn-footer" onClick={(e) => { e.stopPropagation(); handleBump(item); }} title="끌어올리기">
+                          <RiArrowUpCircleLine size={18} />
                         </button>
-                        <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleCloseListing(); openEditForm(item); }}>
-                          <RiEditLine />
+                        <button className="btn btn-secondary icon-btn-footer" onClick={(e) => { e.stopPropagation(); handleCloseListing(); openEditForm(item); }} title="수정">
+                          <RiEditLine size={18} />
                         </button>
-                        <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleCloseListing(); handleDelete(item.id); }} style={{ color: '#ef4444' }}>
-                          <RiDeleteBinLine />
+                        <button className="btn btn-secondary icon-btn-footer btn-del" onClick={(e) => { e.stopPropagation(); handleCloseListing(); handleDelete(item.id); }} title="삭제">
+                          <RiDeleteBinLine size={18} />
                         </button>
-                      </>
+                      </div>
                     ) : (
-                      <button className="btn btn-primary" onClick={(e) => { 
-                        e.stopPropagation(); 
-                        if (window.confirm('이 게시물을 신고하시겠습니까?')) {
-                          addSubmission({
-                            type: 'report',
-                            field: '게시물 신고',
-                            oldValue: item.title,
-                            newValue: '신고 접수',
-                            uid: userProfile?.uid || 'guest',
-                            userName: userProfile?.displayName || '방문자',
-                            placeId: item.id,
-                            placeName: '중고거래 게시물'
-                          });
-                          alert('신고가 접수되었습니다.'); 
-                        }
-                      }}>
-                        <RiFlag2Line /> 신고
-                      </button>
+                      <div className="buyer-action-group">
+                        <button 
+                          className="btn btn-primary start-chat-btn" 
+                          onClick={() => handleStartChat(item)}
+                          disabled={isSold}
+                        >
+                          <RiChat1Line size={18} />
+                          <span>채팅으로 거래하기</span>
+                        </button>
+                        <button 
+                          className="btn btn-secondary report-btn-footer" 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (window.confirm('이 게시물을 신고하시겠습니까?')) {
+                              addSubmission({
+                                type: 'report',
+                                field: '게시물 신고',
+                                oldValue: item.title,
+                                newValue: '신고 접수',
+                                uid: userProfile?.uid || 'guest',
+                                userName: userProfile?.displayName || '방문자',
+                                placeId: item.id,
+                                placeName: '중고거래 게시물'
+                              });
+                              alert('신고가 접수되었습니다.'); 
+                            }
+                          }}
+                          title="신고"
+                        >
+                          <RiFlag2Line size={16} />
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -887,6 +1201,32 @@ export default function MarketplacePage() {
           </div>
         );
       })()}
+
+      {/* 1:1 Live Chat Window */}
+      {activeChatRoom && (
+        <MarketChatModal
+          room={activeChatRoom}
+          currentUser={userProfile}
+          onClose={() => setActiveChatRoom(null)}
+          onBackToList={() => {
+            setActiveChatRoom(null);
+            setShowChatListModal(true);
+          }}
+        />
+      )}
+
+      {/* Chat Rooms List Modal */}
+      {showChatListModal && (
+        <MarketChatListModal
+          rooms={chatRooms}
+          currentUser={userProfile}
+          onClose={() => setShowChatListModal(false)}
+          onSelectRoom={(room) => {
+            setShowChatListModal(false);
+            setActiveChatRoom(room);
+          }}
+        />
+      )}
 
       {showPhoneAuthModal && (
         <PhoneAuthModal onClose={() => setShowPhoneAuthModal(false)} />
