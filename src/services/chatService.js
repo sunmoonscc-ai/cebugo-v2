@@ -12,10 +12,10 @@ import {
   updateDoc
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { compressImageDataUrl, uploadImageToFirebaseStorage } from '../utils/imageHelper';
 
 /**
  * Creates or retrieves an existing 1:1 chat room for a marketplace item.
- * Room ID rule: composite of itemId + sorted uids or unique hash
  */
 export async function getOrCreateChatRoom({ listing, currentUser }) {
   if (!currentUser?.uid || !listing?.id || !listing?.sellerUid) {
@@ -102,7 +102,7 @@ export function subscribeChatMessages(roomId, callback) {
 }
 
 /**
- * Send a chat message (text, quick question, price proposal, or appointment)
+ * Send a chat message (text, image, proposal, appointment, review)
  */
 export async function sendChatMessage({ 
   roomId, 
@@ -119,13 +119,24 @@ export async function sendChatMessage({
   const messagesRef = collection(db, 'cebugo_chats', roomId, 'messages');
   const roomRef = doc(db, 'cebugo_chats', roomId);
 
+  let finalPayload = payload;
+
+  // If type is image, compress & upload to storage
+  if (type === 'image' && payload?.imageUrl) {
+    if (payload.imageUrl.startsWith('data:image')) {
+      const compressed = await compressImageDataUrl(payload.imageUrl, 1200, 0.8);
+      const cloudUrl = await uploadImageToFirebaseStorage(compressed, 'chat_images');
+      finalPayload = { ...payload, imageUrl: cloudUrl };
+    }
+  }
+
   // 1. Add message doc
   await addDoc(messagesRef, {
     senderUid,
     senderName,
     text: trimmedText,
-    type, // 'text' | 'proposal' | 'appointment'
-    payload,
+    type, // 'text' | 'image' | 'proposal' | 'appointment' | 'review'
+    payload: finalPayload,
     createdAt: serverTimestamp()
   });
 
@@ -135,8 +146,10 @@ export async function sendChatMessage({
   const currentOtherCount = currentUnread[otherUid] || 0;
 
   let displayLast = trimmedText;
+  if (type === 'image') displayLast = '📷 사진을 보냈습니다.';
   if (type === 'proposal') displayLast = `[가격 제안] ${trimmedText}`;
   if (type === 'appointment') displayLast = `[거래 약속] ${trimmedText}`;
+  if (type === 'review') displayLast = `⭐ [거래 후기] ${trimmedText}`;
 
   await updateDoc(roomRef, {
     lastMessage: displayLast,
@@ -166,16 +179,93 @@ export async function markRoomAsRead(roomId, currentUserUid) {
 export async function updateChatListingStatus({ roomId, listingId, newStatus }) {
   if (!roomId || !listingId || !newStatus) return;
 
-  // 1. Update listing in marketplace
   const listingRef = doc(db, 'cebugo_marketplace', listingId);
   await updateDoc(listingRef, {
     status: newStatus,
     updatedAt: new Date().toISOString()
   });
 
-  // 2. Update room cache
   const roomRef = doc(db, 'cebugo_chats', roomId);
   await updateDoc(roomRef, {
     listingStatus: newStatus
   });
+}
+
+/**
+ * Submit transaction review & manner rating
+ */
+export async function submitTransactionReview({
+  roomId,
+  listingId,
+  reviewerUid,
+  reviewerName,
+  targetUid,
+  rating, // 'good' | 'great' | 'bad'
+  mannerTags = [],
+  comment = ''
+}) {
+  if (!reviewerUid || !targetUid) return;
+
+  const reviewRef = collection(db, 'cebugo_reviews');
+  await addDoc(reviewRef, {
+    roomId,
+    listingId,
+    reviewerUid,
+    reviewerName,
+    targetUid,
+    rating,
+    mannerTags,
+    comment,
+    createdAt: serverTimestamp()
+  });
+
+  // Calculate manner temperature update
+  const userProfileRef = doc(db, 'cebugo_users', targetUid);
+  const userSnap = await getDoc(userProfileRef);
+  if (userSnap.exists()) {
+    const currentTemp = userSnap.data()?.mannerTemp || 36.5;
+    let tempDelta = 0.5;
+    if (rating === 'great') tempDelta = 1.0;
+    if (rating === 'bad') tempDelta = -0.8;
+    const newTemp = Math.min(99.0, Math.max(0.0, Math.round((currentTemp + tempDelta) * 10) / 10));
+    await updateDoc(userProfileRef, {
+      mannerTemp: newTemp
+    });
+  }
+}
+
+/**
+ * User Keyword Watch Service (Item 3)
+ */
+export async function getUserKeywords(uid) {
+  if (!uid) return [];
+  const ref = doc(db, 'cebugo_keyword_watch', uid);
+  const snap = await getDoc(ref);
+  return snap.exists() ? (snap.data()?.keywords || []) : [];
+}
+
+export async function addUserKeyword(uid, keyword) {
+  if (!uid || !keyword?.trim()) return;
+  const cleanKeyword = keyword.trim().toLowerCase();
+  const ref = doc(db, 'cebugo_keyword_watch', uid);
+  const snap = await getDoc(ref);
+  const existing = snap.exists() ? (snap.data()?.keywords || []) : [];
+  if (!existing.includes(cleanKeyword)) {
+    await setDoc(ref, {
+      keywords: [...existing, cleanKeyword],
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  }
+}
+
+export async function removeUserKeyword(uid, keyword) {
+  if (!uid || !keyword) return;
+  const ref = doc(db, 'cebugo_keyword_watch', uid);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    const existing = snap.data()?.keywords || [];
+    await updateDoc(ref, {
+      keywords: existing.filter(k => k !== keyword)
+    });
+  }
 }

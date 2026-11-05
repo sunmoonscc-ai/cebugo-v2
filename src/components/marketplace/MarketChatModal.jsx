@@ -8,14 +8,18 @@ import {
   RiMoneyDollarCircleLine,
   RiCalendarEventLine,
   RiCheckLine,
-  RiMapPinLine
+  RiMapPinLine,
+  RiImageAddLine,
+  RiStarFill
 } from 'react-icons/ri';
 import { 
   subscribeChatMessages, 
   sendChatMessage, 
   markRoomAsRead,
-  updateChatListingStatus 
+  updateChatListingStatus,
+  submitTransactionReview
 } from '../../services/chatService';
+import ReviewModal from './ReviewModal';
 import './MarketChatModal.css';
 
 const QUICK_QUESTIONS = [
@@ -37,9 +41,13 @@ export default function MarketChatModal({ room, currentUser, onClose, onBackToLi
   const [appointmentPlace, setAppointmentPlace] = useState('');
   const [appointmentTime, setAppointmentTime] = useState('');
 
+  // Review Modal state (Item 1)
+  const [showReviewModal, setShowReviewModal] = useState(false);
+
   const [currentListingStatus, setCurrentListingStatus] = useState(room?.listingStatus || 'available');
 
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const isSeller = currentUser?.uid === room?.sellerUid;
   const otherUid = isSeller ? room?.buyerUid : room?.sellerUid;
@@ -65,11 +73,12 @@ export default function MarketChatModal({ room, currentUser, onClose, onBackToLi
   const handleSend = async (e, textToSend = null, type = 'text', payload = null) => {
     if (e) e.preventDefault();
     const finalMsg = textToSend || inputText;
-    if (!finalMsg.trim() || sending) return;
+    if (!finalMsg.trim() && type === 'text') return;
+    if (sending) return;
 
     try {
       setSending(true);
-      if (!textToSend) setInputText('');
+      if (!textToSend && type === 'text') setInputText('');
       await sendChatMessage({
         roomId: room.id,
         senderUid: currentUser.uid,
@@ -85,6 +94,20 @@ export default function MarketChatModal({ room, currentUser, onClose, onBackToLi
     } finally {
       setSending(false);
     }
+  };
+
+  // Chat Image Upload (Item 2)
+  const handleImageFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const dataUrl = event.target.result;
+      await handleSend(null, '사진', 'image', { imageUrl: dataUrl });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   // Submit Price Proposal
@@ -123,9 +146,38 @@ export default function MarketChatModal({ room, currentUser, onClose, onBackToLi
       setCurrentListingStatus(newStatus);
       const statusLabel = newStatus === 'sold' ? '거래완료' : (newStatus === 'reserved' ? '예약중' : '판매중');
       await handleSend(null, `판매자가 매물 상태를 [${statusLabel}](으)로 변경했습니다.`);
+      if (newStatus === 'sold') {
+        setShowReviewModal(true);
+      }
     } catch (err) {
       console.error('Failed to update status:', err);
       alert('상태 변경에 실패했습니다.');
+    }
+  };
+
+  // Handle Review Submission (Item 1)
+  const handleReviewSubmit = async (reviewData) => {
+    try {
+      await submitTransactionReview({
+        roomId: room.id,
+        listingId: room.listingId,
+        reviewerUid: currentUser.uid,
+        reviewerName: currentUser.displayName || '사용자',
+        targetUid: otherUid,
+        rating: reviewData.rating,
+        mannerTags: reviewData.mannerTags,
+        comment: reviewData.comment
+      });
+
+      const ratingLabel = reviewData.rating === 'great' ? '최고예요! 👍' : (reviewData.rating === 'good' ? '좋았어요 😊' : '별로예요');
+      const tagsText = reviewData.mannerTags.length > 0 ? ` (${reviewData.mannerTags.join(', ')})` : '';
+      await handleSend(null, `[거래 후기 작성 완료] ${ratingLabel}${tagsText}${reviewData.comment ? ` : "${reviewData.comment}"` : ''}`, 'review', reviewData);
+      
+      setShowReviewModal(false);
+      alert('거래 후기가 등록되었습니다! 상대방의 매너온도에 반영됩니다.');
+    } catch (e) {
+      console.error(e);
+      alert('후기 등록 중 오류가 발생했습니다.');
     }
   };
 
@@ -212,7 +264,16 @@ export default function MarketChatModal({ room, currentUser, onClose, onBackToLi
                 <div key={msg.id} className={`chat-bubble-row ${isMine ? 'mine' : 'theirs'}`}>
                   {!isMine && <div className="bubble-sender">{msg.senderName}</div>}
                   <div className="bubble-content-wrap">
-                    {msg.type === 'proposal' ? (
+                    {msg.type === 'image' ? (
+                      <div className="chat-bubble-image-wrap">
+                        <img 
+                          src={msg.payload?.imageUrl || msg.text} 
+                          alt="chat-pic" 
+                          className="chat-sent-image" 
+                          onClick={() => window.open(msg.payload?.imageUrl || msg.text, '_blank')}
+                        />
+                      </div>
+                    ) : msg.type === 'proposal' ? (
                       <div className="chat-card-proposal">
                         <div className="card-proposal-header">
                           <RiMoneyDollarCircleLine size={18} />
@@ -233,6 +294,14 @@ export default function MarketChatModal({ room, currentUser, onClose, onBackToLi
                           <div><RiMapPinLine size={14} /> <strong>장소:</strong> {msg.payload?.place}</div>
                           <div><RiCalendarEventLine size={14} /> <strong>일시:</strong> {msg.payload?.time}</div>
                         </div>
+                      </div>
+                    ) : msg.type === 'review' ? (
+                      <div className="chat-card-review">
+                        <div className="card-review-header">
+                          <RiStarFill size={16} color="#f59e0b" />
+                          <span>따뜻한 거래 후기가 도착했습니다!</span>
+                        </div>
+                        <div className="card-review-text">{msg.text}</div>
                       </div>
                     ) : (
                       <div className="chat-bubble">
@@ -262,7 +331,7 @@ export default function MarketChatModal({ room, currentUser, onClose, onBackToLi
           ))}
         </div>
 
-        {/* Action Buttons Bar: Price Proposal & Appointment */}
+        {/* Action Buttons Bar: Price Proposal, Appointment, and Leave Review */}
         <div className="chat-action-tools-bar">
           <button 
             type="button" 
@@ -285,6 +354,14 @@ export default function MarketChatModal({ room, currentUser, onClose, onBackToLi
           >
             <RiCalendarEventLine size={16} />
             <span>약속 잡기</span>
+          </button>
+          <button 
+            type="button" 
+            className="action-tool-btn review-btn"
+            onClick={() => setShowReviewModal(true)}
+          >
+            <RiStarFill size={14} color="#f59e0b" />
+            <span>거래 후기</span>
           </button>
         </div>
 
@@ -336,6 +413,23 @@ export default function MarketChatModal({ room, currentUser, onClose, onBackToLi
 
         {/* Input Bar */}
         <form className="chat-input-bar" onSubmit={handleSend}>
+          {/* Photo attach button (Item 2) */}
+          <button 
+            type="button" 
+            className="chat-photo-btn"
+            onClick={() => fileInputRef.current?.click()}
+            title="사진 전송"
+          >
+            <RiImageAddLine size={22} />
+          </button>
+          <input 
+            type="file" 
+            accept="image/*" 
+            ref={fileInputRef} 
+            onChange={handleImageFileChange} 
+            style={{ display: 'none' }} 
+          />
+
           <input
             type="text"
             className="chat-text-input"
@@ -352,6 +446,15 @@ export default function MarketChatModal({ room, currentUser, onClose, onBackToLi
           </button>
         </form>
       </div>
+
+      {/* Review Modal (Item 1) */}
+      {showReviewModal && (
+        <ReviewModal
+          targetName={otherName}
+          onClose={() => setShowReviewModal(false)}
+          onSubmit={handleReviewSubmit}
+        />
+      )}
     </div>
   );
 }

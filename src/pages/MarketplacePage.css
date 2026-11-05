@@ -34,6 +34,34 @@
   color: #64748b;
 }
 
+/* Header Quick Buttons */
+.header-quick-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.keyword-watch-trigger-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.keyword-watch-trigger-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
 /* Chat List Trigger Button in Header */
 .chat-list-trigger-btn {
   display: flex;

@@ -280,6 +280,27 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
+/* Chat Image (Item 2) */
+.chat-bubble-image-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+  max-width: 220px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: #000;
+}
+
+.chat-sent-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.chat-sent-image:hover {
+  transform: scale(1.02);
+}
+
 /* Custom Cards in chat: Proposal */
 .chat-card-proposal {
   background: #ffffff;
@@ -354,6 +375,32 @@
   gap: 4px;
 }
 
+/* Custom Cards in chat: Review (Item 1) */
+.chat-card-review {
+  background: #fffbeb;
+  border: 2px solid #f59e0b;
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+  min-width: 220px;
+}
+
+.card-review-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #b45309;
+  margin-bottom: 4px;
+}
+
+.card-review-text {
+  font-size: 0.85rem;
+  color: #1e293b;
+  line-height: 1.4;
+}
+
 .bubble-time {
   font-size: 0.68rem;
   color: #94a3b8;
@@ -394,7 +441,7 @@
   color: #ea580c;
 }
 
-/* Chat Action Tools Bar (Proposal & Appointment) */
+/* Chat Action Tools Bar (Proposal & Appointment & Review) */
 .chat-action-tools-bar {
   display: flex;
   align-items: center;
@@ -402,6 +449,8 @@
   padding: 6px 14px;
   background: #fafaf9;
   border-top: 1px solid #f1f5f9;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
 .action-tool-btn {
@@ -417,11 +466,18 @@
   color: #475569;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .action-tool-btn:hover {
   background: #f1f5f9;
   color: #1e293b;
+}
+
+.action-tool-btn.review-btn {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #b45309;
 }
 
 /* Drawers */
@@ -497,6 +553,23 @@
   padding: 10px 14px;
   background: #ffffff;
   border-top: 1px solid #e2e8f0;
+}
+
+.chat-photo-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 50%;
+  transition: color 0.2s;
+}
+
+.chat-photo-btn:hover {
+  color: #ea580c;
 }
 
 .chat-text-input {

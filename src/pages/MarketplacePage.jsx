@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { usePlaces } from '../context/PlacesContext';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 import PhoneAuthModal from '../components/modals/PhoneAuthModal';
 import { LevelBadge, PhoneVerifiedBadge, KakaoVerifiedBadge } from '../components/common/Badge';
 import { parseSnsEntry } from '../utils/phoneSnsClassifier';
@@ -22,7 +22,8 @@ import {
   RiCloseCircleLine,
   RiChat1Line,
   RiMapPinLine,
-  RiGiftLine
+  RiGiftLine,
+  RiNotification3Line
 } from 'react-icons/ri';
 import ZoomableImage from '../components/common/ZoomableImage';
 import { getRelativeTimeString } from '../utils/dateHelper';
@@ -32,6 +33,7 @@ import {
 } from '../services/chatService';
 import MarketChatModal from '../components/marketplace/MarketChatModal';
 import MarketChatListModal from '../components/marketplace/MarketChatListModal';
+import KeywordWatchModal from '../components/marketplace/KeywordWatchModal';
 import './MarketplacePage.css';
 
 // 5 Regions
@@ -70,11 +72,13 @@ export default function MarketplacePage() {
   const [showWriteForm, setShowWriteForm] = useState(false);
   const [editingListingId, setEditingListingId] = useState(null);
   const [selectedListing, setSelectedListing] = useState(null);
+  const [sellerMannerTemp, setSellerMannerTemp] = useState(36.5);
 
   // Chat States
   const [chatRooms, setChatRooms] = useState([]);
   const [activeChatRoom, setActiveChatRoom] = useState(null);
   const [showChatListModal, setShowChatListModal] = useState(false);
+  const [showKeywordModal, setShowKeywordModal] = useState(false);
 
   // Subscribe to user chat rooms for unread counts
   useEffect(() => {
@@ -100,17 +104,35 @@ export default function MarketplacePage() {
         setShowChatListModal(false);
         return;
       }
+      if (showKeywordModal) {
+        setShowKeywordModal(false);
+        return;
+      }
       if (selectedListing) {
         setSelectedListing(null);
       }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [selectedListing, activeChatRoom, showChatListModal]);
+  }, [selectedListing, activeChatRoom, showChatListModal, showKeywordModal]);
 
-  const handleOpenListing = (item) => {
+  const handleOpenListing = async (item) => {
     setSelectedListing(item);
     window.history.pushState({ modal: 'marketplace_detail' }, '');
+
+    // Fetch seller's real manner temperature
+    if (item.sellerUid) {
+      try {
+        const snap = await getDoc(doc(db, 'cebugo_users', item.sellerUid));
+        if (snap.exists() && snap.data()?.mannerTemp !== undefined) {
+          setSellerMannerTemp(snap.data().mannerTemp);
+        } else {
+          setSellerMannerTemp(36.5);
+        }
+      } catch (e) {
+        setSellerMannerTemp(36.5);
+      }
+    }
   };
 
   const handleCloseListing = () => {
@@ -504,17 +526,27 @@ export default function MarketplacePage() {
             <span className="header-info-sub"> - 당근처럼 쉽고 빠른 세부 한인 이웃 직거래</span>
           </h2>
           {isValidUser && (
-            <button 
-              className="chat-list-trigger-btn"
-              onClick={() => setShowChatListModal(true)}
-              title="내 당근채팅 목록"
-            >
-              <RiChat1Line size={20} />
-              <span>채팅</span>
-              {totalUnreadCount > 0 && (
-                <span className="chat-badge-count">{totalUnreadCount}</span>
-              )}
-            </button>
+            <div className="header-quick-btns">
+              <button 
+                className="keyword-watch-trigger-btn"
+                onClick={() => setShowKeywordModal(true)}
+                title="키워드 알림 설정"
+              >
+                <RiNotification3Line size={18} />
+                <span>키워드</span>
+              </button>
+              <button 
+                className="chat-list-trigger-btn"
+                onClick={() => setShowChatListModal(true)}
+                title="내가 참여 중인 채팅방 목록"
+              >
+                <RiChat1Line size={20} />
+                <span>내 채팅목록</span>
+                {totalUnreadCount > 0 && (
+                  <span className="chat-badge-count">{totalUnreadCount}</span>
+                )}
+              </button>
+            </div>
           )}
         </div>
 
@@ -976,7 +1008,9 @@ export default function MarketplacePage() {
       {selectedListing && (() => {
         const item = selectedListing;
         const snsInfo = parseSnsEntry(item.sns);
-        const isOwner = userProfile?.uid === item.sellerUid || userProfile?.isAdmin;
+        // Distinguish whether viewer is the actual seller who posted this item
+        const isRealSeller = userProfile?.uid === item.sellerUid;
+        const isAdminUser = !!userProfile?.isAdmin;
         const isFavorited = item.favoritesUsers?.includes(userProfile?.uid);
         const isSold = item.status === 'sold';
         const maskedName = item.sellerEmail ? (item.sellerEmail.substring(0, 3) + '***') : (item.sellerName ? (item.sellerName.substring(0, 3) + '***') : '이웃***');
@@ -1049,9 +1083,9 @@ export default function MarketplacePage() {
                           <span className="seller-region-text">📍 {itemRegion} 이웃</span>
                         </div>
                         
-                        {/* Karrot style manner temperature badge */}
+                        {/* Karrot style manner temperature badge with real data */}
                         <div className="manner-temp-box">
-                          <span className="temp-val">36.5℃</span>
+                          <span className="temp-val">{sellerMannerTemp.toFixed(1)}℃</span>
                           <span className="temp-label">매너온도</span>
                         </div>
                       </div>
@@ -1083,7 +1117,7 @@ export default function MarketplacePage() {
                           <strong>거래 지역:</strong> {itemRegion}
                         </div>
                         <div className="contact-row">
-                          {userCanViewContact || isOwner ? (
+                          {userCanViewContact || isRealSeller || isAdminUser ? (
                             item.contactList && item.contactList.length > 0 ? (
                               item.contactList.map((contact, idx) => (
                                 <span key={idx} className="contact-chip">
@@ -1135,7 +1169,8 @@ export default function MarketplacePage() {
                   </div>
 
                   <div className="detail-actions">
-                    {isOwner ? (
+                    {/* If user is the seller who posted this item */}
+                    {isRealSeller ? (
                       <div className="owner-action-group">
                         <select 
                           className="form-select status-select-footer" 
@@ -1161,6 +1196,7 @@ export default function MarketplacePage() {
                         </button>
                       </div>
                     ) : (
+                      /* Buyer or Admin viewing other seller's item */
                       <div className="buyer-action-group">
                         <button 
                           className="btn btn-primary start-chat-btn" 
@@ -1170,6 +1206,11 @@ export default function MarketplacePage() {
                           <RiChat1Line size={18} />
                           <span>채팅으로 거래하기</span>
                         </button>
+                        {isAdminUser && (
+                          <button className="btn btn-secondary icon-btn-footer btn-del" onClick={(e) => { e.stopPropagation(); handleCloseListing(); handleDelete(item.id); }} title="관리자 삭제">
+                            <RiDeleteBinLine size={18} />
+                          </button>
+                        )}
                         <button 
                           className="btn btn-secondary report-btn-footer" 
                           onClick={(e) => { 
@@ -1225,6 +1266,14 @@ export default function MarketplacePage() {
             setShowChatListModal(false);
             setActiveChatRoom(room);
           }}
+        />
+      )}
+
+      {/* Keyword Watch Modal (Item 3) */}
+      {showKeywordModal && (
+        <KeywordWatchModal
+          currentUser={userProfile}
+          onClose={() => setShowKeywordModal(false)}
         />
       )}
 
