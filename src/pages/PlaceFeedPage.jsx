@@ -277,7 +277,7 @@ export default function PlaceFeedPage() {
     .filter((p) => {
       const status = getPostStatus(p).status;
       if (canPost) return true; // 관리자 및 광고주는 예약/종료된 게시물도 볼 수 있음
-      return status === 'active'; // 일반 사용자는 현재 진행 중인 게시물만 볼 수 있음
+      return status !== 'expired'; // 일반 사용자도 진행 중 및 예정된(12월 행사 등) 게시물 모두 열람 가능
     })
     .filter((p) => !selectedAdvertiserId || p.advertiserId === selectedAdvertiserId)
     .filter((p) => isPostActiveInMonth(p, filterMonth))
@@ -502,7 +502,7 @@ export default function PlaceFeedPage() {
           onClick={() => setActiveTab('ad')}
         >
           <RiMegaphoneLine className="tab-icon" />
-          <span>광고 ({posts.filter((p) => p.category === 'ad' && getPostStatus(p).status === 'active').length})</span>
+          <span>광고 ({posts.filter((p) => p.category === 'ad' && (canPost ? true : getPostStatus(p).status !== 'expired')).length})</span>
         </button>
 
         <button
@@ -510,7 +510,7 @@ export default function PlaceFeedPage() {
           onClick={() => setActiveTab('event')}
         >
           <RiCalendarEventLine className="tab-icon" />
-          <span>이벤트 ({posts.filter((p) => p.category === 'event' && getPostStatus(p).status === 'active').length})</span>
+          <span>이벤트 ({posts.filter((p) => p.category === 'event' && (canPost ? true : getPostStatus(p).status !== 'expired')).length})</span>
         </button>
       </div>
 
@@ -606,7 +606,7 @@ export default function PlaceFeedPage() {
                         📍 {post.location}
                       </span>
                     )}
-                    {canPost && (() => {
+                    {(() => {
                       const statusInfo = getPostStatus(post);
                       if (statusInfo.status === 'scheduled') {
                         return (
@@ -615,7 +615,7 @@ export default function PlaceFeedPage() {
                           </span>
                         );
                       }
-                      if (statusInfo.status === 'expired') {
+                      if (canPost && statusInfo.status === 'expired') {
                         return (
                           <span className="post-cat-badge" style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', fontWeight: 600 }}>
                             🔴 {statusInfo.label}
