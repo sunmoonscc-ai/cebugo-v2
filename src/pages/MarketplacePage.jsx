@@ -541,7 +541,7 @@ export default function MarketplacePage() {
                 title="내가 참여 중인 채팅방 목록"
               >
                 <RiChat1Line size={20} />
-                <span>내 채팅목록</span>
+                <span className="chat-btn-label">내 채팅</span>
                 {totalUnreadCount > 0 && (
                   <span className="chat-badge-count">{totalUnreadCount}</span>
                 )}

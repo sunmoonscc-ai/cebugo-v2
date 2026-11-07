@@ -55,6 +55,7 @@
   cursor: pointer;
   transition: all 0.2s;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .keyword-watch-trigger-btn:hover {
@@ -66,7 +67,7 @@
 .chat-list-trigger-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   padding: 6px 12px;
   border-radius: 20px;
   background: #fff7ed;
@@ -78,6 +79,7 @@
   position: relative;
   transition: all 0.2s;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .chat-list-trigger-btn:hover {
@@ -91,6 +93,48 @@
   padding: 1px 6px;
   border-radius: 10px;
   font-weight: 700;
+  line-height: 1.2;
+}
+
+@media (max-width: 600px) {
+  .marketplace-header {
+    padding: 14px 16px;
+  }
+  
+  .header-info {
+    gap: 8px;
+  }
+
+  .header-info h2 {
+    font-size: 1.15rem;
+  }
+
+  .header-quick-btns {
+    gap: 6px;
+  }
+
+  .keyword-watch-trigger-btn {
+    padding: 6px 10px;
+    font-size: 0.82rem;
+    gap: 3px;
+  }
+
+  .chat-list-trigger-btn {
+    padding: 6px 10px;
+    font-size: 0.82rem;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 400px) {
+  .header-info {
+    flex-wrap: wrap;
+  }
+  
+  .header-quick-btns {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 
 .user-eligibility-box {
