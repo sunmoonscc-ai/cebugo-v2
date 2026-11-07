@@ -121,9 +121,13 @@ export default function MarketplacePage() {
     window.history.pushState({ modal: 'marketplace_detail' }, '');
 
     // Fetch seller's real manner temperature
-    if (item.sellerUid) {
+    const targetSellerUid = item.sellerUid;
+    if (targetSellerUid) {
       try {
-        const snap = await getDoc(doc(db, 'cebugo_users', item.sellerUid));
+        let snap = await getDoc(doc(db, 'users', targetSellerUid));
+        if (!snap.exists()) {
+          snap = await getDoc(doc(db, 'cebugo_users', targetSellerUid));
+        }
         if (snap.exists() && snap.data()?.mannerTemp !== undefined) {
           setSellerMannerTemp(snap.data().mannerTemp);
         } else {
@@ -435,7 +439,7 @@ export default function MarketplacePage() {
       };
 
       setActiveChatRoom(targetRoom);
-      handleCloseListing();
+      setSelectedListing(null);
     } catch (err) {
       console.error('Chat error:', err);
       alert(err.message || '채팅방을 여는 중 오류가 발생했습니다.');
@@ -521,10 +525,12 @@ export default function MarketplacePage() {
       {/* Top Header Bar */}
       <div className="marketplace-header glass-card">
         <div className="header-info">
-          <h2>
-            <RiShoppingBagLine /> 세부 중고거래
-            <span className="header-info-sub"> - 당근처럼 쉽고 빠른 세부 한인 이웃 직거래</span>
-          </h2>
+          <div className="header-title-group">
+            <h2>
+              <RiShoppingBagLine /> 세부 중고거래
+            </h2>
+            <span className="header-info-sub">- 당근처럼 쉽고 빠른 세부 한인 이웃 직거래</span>
+          </div>
           {isValidUser && (
             <div className="header-quick-btns">
               <button 

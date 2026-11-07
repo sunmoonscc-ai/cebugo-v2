@@ -64,10 +64,10 @@ export async function getOrCreateChatRoom({ listing, currentUser }) {
 export function subscribeUserChatRooms(uid, callback) {
   if (!uid) return () => {};
 
+  // Note: Avoid compound query (where array-contains + orderBy) to prevent missing composite index error
   const q = query(
     collection(db, 'cebugo_chats'),
-    where('participants', 'array-contains', uid),
-    orderBy('lastMessageTime', 'desc')
+    where('participants', 'array-contains', uid)
   );
 
   return onSnapshot(q, (snapshot) => {
@@ -75,6 +75,14 @@ export function subscribeUserChatRooms(uid, callback) {
       id: doc.id,
       ...doc.data()
     }));
+    
+    // In-memory sort by lastMessageTime descending
+    rooms.sort((a, b) => {
+      const timeA = a.lastMessageTime?.toDate ? a.lastMessageTime.toDate().getTime() : (new Date(a.createdAt || 0).getTime());
+      const timeB = b.lastMessageTime?.toDate ? b.lastMessageTime.toDate().getTime() : (new Date(b.createdAt || 0).getTime());
+      return timeB - timeA;
+    });
+
     callback(rooms);
   }, (err) => {
     console.error('Error subscribing to chat rooms:', err);
@@ -220,15 +228,26 @@ export async function submitTransactionReview({
   });
 
   // Calculate manner temperature update
-  const userProfileRef = doc(db, 'cebugo_users', targetUid);
-  const userSnap = await getDoc(userProfileRef);
+  const userProfileRef = doc(db, 'users', targetUid);
+  const cebugoUserRef = doc(db, 'cebugo_users', targetUid);
+  
+  let userSnap = await getDoc(userProfileRef);
+  let refToUpdate = userProfileRef;
+  if (!userSnap.exists()) {
+    const altSnap = await getDoc(cebugoUserRef);
+    if (altSnap.exists()) {
+      userSnap = altSnap;
+      refToUpdate = cebugoUserRef;
+    }
+  }
+
   if (userSnap.exists()) {
     const currentTemp = userSnap.data()?.mannerTemp || 36.5;
     let tempDelta = 0.5;
     if (rating === 'great') tempDelta = 1.0;
     if (rating === 'bad') tempDelta = -0.8;
     const newTemp = Math.min(99.0, Math.max(0.0, Math.round((currentTemp + tempDelta) * 10) / 10));
-    await updateDoc(userProfileRef, {
+    await updateDoc(refToUpdate, {
       mannerTemp: newTemp
     });
   }

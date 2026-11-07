@@ -10,28 +10,39 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
+}
+
+.header-title-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
 }
 
 .header-info h2 {
   font-size: 1.25rem;
   font-weight: 700;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: 6px;
   margin: 0;
   color: #0f172a;
+  white-space: nowrap;
 }
 
 .header-info h2 svg {
   color: #ea580c;
+  flex-shrink: 0;
 }
 
 .header-info-sub {
   font-size: 0.8rem;
   font-weight: 400;
   color: #64748b;
+  white-space: nowrap;
 }
 
 /* Header Quick Buttons */
@@ -39,6 +50,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .keyword-watch-trigger-btn {
@@ -103,10 +115,22 @@
   
   .header-info {
     gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .header-title-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
   }
 
   .header-info h2 {
     font-size: 1.15rem;
+  }
+
+  .header-info-sub {
+    white-space: normal;
+    font-size: 0.75rem;
   }
 
   .header-quick-btns {
@@ -114,14 +138,14 @@
   }
 
   .keyword-watch-trigger-btn {
-    padding: 6px 10px;
-    font-size: 0.82rem;
+    padding: 5px 9px;
+    font-size: 0.8rem;
     gap: 3px;
   }
 
   .chat-list-trigger-btn {
-    padding: 6px 10px;
-    font-size: 0.82rem;
+    padding: 5px 9px;
+    font-size: 0.8rem;
     gap: 4px;
   }
 }
@@ -129,8 +153,13 @@
 @media (max-width: 400px) {
   .header-info {
     flex-wrap: wrap;
+    gap: 10px;
   }
   
+  .header-title-group {
+    width: 100%;
+  }
+
   .header-quick-btns {
     width: 100%;
     justify-content: flex-end;
@@ -147,6 +176,34 @@
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .user-eligibility-box {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+  
+  .eligibility-status {
+    flex-wrap: wrap;
+  }
+
+  .verification-request-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .kakao-verif-form {
+    width: 100%;
+  }
+
+  .kakao-verif-form .form-input {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 .eligibility-status {
