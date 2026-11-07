@@ -1041,20 +1041,50 @@ export default function MarketplacePage() {
               <div className="detail-modal-body">
                 {!userCanRead ? (
                   <div className="restricted-notice">
-                    <RiLock2Line style={{ fontSize: '3rem', color: '#94a3b8' }} />
-                    <h3 style={{ margin: 0, color: '#334155' }}>상세 내용 접근 제한</h3>
-                    <p style={{ lineHeight: '1.6', margin: 0 }}>
-                      {!isValidUser && (
-                        <><strong style={{ color: '#ef4444' }}>회원가입 및 로그인이 필요합니다.</strong><br/><br/></>
-                      )}
-                      상세 내용을 열람하려면 다음 조건이 필요합니다.<br/>
-                      <strong>최소 레벨: Lv.{rules.readLevel}</strong>
-                      {rules.reqPhoneRead && <span> / <strong>전화번호 인증</strong></span>}
-                      {rules.reqKakaoRead && <span> / <strong>카카오톡 인증</strong></span>}
-                    </p>
+                    <div className="restricted-icon-box">
+                      <RiLock2Line size={36} />
+                    </div>
+                    <h3 className="restricted-title">상세 내용 접근 제한</h3>
+                    
+                    {!isValidUser ? (
+                      <div className="restricted-badge-login">
+                        로그인이 필요한 서비스입니다
+                      </div>
+                    ) : null}
+
+                    <div className="restricted-card">
+                      <p className="restricted-desc">
+                        중고거래 매물 상세 내용은 <strong>회원 전용</strong> 공간입니다.<br />
+                        {!isValidUser ? '로그인 후 안전하고 편리하게 이웃과 거래해보세요!' : '아래 조건을 만족하시면 상세 내용을 열람하실 수 있습니다.'}
+                      </p>
+                      
+                      <div className="restricted-requirements">
+                        <div className="req-item">
+                          <span className="req-label">열람 최소 등급</span>
+                          <span className="req-val">Lv.{rules.readLevel} 이상</span>
+                        </div>
+                        {rules.reqPhoneRead && (
+                          <div className="req-item">
+                            <span className="req-label">전화번호 인증</span>
+                            <span className="req-val req-highlight">필수</span>
+                          </div>
+                        )}
+                        {rules.reqKakaoRead && (
+                          <div className="req-item">
+                            <span className="req-label">카카오톡 인증</span>
+                            <span className="req-val req-highlight">필수</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     {!isValidUser && (
-                      <button className="btn btn-primary" onClick={() => window.location.href = '/profile'} style={{ marginTop: '8px' }}>
-                        회원가입 / 로그인 하러가기
+                      <button 
+                        type="button" 
+                        className="btn-restricted-login" 
+                        onClick={() => window.location.href = '/profile'}
+                      >
+                        로그인 / 회원가입 하러가기
                       </button>
                     )}
                   </div>
