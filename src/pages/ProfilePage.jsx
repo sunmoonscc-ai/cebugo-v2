@@ -254,9 +254,14 @@ export default function ProfilePage() {
               <KakaoVerifiedBadge isVerified={userProfile.kakaoVerified} />
             </div>
             
-            <button className="btn btn-secondary" style={{ marginTop: '8px', fontSize: '0.8rem', padding: '4px 8px' }} onClick={() => setIsEditingProfile(!isEditingProfile)}>
-              {isEditingProfile ? '수정 취소' : '개인정보 수정'}
-            </button>
+            <div className="profile-action-buttons">
+              <button className="btn btn-secondary btn-edit-profile" onClick={() => setIsEditingProfile(!isEditingProfile)}>
+                {isEditingProfile ? '수정 취소' : '개인정보 수정'}
+              </button>
+              <button className="btn-logout-header" onClick={logout} title="로그아웃">
+                <RiLogoutBoxRLine /> 로그아웃
+              </button>
+            </div>
           </div>
         </div>
 
@@ -405,9 +410,11 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        <button className="logout-link-btn" onClick={logout}>
-          <RiLogoutBoxRLine /> 로그아웃
-        </button>
+        <div className="profile-footer-actions">
+          <button className="logout-btn-styled" onClick={logout}>
+            <RiLogoutBoxRLine /> 로그아웃
+          </button>
+        </div>
       </div>
 
       {/* Profile Activity Tabs */}

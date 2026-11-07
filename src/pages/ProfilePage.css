@@ -114,6 +114,40 @@
   color: var(--primary);
 }
 
+.profile-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-edit-profile {
+  font-size: 0.8rem;
+  padding: 5px 12px;
+  border-radius: 6px;
+}
+
+.btn-logout-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-logout-header:hover {
+  background: #ffe4e6;
+  border-color: #fda4af;
+  color: #be123c;
+}
+
 .status-text strong {
   font-size: 0.88rem;
 }
@@ -123,16 +157,33 @@
   color: #64748b;
 }
 
-.logout-link-btn {
-  background: transparent;
-  border: none;
-  color: #ef4444;
+.profile-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.logout-btn-styled {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
   font-size: 0.85rem;
   font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.logout-btn-styled:hover {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #ef4444;
 }
 
 .profile-tabs {
