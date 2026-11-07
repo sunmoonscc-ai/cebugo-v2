@@ -194,9 +194,39 @@ export async function updateChatListingStatus({ roomId, listingId, newStatus }) 
   });
 
   const roomRef = doc(db, 'cebugo_chats', roomId);
+  const roomSnap = await getDoc(roomRef);
+  const roomData = roomSnap.exists() ? roomSnap.data() : null;
+
   await updateDoc(roomRef, {
     listingStatus: newStatus
   });
+
+  // 거래 성공(거래완료) 시 판매자와 구매자 거래성공 횟수 +1회씩 증가
+  if (newStatus === 'sold' && roomData) {
+    const participantsToReward = [roomData.sellerUid, roomData.buyerUid].filter(Boolean);
+    for (const uid of participantsToReward) {
+      try {
+        const userRef = doc(db, 'users', uid);
+        const cebugoRef = doc(db, 'cebugo_users', uid);
+        let uSnap = await getDoc(userRef);
+        let targetRef = userRef;
+        if (!uSnap.exists()) {
+          const altSnap = await getDoc(cebugoRef);
+          if (altSnap.exists()) {
+            uSnap = altSnap;
+            targetRef = cebugoRef;
+          }
+        }
+        const curDeals = uSnap.exists() ? (Number(uSnap.data()?.completedDealsCount ?? uSnap.data()?.mannerTemp ?? 0)) : 0;
+        await setDoc(targetRef, {
+          completedDealsCount: curDeals + 1,
+          mannerTemp: curDeals + 1 // 호환성 유지
+        }, { merge: true });
+      } catch (err) {
+        console.error('Failed to increase completedDealsCount on deal completion:', err);
+      }
+    }
+  }
 }
 
 /**
@@ -242,13 +272,15 @@ export async function submitTransactionReview({
   }
 
   if (userSnap.exists()) {
-    const currentTemp = userSnap.data()?.mannerTemp || 36.5;
-    let tempDelta = 0.5;
-    if (rating === 'great') tempDelta = 1.0;
-    if (rating === 'bad') tempDelta = -0.8;
-    const newTemp = Math.min(99.0, Math.max(0.0, Math.round((currentTemp + tempDelta) * 10) / 10));
+    const curDeals = Number(userSnap.data()?.completedDealsCount ?? userSnap.data()?.mannerTemp ?? 0);
+    let delta = 0;
+    if (rating === 'great') delta = 1;
+    if (rating === 'good') delta = 0;
+    if (rating === 'bad') delta = -1;
+    const newDeals = Math.max(0, curDeals + delta);
     await updateDoc(refToUpdate, {
-      mannerTemp: newTemp
+      completedDealsCount: newDeals,
+      mannerTemp: newDeals
     });
   }
 }

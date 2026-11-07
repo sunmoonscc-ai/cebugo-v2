@@ -72,7 +72,7 @@ export default function MarketplacePage() {
   const [showWriteForm, setShowWriteForm] = useState(false);
   const [editingListingId, setEditingListingId] = useState(null);
   const [selectedListing, setSelectedListing] = useState(null);
-  const [sellerMannerTemp, setSellerMannerTemp] = useState(36.5);
+  const [sellerDealsCount, setSellerDealsCount] = useState(0);
 
   // Chat States
   const [chatRooms, setChatRooms] = useState([]);
@@ -120,7 +120,7 @@ export default function MarketplacePage() {
     setSelectedListing(item);
     window.history.pushState({ modal: 'marketplace_detail' }, '');
 
-    // Fetch seller's real manner temperature
+    // Fetch seller's real completed transaction count
     const targetSellerUid = item.sellerUid;
     if (targetSellerUid) {
       try {
@@ -128,13 +128,15 @@ export default function MarketplacePage() {
         if (!snap.exists()) {
           snap = await getDoc(doc(db, 'cebugo_users', targetSellerUid));
         }
-        if (snap.exists() && snap.data()?.mannerTemp !== undefined) {
-          setSellerMannerTemp(snap.data().mannerTemp);
+        if (snap.exists()) {
+          const data = snap.data();
+          const count = Number(data?.completedDealsCount ?? data?.mannerTemp ?? 0);
+          setSellerDealsCount(count);
         } else {
-          setSellerMannerTemp(36.5);
+          setSellerDealsCount(0);
         }
       } catch (e) {
-        setSellerMannerTemp(36.5);
+        setSellerDealsCount(0);
       }
     }
   };
@@ -1119,10 +1121,10 @@ export default function MarketplacePage() {
                           <span className="seller-region-text">📍 {itemRegion} 이웃</span>
                         </div>
                         
-                        {/* Karrot style manner temperature badge with real data */}
+                        {/* Transaction success count badge */}
                         <div className="manner-temp-box">
-                          <span className="temp-val">{sellerMannerTemp.toFixed(1)}℃</span>
-                          <span className="temp-label">매너온도</span>
+                          <span className="temp-val">{sellerDealsCount}회</span>
+                          <span className="temp-label">거래성공</span>
                         </div>
                       </div>
 

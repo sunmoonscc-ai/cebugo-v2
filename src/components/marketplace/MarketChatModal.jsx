@@ -174,7 +174,7 @@ export default function MarketChatModal({ room, currentUser, onClose, onBackToLi
       await handleSend(null, `[거래 후기 작성 완료] ${ratingLabel}${tagsText}${reviewData.comment ? ` : "${reviewData.comment}"` : ''}`, 'review', reviewData);
       
       setShowReviewModal(false);
-      alert('거래 후기가 등록되었습니다! 상대방의 매너온도에 반영됩니다.');
+      alert('거래 후기가 등록되었습니다! 상대방의 신뢰도 및 거래성공 횟수에 반영됩니다.');
     } catch (e) {
       console.error(e);
       alert('후기 등록 중 오류가 발생했습니다.');

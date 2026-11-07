@@ -102,7 +102,7 @@ export default function ReviewModal({ targetName, onSubmit, onClose }) {
           <textarea
             className="review-comment-input"
             rows="3"
-            placeholder="따뜻한 거래 후기를 남겨주세요. 남겨주신 후기는 상대방의 매너온도에 반영됩니다."
+            placeholder="따뜻한 거래 후기를 남겨주세요. 남겨주신 후기는 상대방의 거래 신뢰도에 반영됩니다."
             value={comment}
             onChange={(e) => setComment(e.target.value)}
           />
